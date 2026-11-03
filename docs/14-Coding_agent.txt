@@ -1,0 +1,1478 @@
+
+❯ /clear
+
+❯ lets work on the Part B, as the Part A is already covered, lets create the
+  specs first
+
+● I'll start by reading the spec workflow and the existing specs so Part B
+  follows the same format.
+
+  Read 1 file, listed 2 directories (ctrl+o to expand)
+
+● Now the reference design itself.
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● I've reviewed the brief, workflow, and reference image (2400×1560, matching
+  the existing desktop Playwright project) — the design only shows one state
+  (subscribe selected, quantity 1), leaving four behaviors around dynamic box
+  content unclear. Per the workflow, I'll surface these open questions now
+  before drafting spec.md.
+
+● User answered Claude's questions:
+  ⎿  · Part B buy box: the design shows only the 'Subscribe & save 15%' option
+     selected. When the customer picks 'One-time purchase' instead, what happens
+     to the subscribe card's frequency selector and perks, and to the fine
+     print ('Your subscription renews every 30 days at $25.46…')? → Collapse +
+     hide (Recommended)
+     · Part B buy box: how should quantity affect the prices? copy.ts gives a
+     unit subscribe price of $25.46 (2546¢). Part A's server rounds the discount
+     on the total instead (totalAfterDiscount: round(2995 × qty × 0.85)), and
+     that differs by 1¢ from 2546 × qty at qty 3 and up (qty 3: $76.37 vs
+     $76.38). → Unit × qty (Recommended)
+     · Part B buy box: how should the quantity stepper (− 1 +) work? → Buttons +
+     typing, 1–10 (Recommended)
+     · Part B buy box: the brief says 'Adding to the cart doesn't need to do
+     anything.' What should pressing 'Add to cart' do? → Announce a summary
+     (Recommended)
+
+● All four answers align with my recommendations, so I'll finalize decisions on
+  breakpoints, the frequency control, copy templates, and pixel-check approach
+  in the spec (open to override on review). First I'll check the existing e2e
+  helpers so the spec references them accurately.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● I'll sample the actual colors first, since the reference's light-grey text
+  (struck-through price, fine print, eyebrow) may not meet the 4.5:1 WCAG AA
+  contrast ratio, which could conflict with pixel-perfect accuracy.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I found a real contrast issue: the muted gray text (#6b7a70) and the
+  struck-through price (#8a948e) both fall below the 4.5 AA threshold, which
+  would fail the axe smoke test on ?part=b. I'll adjust these colors to meet
+  accessibility requirements.
+
+● User answered Claude's questions:
+  ⎿  · Part B buy box: four texts in the reference fail WCAG AA contrast. The
+     grey #6b7a70 (eyebrow, reviews link, fine print) is 4.27:1 and the
+     struck-through $29.95 (#8a948e) is 2.87:1; AA needs 4.5:1. Pixel-perfect
+     and accessible conflict here. Which wins? → Exact design colours
+
+● I'll document the exact design colors as an intentional AA deviation, keeping
+  axe's contrast rule active everywhere except those four elements so other
+  failures still get caught. Writing the spec now.
+
+  Read 1 file (ctrl+o to expand)
+
+● Write(SPECS/005-b-buy-box/spec.md)
+  ⎿  Wrote 160 lines to SPECS/005-b-buy-box/spec.md
+       1 # 005: Buy box
+       2
+       3 Status: Draft
+       4
+       5 ## Problem
+       6
+       7 A shopper on the Vitamin D product page decides here whether to
+         buy once or subscribe, how often, and how many.
+       8 Design gave us one finished screen, `public/reference/buy-box.pn
+         g`: a 2x screenshot of a 1200×780 window in the
+     … +152 lines (ctrl+o to expand)
+
+● Now the work-log entry, then a Prettier pass so check stays green.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 21 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box: spec drafted                     
+       6 +                                                               
+       7 +- **Changed:** `SPECS/005-b-buy-box/spec.md` with status Draft:
+         + R1–R14, acceptance criteria, out of scope and                 
+       8 +  known limitations.                                           
+       9 +- **Decisions:**                                               
+      10 +  - Settled with the human:                                    
+      11 +    - one-time collapses the subscription details and hides the
+         + fine print                                                    
+      12 +    - totals are unit price × quantity                         
+      13 +    - quantity is 1–10, by typing or buttons, and clamped when 
+         +the field loses focus                                          
+      14 +    - "Add to cart" shows and announces a summary              
+      15 +    - the design's colours ship unchanged, even where they fail
+         + AA contrast                                                   
+      16 +  - Agent decisions, open to review in the spec:               
+      17 +    - native `select` and native radios                        
+      18 +    - `aria-disabled` stepper buttons, so focus isn't lost at a
+         + limit                                                         
+      19 +    - a one-column layout below a breakpoint chosen in the plan
+      20 +    - new strings and templates go into `copy.ts`              
+      21 +    - the visual test hides the app's nav, and the app keeps it
+      22 +- **Verified:** the reference is 2400×1560, so 1200×780 at 2x, 
+         +which matches the existing `desktop` project.                  
+      23 +  Sampled the text colours from it with a scratch Pillow script
+         +. Four texts fail 4.5:1: the eyebrow, the reviews              
+      24 +  link and the fine print at 4.27, and the struck-through price
+         + at 2.87. Everything else is 5.2:1 or higher.                  
+      25 +                                                               
+      26  ## 2026-11-03: deploy: add vercel.json
+      27  
+      28  - **Changed:** `vercel.json`: the Vite preset, `npm ci`, `npm r
+          un build` (typecheck, then `vite build`), output
+
+● Bash(npx prettier --write SPECS/005-b-buy-box/spec.md SPECS/CHANGELOG.md &&
+      npx prettier --check SPECS && git diff --stat && git status --short)
+  ⎿  Updated SPECS/005-b-buy-box/spec.md (+3 -0)
+      26    Every visible and screen-reader-only string comes from `src/p
+          art-b/copy.ts`. The strings already there stay
+      27    exactly as given. New strings (accessible names, the photo's 
+          alt text, the announcements in R10 and R11, and the
+      28    templates in R9) are added to `copy.ts`, never written inline
+           in components.
+      29 +                                                               
+      30  - R2 **Visual match.** At 1200×780 with a device pixel ratio of
+           2, in the default state, the box matches the
+      31    reference: layout, spacing, sizes, radii, borders, colours, f
+          onts (Fraunces for the title, Inter for the rest)
+      32    and the photo's crop. The colours are the ones measured from 
+          the reference, including the four that fail AA
+     ...
+      72      while the subscription is selected, because a one-time purc
+          hase doesn't renew.
+      73  
+      74    Money is formatted with `Intl` in `en-US` and `USD`.
+      75 +                                                               
+      76  - R10 **Add to cart.** The box is a `form`, and "Add to cart" s
+          ubmits it, as does Enter in the quantity field
+      77    (after R8's clamp). Nothing is stored. A status line appears 
+          under the button, and it is also a polite live
+      78    region:
+     ...
+      81  
+      82    The line clears when the option, the frequency or the quantit
+          y changes, so it never describes an old selection.
+      83    Pressing "Add to cart" again announces it again.
+      84 +                                                               
+      85  - R11 **Quantity corrections are announced.** When R8 changes a
+           typed value, a polite announcement says "Quantity
+      86    set to {n}. You can order 1 to 10 at a time." Normal steps ar
+          en't announced, because the field's value is
+      87    already read.
+
+● I've written the Part B spec, SPECS/005-b-buy-box/spec.md, with status Draft.
+  It's waiting for your review before I write plan.md and task.md. I didn't run
+  npm run check because only docs changed, but Prettier passes on SPECS/.
+  Nothing is committed yet.
+
+  What we settled in conversation:
+  - One-time purchase: picking it collapses the subscription card to its header
+    row and hides the fine print. The chosen frequency comes back when the
+    shopper switches back.
+  - Totals: unit price × quantity, so 3 × $25.46 shows $76.38. The option rows
+    always show unit prices.
+  - Quantity: 1–10, with the buttons or by typing. Out-of-range, decimal or
+    empty values are corrected when the field loses focus, and the correction is
+    announced.
+  - Add to cart: stores nothing, but shows and announces a summary line. The
+    line clears on any change, so it never describes an old selection.
+  - Contrast: the design's colours ship unchanged. I sampled them from the
+    reference, and four texts fail AA: the eyebrow, the reviews link and the
+    fine print at 4.27:1, and the struck-through $29.95 at 2.87:1. The
+    accessibility check skips colour contrast on those four elements only.
+    They're listed in R14 and under Known limitations, so the exception stays
+    visible.
+
+  Decisions I made that you should check in review:
+  - Quantity buttons at a limit: − at 1 and + at 10 are marked unavailable with
+    aria-disabled, not truly disabled. A truly disabled button drops keyboard
+    focus when you press it to the limit.
+  - Frequency control: a native <select> styled to the design.
+  - Purchase options: native radio buttons in a fieldset. Each one's
+    screen-reader name includes its price.
+  - New text (screen-reader names, the photo's alt text, the announcements, the
+    fine-print template) goes into copy.ts. A test checks that the default state
+    renders exactly copy.finePrint.
+  - Narrow screens: the design only shows 1200px, so below a breakpoint I'll
+    pick in the plan, the layout becomes one column. It must have no horizontal
+    scroll at 375px or 320px, since the e2e suite already runs at 375px.
+  - Pixel check: a Playwright screenshot at 1200×780 and 2x, compared with the
+    reference, needing no new dependencies. The test hides the app's top nav,
+    which isn't in the design. The app keeps it.
+  - The existing Part B smoke test will need changing: it runs the full
+    accessibility check, so it will fail on the four design colours until it
+    uses the same exclusions.
+
+  I also added a work-log entry to SPECS/CHANGELOG.md.
+
+  Once you approve the spec or send changes, I'll measure the reference
+  precisely (spacing, sizes, exact colours) and put those values in the plan.
+
+❯ The 005 spec is good. Make these changes, then set it to Approved and write
+  plan.md and task.md:
+  1. R2/R14: the pixel test runs in its own project or setup with
+  deviceScaleFactor: 2. The desktop project is 1x, so it doesn't match the
+  reference. 2. R2: the baseline is a committed copy of
+  public/reference/buy-box.png, and a test checks the copy is byte-identical to
+  the original, so --update-snapshots can never replace the design. Record the
+  actual diff ratio in the CHANGELOG and attach the diff image to the test
+  report. 3. R14: two axe runs. One runs every rule except color-contrast on
+  the whole page. The other runs only color-contrast with the four elements
+  excluded. .exclude() alone would turn off every rule for them. 4. R8: in the
+  reference, "−" at quantity 1 is the same colour as "+". aria-disabled keeps
+  the design's colour and only adds cursor: not-allowed, so the default
+  screenshot still matches. 5. R11: the correction message ("Quantity set
+  to 10. You can order 1 to 10 at a time.") is also visible in the status line
+  under the button, not only announced, and it clears on the next change like
+  R10. 6. R4: only the header row is inside the radio's <label>. The frequency
+  select is never inside it; the rest of the card selects the option with a
+  click handler. 7. R8/R9: while the field holds an invalid value and still has
+  focus, the total stays at the last valid quantity until R8 corrects it. Say
+  this in R9. 8. R8: inputMode="numeric", hidden spinner arrows, and no
+  mouse-wheel changes while focused. 9. R10: add a criterion for Enter on a
+  radio or the frequency select. Either it doesn't add to the cart, or the spec
+  says that it does. 10. R1: the plan names how "no inline text" is enforced
+  without a new dependency, for example a component test that compares rendered
+  text nodes with copy.ts. 11. R12: no horizontal scroll at 768px and 1024px
+  as well as 375px and 320px.
+
+● I'll check two technical facts before planning, since they decide how items 2
+  and 9 can be done:
+  - Can the test get Playwright's own diff ratio and diff image on a passing
+    run, without a new dependency?
+  - What does Chromium natively do on Enter in a radio or a select inside a
+    form?
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Playwright's comparator isn't a public export (ERR_PACKAGE_PATH_NOT_EXPORTED),
+  so reaching into its internals is out. Next, the Enter behaviour in real
+  Chromium:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I confirmed Chromium auto-submits the form on Enter for radios/number fields
+  but not selects, so the spec will explicitly block Enter from adding to the
+  cart on radios and selects for cross-browser consistency. Next, I'll measure
+  the reference's vertical structure for the right column and photo card.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I've confirmed the vertical layout: the photo card sits at (64, 56) at 540×540
+  CSS px, with option cards (60px and 180.5px tall) spaced 12px apart on the
+  right. Next I'll check the horizontal extents and the colors within each band.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The layout confirms a clean 1200px grid with consistent spacing, and I've
+  identified the token color palette (brand green, borders, tints). Next I'll
+  examine the internals of the option cards, stepper, and button.
+
+  Ran 1 shell command (ctrl+o to expand)
+● I'll use a 1px border plus 1px inset shadow for the selected state to avoid
+  content shift, confirmed stepper (128×56) and button (328×56) dimensions with
+  12px spacing. Next, checking corner radii and exact glyph colors.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Starting font sizes are now estimated from cap heights. Last check: how
+  product.jpg sits inside the 540px photo card (a full-bleed cover or an inset
+  image).
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Confirmed the photo matches exactly: product.jpg at 500×500 CSS px, centered
+  with 20px margins from each edge. I have all the measurements I need, so now
+  I'll apply your 11 changes to the spec.
+
+  Read 1 file (ctrl+o to expand)
+
+● Before writing the plan I'll check how Part A handles re-announcing in live
+  regions and which jsx-a11y rules are on, so Part B reuses the same approach
+  instead of inventing a second one.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● I'll keep a single always-mounted role="status" region like Part A, keying the
+  inner <span> by a sequence number so repeated "Added to cart" messages are
+  announced as new content. Now writing the updated spec.
+
+● Write(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 94 lines, removed 52 lines
+      1  # 005: Buy box
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  ## Problem
+      6  
+     ...
+      20    - a divider
+      21    - the two purchase options
+      22    - the quantity stepper and "Add to cart"
+      23 +  - the status line (R10, R11)                                 
+      24    - the three trust points
+      25    - the fine print
+      26  
+      27    Every visible and screen-reader-only string comes from `src/p
+          art-b/copy.ts`. The strings already there stay
+      27 -  exactly as given. New strings (accessible names, the photo's 
+         -alt text, the announcements in R10 and R11, and the            
+      28 -  templates in R9) are added to `copy.ts`, never written inline
+         - in components.                                                
+      28 +  exactly as given. New strings (accessible names, the photo's 
+         +alt text, the separator, the messages in R10 and R11,          
+      29 +  and the templates in R9) are added to `copy.ts`, never writte
+         +n inline in components. The plan names the test                
+      30 +  that enforces this without a new dependency.                 
+      31  
+      32  - R2 **Visual match.** At 1200×780 with a device pixel ratio of
+           2, in the default state, the box matches the
+      33    reference: layout, spacing, sizes, radii, borders, colours, f
+          onts (Fraunces for the title, Inter for the rest)
+      34    and the photo's crop. The colours are the ones measured from 
+          the reference, including the four that fail AA
+      33 -  contrast (R14). The app's test-only nav bar (`App.tsx`) is no
+         -t part of the design. The visual test hides it, and            
+      34 -  the app keeps it.                                            
+      35 +  contrast (R14).                                              
+      36 +  - **Own project.** The pixel test runs in its own Playwright 
+         +project with `deviceScaleFactor: 2` and a 1200×780             
+      37 +    viewport, and it captures at device scale. The existing `de
+         +sktop` project is 1x, so it can't match a 2x                   
+      38 +    reference.                                                 
+      39 +  - **Protected baseline.** The baseline is a committed copy of
+         + `public/reference/buy-box.png`. A test checks that            
+      40 +    the copy is byte-identical to the original, so `--update-sn
+         +apshots` can never quietly replace the design.                 
+      41 +  - **Recorded diff.** Every run attaches the diff image and th
+         +e measured diff ratio to the test report. The ratio            
+      42 +    is also recorded in `SPECS/CHANGELOG.md` whenever it change
+         +s.                                                             
+      43 +  - **Nav bar.** The app's test-only nav bar (`App.tsx`) is not
+         + part of the design. The visual test hides it, and             
+      44 +    the app keeps it.                                          
+      45 +                                                               
+      46  - R3 **Rating.** The five stars are decorative, all five full a
+          s in the design. A screen reader hears "Rated 4.8 out
+      47    of 5" once, never "star" five times, then the "2,316 reviews"
+           link. The link points to `#reviews`.
+      48  - R4 **Purchase options.** The two options are native radio but
+          tons in a `fieldset` with an accessible name (a
+      38 -  visually hidden legend). "Subscribe & save 15%" is selected b
+         -y default. Clicking anywhere on an option's card               
+      39 -  selects it, and the arrow keys move between options natively.
+         - The selected card has the green border and the                
+      40 -  tinted background, and the other card has the light border on
+         - white. The filled radio dot also shows the                    
+      41 -  selection, so it is never shown by colour alone. Each radio's
+         - accessible name includes its price. The                       
+      42 -  subscription also includes the badge and the original price, 
+         -for example "Subscribe & save 15%, Best value,                 
+      43 -  $25.46, originally $29.95".                                  
+      49 +  visually hidden legend). "Subscribe & save 15%" is selected b
+         +y default, and the arrow keys move between options             
+      50 +  natively.                                                    
+      51 +  - **Label.** Only an option's header row (radio, label, badge
+         +, prices) is inside the radio's `<label>`. The                 
+      52 +    frequency `select` and the perks are never inside it. Click
+         +ing anywhere else on the card selects the option               
+      53 +    through a click handler on the card. The handler ignores cl
+         +icks on form controls and their labels, and the                
+      54 +    radio stays the keyboard path.                             
+      55 +  - **Selected style.** The selected card has the green border 
+         +and the tinted background, and the other card has              
+      56 +    the light border on white. The filled radio dot also shows 
+         +the selection, so it is never shown by colour alone.           
+      57 +  - **Accessible name.** Each radio's accessible name comes fro
+         +m its header row, so it includes the price. For the            
+      58 +    subscription, it also includes the badge and the original p
+         +rice: "Subscribe & save 15% Best value $25.46                  
+      59 +    originally $29.95".                                        
+      60  - R5 **Subscription details.** "Delivered every" and the two pe
+          rks show only while the subscription is selected.
+      45 -  When "One-time purchase" is selected, the subscription card c
+         -ollapses to its header row (radio, label, badge,               
+      46 -  prices). The details are removed, not just hidden from view, 
+         -so they can't be reached by Tab or a screen reader.            
+      47 -  The chosen frequency is kept, so switching back restores it. 
+      61 +  When "One-time purchase" is selected, the subscription card c
+         +ollapses to its header row. The details are removed,           
+      62 +  not just hidden from view, so they can't be reached by Tab or
+         + a screen reader. The chosen frequency is kept, so             
+      63 +  switching back restores it.                                  
+      64  - R6 **Frequency.** A native `select` labelled "Delivered every
+          ", with the options from `copy.ts` in order. "30
+      65    days" is selected by default. It is styled like the design (w
+          hite field, border, chevron) and keeps native
+      66    keyboard and screen-reader behaviour.
+     ...
+       70    uppercase only through CSS.
+       71  - R8 **Quantity.** A native number field labelled "Quantity", 
+           between a "Decrease quantity" button and an "Increase
+       72    quantity" button. It starts at 1, and the range is 1 to 10.
+       57 -  - The buttons step by 1. At its limit, a button is marked un
+          -available with `aria-disabled` and does nothing, but          
+       58 -    it stays focusable, so pressing it to the limit never drop
+          -s keyboard focus.                                             
+       59 -  - The arrow keys in the field step natively within the range
+          -.                                                             
+       60 -  - A typed value that is a whole number from 1 to 10 takes ef
+          -fect as it is typed.                                          
+       61 -  - When the field loses focus, or the form is submitted:     
+       73 +  - **Buttons.** They step by 1. At its limit, a button is mar
+          +ked unavailable with `aria-disabled` and does                 
+       74 +    nothing, but it stays focusable, so pressing it to the lim
+          +it never drops keyboard focus. It keeps the design's          
+       75 +    colour. In the reference, "−" at quantity 1 is the same co
+          +lour as "+", so the only visual change is `cursor:            
+       76 +    not-allowed`, and the default screenshot still matches.   
+       77 +  - **The field.** It has `inputMode="numeric"`, so phones sho
+          +w a number pad, and its spinner arrows are hidden as          
+       78 +    in the design. The arrow keys step natively within the ran
+          +ge. The mouse wheel never changes the value, even             
+       79 +    while the field has focus.                                
+       80 +  - **Typing.** A typed whole number from 1 to 10 takes effect
+          + as it is typed.                                              
+       81 +  - **Correction.** When the field loses focus, or the form is
+          + submitted:                                                   
+       82      - a value outside the range is clamped to 1 or 10
+       83      - a decimal is rounded to the nearest whole number, then c
+           lamped
+       84      - an empty or non-numeric value goes back to the last vali
+           d quantity
+       85  
+       66 -    If the value changes this way, R11 announces it.          
+       67 -- R9 **Totals stay in step.** The total is the selected option
+          -'s unit price × quantity, in whole cents, so                  
+       68 -  shoppers who multiply get the same number. For example, a su
+          -bscription with a quantity of 3 is $76.38.                    
+       86 +    If the value changes this way, R11 says so.               
+       87 +                                                              
+       88 +- R9 **Totals stay in step.** The total is the selected option
+          +'s unit price × the quantity, in whole cents, so a            
+       89 +  shopper who multiplies gets the same number. For example, a 
+          +subscription with a quantity of 3 is $76.38.                  
+       90    - "Add to cart · {total}". The dot is decorative and not rea
+           d out.
+       91    - The fine print: "Your subscription renews every {frequency
+           } at {total} until you cancel. Skip or cancel
+       92      anytime from your account." The default state renders exac
+           tly `copy.finePrint`. The fine print shows only
+       93      while the subscription is selected, because a one-time pur
+           chase doesn't renew.
+       94 +  - While the field holds a value that isn't valid (empty, out
+          + of range or a decimal) and still has focus, every            
+       95 +    total stays at the last valid quantity until R8 corrects t
+          +he field.                                                     
+       96  
+       97    Money is formatted with `Intl` in `en-US` and `USD`.
+       98  
+       76 -- R10 **Add to cart.** The box is a `form`, and "Add to cart" 
+          -submits it, as does Enter in the quantity field               
+       77 -  (after R8's clamp). Nothing is stored. A status line appears
+          - under the button, and it is also a polite live               
+       78 -  region:                                                     
+       99 +- R10 **Add to cart.** The box is a `form`. "Add to cart" subm
+          +its it, and so does Enter in the quantity field, after        
+      100 +  R8's correction. Enter on a radio button or on the frequency
+          + `select` never adds to the cart. Chromium submits a          
+      101 +  form on Enter in a radio (measured on 2026-11-03), so this i
+          +s blocked explicitly and behaves the same in every            
+      102 +  browser. Nothing is stored. The status line under the button
+          + shows the summary and is a polite live region:               
+      103    - subscription: "Added to cart: 2 × Vitamin D, delivered eve
+           ry 60 days, $50.92."
+      104    - one-time: "Added to cart: 1 × Vitamin D, one-time purchase
+           , $29.95."
+      105  
+      106    The line clears when the option, the frequency or the quanti
+           ty changes, so it never describes an old selection.
+      107    Pressing "Add to cart" again announces it again.
+      108  
+       85 -- R11 **Quantity corrections are announced.** When R8 changes 
+          -a typed value, a polite announcement says "Quantity           
+       86 -  set to {n}. You can order 1 to 10 at a time." Normal steps a
+          -ren't announced, because the field's value is                 
+       87 -  already read.                                               
+      109 +- R11 **Quantity corrections are shown and announced.** When R
+          +8 changes a typed value, the status line says                 
+      110 +  "Quantity set to {n}. You can order 1 to 10 at a time." It i
+          +s visible as well as announced. It clears on the next         
+      111 +  change, as in R10. A correction made by submitting comes fir
+          +st on the line, then the R10 summary, so both are             
+      112 +  seen. Normal steps aren't announced, because the field's val
+          +ue is already read.                                           
+      113  - R12 **Responsive.** At 1200px the layout is the design's two
+            columns. Below a breakpoint chosen in the plan, it
+       89 -  becomes one column: the photo, then the box. There is no hor
+          -izontal scroll at 375px or 320px (WCAG 1.4.10), in            
+       90 -  any state. The narrow layout is our own, because the design 
+          -shows only 1200px.                                            
+      114 +  becomes one column: the photo, then the box. There is no hor
+          +izontal scroll at 1024px, 768px, 375px or 320px               
+      115 +  (WCAG 1.4.10), in any state. Everything below 1200px is our 
+          +own layout, because the design shows only 1200px.             
+      116  - R13 **Keyboard and focus.** Every control works by keyboard 
+           alone, in DOM order. Every focusable element has a
+      117    visible `:focus-visible` indicator. The design shows none, s
+           o the default screenshot is unaffected. There is one
+      118    `h1`, "Vitamin D". The photo has descriptive alt text from `
+           copy.ts`.
+       94 -- R14 **Accessibility checks.** Axe reports no WCAG 2.2 A/AA v
+          -iolations at 375px and 1200px, in the default state,          
+       95 -  with one-time selected, and after "Add to cart", with one ex
+          -ception. On the human's decision (2026-11-03), the            
+       96 -  design's colours ship unchanged, so colour-contrast is not c
+          -hecked on these four elements, and only these:                
+      119 +- R14 **Accessibility checks.** Axe runs at 375px and 1200px, 
+          +in the default state, with one-time selected, and             
+      120 +  after "Add to cart". Each check is two axe runs on the whole
+          + page:                                                        
+      121 +  1. every WCAG 2.2 A/AA rule except `color-contrast`, with no
+          +thing excluded                                                
+      122 +  2. only `color-contrast`, with the four elements below exclu
+          +ded                                                           
+      123  
+      124 +  Both must report no violations. Axe's `.exclude()` turns off
+          + every rule for an element, so it is used only in the         
+      125 +  second run. That way the four elements still get every other
+          + check. On the human's decision (2026-11-03), the             
+      126 +  design's colours ship unchanged, so these four, and only the
+          +se, aren't checked for contrast:                              
+      127 +                                                              
+      128    | Element                 | Design colour on background | Co
+           ntrast | AA  |
+      129    | ----------------------- | --------------------------- | --
+           ------ | --- |
+      130    | Eyebrow "VITAMINS"      | `#6b7a70` on `#fbf8f3`      | 4.
+           27:1   | 4.5 |
+     ...
+      132    | Fine print              | `#6b7a70` on `#fbf8f3`      | 4.
+           27:1   | 4.5 |
+      133    | Struck-through "$29.95" | `#8a948e` on `#f3f6f2`      | 2.
+           87:1   | 4.5 |
+      134  
+      105 -  These values were sampled from the reference (the darkest gl
+          -yph pixel against the most common background). The            
+      106 -  plan confirms the exact tokens. Every other check, contrast 
+          -included, stays on for these elements, and every rule         
+      107 -  stays on for the rest of the page.                          
+      108 -                                                              
+      135  ## Acceptance criteria
+      136  
+      111 -- [ ] R1, R2: Given 1200×780 at DPR 2, with the nav hidden and
+          - the default state, when the page is compared with            
+      112 -      `buy-box.png`, then the difference is within the toleran
+          -ce set in the plan.                                           
+      113 -- [ ] R1: Every visible string matches `copy.ts`, and a test f
+          -ails if any text is written inline.                           
+      137 +- [ ] R2: The `visual` project runs at 1200×780 with `deviceSc
+          +aleFactor: 2`, and its screenshot is 2400×1560.               
+      138 +- [ ] R1, R2: Given the default state with the nav hidden, whe
+          +n the page is compared with the committed baseline,           
+      139 +      then the diff ratio is within the plan's tolerance. The 
+          +diff image and the ratio are attached to the report,          
+      140 +      and the ratio is recorded in the CHANGELOG.             
+      141 +- [ ] R2: The committed baseline is byte-identical to `public/
+          +reference/buy-box.png`. Changing either file makes the        
+      142 +      test fail.                                              
+      143 +- [ ] R1: Every rendered text node and accessible-name attribu
+          +te comes from `copy.ts`, in each state. Inline text           
+      144 +      makes the test fail.                                    
+      145  - [ ] R3: A screen reader gets "Rated 4.8 out of 5" once, and 
+           the stars are hidden from it.
+      146  - [ ] R4, R5: Given the default state, when "One-time purchase
+           " is selected, then its card gets the selected style,
+      147        the subscription details and the fine print are gone, an
+           d the button reads "Add to cart · $29.95".
+      148 +- [ ] R4: Clicking the one-time card's padding, outside its la
+          +bel, selects it. The frequency `select` is not inside         
+      149 +      any `<label>` of a radio.                               
+      150 +- [ ] R4: The options can be chosen with the arrow keys, and e
+          +ach radio's accessible name includes its price.               
+      151  - [ ] R5, R6: Given 60 days was chosen, when the shopper switc
+           hes to one-time and back, then 60 days is still
+      152        selected.
+      119 -- [ ] R4: The options can be chosen with the arrow keys, and e
+          -ach radio's accessible name includes its price.               
+      153  - [ ] R6, R9: Given the subscription, when 90 days is chosen, 
+           then the fine print says "every 90 days".
+      154  - [ ] R8, R9: Given the subscription, when + is pressed twice,
+            then the field shows 3, the button reads "Add to cart ·
+      155        $76.38" and the fine print says "at $76.38". The option 
+           rows still show $25.46 and $29.95.
+      123 -- [ ] R8: At 1, "Decrease quantity" is `aria-disabled` and kee
+          -ps focus when pressed. At 10, "Increase quantity" does        
+      124 -      the same.                                               
+      125 -- [ ] R8, R11: Typing 15 and leaving the field sets 10 and ann
+          -ounces it. Typing 0 sets 1. Typing 2.6 sets 3.                
+      126 -      Clearing the field restores the last valid quantity.    
+      156 +- [ ] R8: At 1, "Decrease quantity" is `aria-disabled`, has th
+          +e same colour as "Increase quantity" and keeps focus          
+      157 +      when pressed. At 10, "Increase quantity" does the same. 
+      158 +- [ ] R8: The field has `inputMode="numeric"` and no visible s
+          +pinner. With the field focused and the pointer over           
+      159 +      it, the mouse wheel doesn't change the value.           
+      160 +- [ ] R8, R11: Typing 15 and leaving the field sets 10, and th
+          +e status line shows and announces the correction.             
+      161 +      Typing 0 sets 1. Typing 2.6 sets 3. Clearing the field r
+          +estores the last valid quantity. The next change              
+      162 +      clears the line.                                        
+      163 +- [ ] R9: Given a quantity of 2, when the field is cleared and
+          + still has focus, then the button and the fine print          
+      164 +      still show the total for 2.                             
+      165  - [ ] R10: Given 2 × subscription every 60 days, when "Add to 
+           cart" is pressed, then the status line reads "Added
+      166        to cart: 2 × Vitamin D, delivered every 60 days, $50.92.
+           " in a polite live region. A later change clears it.
+      129 -- [ ] R10: Pressing Enter in the quantity field clamps the val
+          -ue first, then adds to the cart.                              
+      130 -- [ ] R12: At 375px and 320px the layout is one column with no
+          - horizontal scroll, in the default and one-time               
+      131 -      states.                                                 
+      167 +- [ ] R10, R11: Pressing Enter in the quantity field with 15 c
+          +orrects it to 10, then adds to the cart. The line shows       
+      168 +      the correction, then the summary.                       
+      169 +- [ ] R10: Enter on either radio, and on the frequency `select
+          +`, doesn't add to the cart.                                   
+      170 +- [ ] R12: At 1024px and 768px there is no horizontal scroll. 
+          +At 375px and 320px the layout is one column with no           
+      171 +      horizontal scroll. Each is checked in the default and on
+          +e-time states.                                                
+      172  - [ ] R13: A keyboard-only run reaches every control, picks on
+           e-time, the subscription, 60 days and a quantity of 2,
+      173        and adds to the cart without a mouse.
+      134 -- [ ] R14: Axe passes as described in R14, at 375px and 1200px
+          -, in each listed state, and the existing Part B smoke         
+      135 -      test uses the same four exclusions.                     
+      174 +- [ ] R14: Both axe runs pass at 375px and 1200px in each list
+          +ed state, and the existing Part B smoke test uses the         
+      175 +      same two runs.                                          
+      176  - [ ] The page loads and every interaction runs with no consol
+           e errors.
+      177  
+      178  ## Out of scope
+     ...
+      189    only exception to axe's contrast check, and the spec lists t
+           hem so that the exception stays visible.
+      190  - **The visual match can't be exact.** Font rasterisation diff
+           ers between machines and browsers, the photo is
+      191    resampled, and the e2e run loads the fonts from Google Fonts
+            over the network. The visual test allows a tolerance,
+      152 -  and it waits for `document.fonts.ready`.                    
+      192 +  and it waits for the fonts to load.                         
+      193 +- **Screen-reader output isn't tested with a real screen reade
+          +r.** Tests check the live region's role and that its          
+      194 +  content node is replaced, not what NVDA or VoiceOver actuall
+          +y says.                                                       
+      195  - **The reviews link points to `#reviews`,** which doesn't exi
+           st on this page.
+      196  - **The stars are all full for a rating of 4.8,** as in the de
+           sign.
+      197  - **"Add to cart" is simulated:** it only shows and announces 
+           a summary.
+      198  - **The totals may differ by 1¢ from Part A.** They use unit p
+           rice × quantity, while Part A's mock rounds the
+      199    discount on the total (`totalAfterDiscount`), so at a quanti
+           ty of 3 or more a Part A subscription could differ by
+      200    1¢ (3 × Vitamin D: $76.38 here, $76.37 there). The two parts
+            are separate builds that share no cart.
+      159 -- **The narrow layout below 1200px (R12) is not from the desig
+          -n.**                                                          
+      201 +- **The layout below 1200px (R12) is not from the design.**   
+      202  
+      203  ## Open questions
+      204  
+
+● Spec updated and set to Approved. Now the plan, with the measurements written
+  out so the build and the geometry test have concrete targets.
+
+● Write(SPECS/005-b-buy-box/plan.md)
+  ⎿  Wrote 339 lines to SPECS/005-b-buy-box/plan.md
+      1 # 005: Plan
+      2
+      3 Status: Draft
+      4
+      5 Spec: [spec.md](spec.md) (Approved)
+      6
+      7 ## Approach
+      8
+      9 Same shape as Part A:
+     … +330 lines (ctrl+o to expand)
+
+● Write(SPECS/005-b-buy-box/task.md)
+  ⎿  Wrote 35 lines to SPECS/005-b-buy-box/task.md
+      1 # 005: Tasks
+      2
+      3 - [ ] T1 (R1, R7, R9–R11): `copy.ts` additions, with the existing
+         values unchanged. `buyBox.ts` with `formatMoney`,
+      4       `unitPriceCents`, `totalCents`, `parseQuantity` and `correc
+        tQuantity`. Unit tests, including
+      5       `renewalNotice("30 days", "$25.46") === copy.finePrint`, $7
+        6.38 at 3, $254.60 at 10, and 15/0/2.6/""/"abc"
+      6 - [ ] T2 (R4–R6, R8–R11): `buyBoxReducer.ts` with the six actions
+        , plus unit tests for every transition, every
+     … +29 lines (ctrl+o to expand)
+
+● Now the CHANGELOG entry and a Prettier pass:
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 40 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box: spec Approved, plan and tasks dra
+         +fted                                                           
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `spec.md` with the human's 11 review changes, then status A
+         +pproved:                                                       
+       9 +    - R2: a separate `visual` project at DPR 2, a byte-checked 
+         +baseline copy, and the diff image and ratio                    
+      10 +      attached and recorded                                    
+      11 +    - R14: two axe runs                                        
+      12 +    - R8: `aria-disabled` keeps the design's colour, plus `inpu
+         +tMode`, no spinners and no wheel changes                       
+      13 +    - R11: the correction is visible                           
+      14 +    - R4: only the header row is in the label, with a card clic
+         +k handler                                                      
+      15 +    - R9: the last valid total is kept while the field is inval
+         +id                                                             
+      16 +    - R10: Enter on a radio or the select doesn't add          
+      17 +    - R1: how inline text is enforced                          
+      18 +    - R12: 1024 and 768 added                                  
+      19 +  - New `plan.md` (Draft) and `task.md` (T1–T10).              
+      20 +- **Decisions:**                                               
+      21 +  - **Enter blocked on radios.** Chromium submits a form on Ent
+         +er in a radio button. A scratch Playwright script              
+      22 +    showed radio → 1 submit, select → 0, number field → 1. So E
+         +nter on a radio or the select is blocked in the                
+      23 +    form's `onKeyDown`.                                        
+      24 +  - **Own diff helper.** Playwright's image comparator isn't ex
+         +ported (`playwright-core/lib/utils` gives                      
+      25 +    `ERR_PACKAGE_PATH_NOT_EXPORTED`). So the always-on diff ima
+         +ge and ratio come from an in-browser canvas helper             
+      26 +    (pixelmatch's YIQ delta at a threshold of 0.2). `toHaveScre
+         +enshot` stays the gate.                                        
+      27 +  - **Geometry test.** It checks element boxes within ±1px. It'
+         +s added because font rasterisation (the reference              
+      28 +    was probably captured on macOS) makes the pixel ratio noisy
+         +, and the geometry test still catches layout                   
+      29 +    drift.                                                     
+      30 +  - **Selected border.** A 1px border plus an inset 1px shadow.
+         + The radio is at x 689 in both cards, so the                   
+      31 +    measured 2px green border can't be a real 2px border withou
+         +t shifting the content.                                        
+      32 +  - **Tolerance.** The measured ratio rounded up to the next 0.
+         +5%, with a ceiling of 3%. Above the ceiling, the               
+      33 +    agent stops and asks the human.                            
+      34 +- **Verified:**                                                
+      35 +  - Measured the reference with scratch Pillow scripts:        
+      36 +    - columns 64/540/64/468/64                                 
+      37 +    - every band's position                                    
+      38 +    - 15 colour tokens                                         
+      39 +    - radii                                                    
+      40 +    - cap heights for the starting font sizes                  
+      41 +  - Matched `product.jpg` at 500×500, centred in the card, with
+         + a mean error of 0.15/255 (others were 0.77 or                 
+      42 +    worse).                                                    
+      43 +  - Confirmed that "−" and "+" are both `#4a5550` in the refere
+         +nce.                                                           
+      44 +                                                               
+      45  ## 2026-11-03: 005-b-buy-box: spec drafted
+      46  
+      47  - **Changed:** `SPECS/005-b-buy-box/spec.md` with status Draft:
+           R1–R14, acceptance criteria, out of scope and
+
+● Bash(npx prettier --write SPECS/005-b-buy-box/ SPECS/CHANGELOG.md && npx
+      prettier --check . && git status --short)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+74 -74)
+      30  
+      31  ### Layout
+      32  
+      33 -| Element                    | Measured                        
+         -                                                               
+         -  |                                                            
+      34 -| -------------------------- | --------------------------------
+         ----------------------------------------------------------------
+         -- |                                                            
+      35 -| Columns                    | 64 page margin · photo card 540 
+         -· gap 64 · box 468 · 64 margin (= 1200)                        
+         -  |                                                            
+      36 -| Top                        | photo card top 56. Eyebrow cap t
+         -op 58.5, so both columns start at 56                           
+         -  |                                                            
+      37 -| Photo card                 | x 64, y 56, 540×540, 1px `#e7e1d
+         -6` border, white, radius ≈ 20                                  
+         -  |                                                            
+      38 -| Photo                      | `product.jpg` at 500×500, centre
+         -d (20 from each outer edge). Mean error 0.15/255 at this size  
+         -   |                                                           
+      39 -| Stars                      | 5 × 14×14, 4 apart, x 669, y 86.
+         -5–100.5                                                        
+         -  |                                                            
+      40 -| "4.8" / reviews link       | x 764.5 / 793.5–884. Underline a
+         -t y 101                                                        
+         -  |                                                            
+      41 -| Title                      | cap top 122.5, cap height 31    
+         -                                                               
+         -  |                                                            
+      42 -| Subtitle                   | first cap top 180, line pitch 25
+         -.5, two lines at 468 wide                                      
+         -  |                                                            
+      43 -| Divider                    | y 251.5, 1px `#e7e1d6`, full box
+         - width                                                         
+         -  |                                                            
+      44 -| One-time card              | y 276.5–336.5 (60 tall), 1px `#e
+         -1dbcf`, white, radius ≈ 12                                     
+         -  |                                                            
+      45 -| Subscription card          | y 348.5–529 (180.5 tall), 12 bel
+         -ow, 2px `#17402f` look, `#f3f6f2`                              
+         - |                                                             
+      46 -| Card content               | 20 from the card's outer edge. R
+         -adio 20×20 at x 689 in both cards. Label x 721.5. Price ends 11
+         -15 |                                                           
+      47 -| Badge                      | x 903–999.5, y 376.5–397.5 (≈ 96
+         -×21), pill                                                     
+         -  |                                                            
+      48 -| Subscription prices        | `$25.46` cap top 371.5, `$29.95`
+         - cap top 394.5, right-aligned at 1115                          
+         -  |                                                            
+      49 -| Frequency row              | "Delivered every" x 722 (under t
+         -he label). Select x 834.5–950, y 421–454, 1px `#cfd6d0`, white 
+         - |                                                             
+      50 -| Perks                      | cap tops 471 and 496 (pitch 25).
+         - Check icon x 723–734.5, text x 745.5                          
+         -  |                                                            
+      51 -| Quantity row               | y 553–609 (56 tall), 24 below th
+         -e card. Stepper x 668–796 (128), button x 808–1136 (328)       
+         -  |                                                            
+      52 -| Radii                      | stepper ≈ 10, button ≈ 10       
+         -                                                               
+         -  |                                                            
+      53 -| Trust row                  | cap top 632. Icons 14 wide at x 
+         -669, 828.5 and 938, text about 7.5 after each icon             
+         -  |                                                            
+      54 -| Fine print                 | cap tops 665 and ≈ 683, x 668 to
+         - about 1133, two lines                                         
+         -  |                                                            
+      33 +| Element              | Measured                              
+         +                                                            |  
+      34 +| -------------------- | --------------------------------------
+         +----------------------------------------------------------- |  
+      35 +| Columns              | 64 page margin · photo card 540 · gap 
+         +64 · box 468 · 64 margin (= 1200)                           |  
+      36 +| Top                  | photo card top 56. Eyebrow cap top 58.
+         +5, so both columns start at 56                              |  
+      37 +| Photo card           | x 64, y 56, 540×540, 1px `#e7e1d6` bor
+         +der, white, radius ≈ 20                                     |  
+      38 +| Photo                | `product.jpg` at 500×500, centred (20 
+         +from each outer edge). Mean error 0.15/255 at this size     |  
+      39 +| Stars                | 5 × 14×14, 4 apart, x 669, y 86.5–100.
+         +5                                                           |  
+      40 +| "4.8" / reviews link | x 764.5 / 793.5–884. Underline at y 10
+         +1                                                           |  
+      41 +| Title                | cap top 122.5, cap height 31          
+         +                                                            |  
+      42 +| Subtitle             | first cap top 180, line pitch 25.5, tw
+         +o lines at 468 wide                                         |  
+      43 +| Divider              | y 251.5, 1px `#e7e1d6`, full box width
+         +                                                            |  
+      44 +| One-time card        | y 276.5–336.5 (60 tall), 1px `#e1dbcf`
+         +, white, radius ≈ 12                                        |  
+      45 +| Subscription card    | y 348.5–529 (180.5 tall), 12 below, 2p
+         +x `#17402f` look, `#f3f6f2`                                 |  
+      46 +| Card content         | 20 from the card's outer edge. Radio 2
+         +0×20 at x 689 in both cards. Label x 721.5. Price ends 1115 |  
+      47 +| Badge                | x 903–999.5, y 376.5–397.5 (≈ 96×21), 
+         +pill                                                        |  
+     … 136 more lines (ctrl+o to expand)
+  ⎿  Updated SPECS/005-b-buy-box/spec.md (+1 -1)
+      73    - **Buttons.** They step by 1. At its limit, a button is mark
+          ed unavailable with `aria-disabled` and does
+      74      nothing, but it stays focusable, so pressing it to the limi
+          t never drops keyboard focus. It keeps the design's
+      75      colour. In the reference, "−" at quantity 1 is the same col
+          our as "+", so the only visual change is `cursor:
+      76 -    not-allowed`, and the default screenshot still matches.    
+      76 +not-allowed`, and the default screenshot still matches.        
+      77    - **The field.** It has `inputMode="numeric"`, so phones show
+           a number pad, and its spinner arrows are hidden as
+      78      in the design. The arrow keys step natively within the rang
+          e. The mouse wheel never changes the value, even
+      79      while the field has focus.
+
+● I applied all 11 changes to spec.md (SPECS/005-b-buy-box/spec.md) and set it
+  to Approved. I also wrote plan.md (SPECS/005-b-buy-box/plan.md) (status Draft)
+  and task.md (SPECS/005-b-buy-box/task.md) with tasks T1–T10. Prettier passes
+  across the repo. No code is written yet and nothing is committed.
+
+  Two of your changes depended on things I checked first:
+  - Enter on a radio or the select (item 9): I ran a scratch Playwright test.
+    Chromium submits the form when Enter is pressed on a radio (and in the
+    number field), but not on the select. So the spec says Enter on a radio or
+    the select never adds to the cart. The form's key handler blocks it, so
+    every browser behaves the same.
+  - Diff ratio and diff image on every run (item 2): Playwright doesn't expose
+    its image comparator (ERR_PACKAGE_PATH_NOT_EXPORTED). The plan uses a small
+    in-browser canvas helper that measures the ratio and makes the diff image on
+    every run, and adds both to the test report. toHaveScreenshot against the
+    byte-checked copy stays the pass/fail gate. The CHANGELOG will record both
+    ratios, the helper's and Playwright's.
+
+  What the plan is built on: I measured the reference instead of judging by eye.
+  - Grid: the columns are 64/540/64/468/64, which adds up to exactly 1200.
+  - Photo: product.jpg sits at 500×500 centred in its card. That match is
+    near-exact (mean error 0.15/255).
+  - Colours: 15 tokens. "−" and "+" are both #4a5550, which confirms your
+    item 4.
+  - Selected border: the radio sits at the same x in both option cards, so the
+    selected card's "2px" green border has to be a 1px border plus a 1px inset
+    shadow, or the content would shift.
+  - Font sizes: the type table gives starting values from cap heights. T5 tunes
+    them against the diff and writes the final values back into the plan.
+
+  Three things to look at when you review the plan:
+  - Geometry test: I added a check that key element boxes are within ±1px of the
+    measured positions. Font rendering differs between machines (the reference
+    was probably captured on macOS), so the pixel ratio will be noisy. This test
+    still catches layout drift precisely.
+  - Tolerance rule: the measured ratio rounded up to the next 0.5%, with a hard
+    ceiling of 3%. If the tuned page is still above 3%, I stop and ask you
+    rather than raise it.
+  - Breakpoint: two columns at 960px and wider, one column below.
+
+  Once you approve the plan, I'll start with T1.
+
+❯ Perfect especially capturing at device scale. Six small spec changes, then
+  the plan can go ahead: 1. R10: the form has noValidate. Otherwise Chrome's
+  native min/max check blocks Enter with 15 before our handler runs, and the
+  "Enter with 15 corrects to 10, then adds" criterion can't pass. 2. R8: both
+  quantity buttons are type="button", so they never submit the form. Add to the
+  "+ pressed twice" criterion: the status line stays empty. 3. R1/R10: while
+  empty, the status line takes no height, so the default screenshot matches.
+  The trust points move down when a message appears; accept that. 4. R11: a
+  correction made on blur, immediately followed by a submit (tapping "Add to
+  cart" while the field has focus), also shows the correction then the summary.
+  Add a criterion: type 15, click "Add to cart", and the line shows both. 5.
+  R1 criterion: the expected text is built from copy.ts values plus the money
+  formatter and templates. Formatted prices and the field's value aren't
+  literals in copy.ts. 6. R12: the two-column grid matches 64/540/64/468/64 at
+  1200px and shrinks between 960 and 1200px (the photo column first), so 1024px
+  has no horizontal scroll. Plan: approved as written, plus the geometry test
+  also asserts that the subtitle renders on exactly two lines, so a wrap change
+  fails with a clear message.
+
+● I'll re-read the spec first, because Prettier reflowed it after my last write.
+
+  Read 1 file (ctrl+o to expand)
+
+● Prettier wrapped cursor: not-allowed across two lines inside a code span
+  (lines 75–76). I'll fix that while I'm in R8.
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 5 lines, removed 4 lines
+      70    uppercase only through CSS.
+      71  - R8 **Quantity.** A native number field labelled "Quantity", b
+          etween a "Decrease quantity" button and an "Increase
+      72    quantity" button. It starts at 1, and the range is 1 to 10.
+      73 -  - **Buttons.** They step by 1. At its limit, a button is mark
+         -ed unavailable with `aria-disabled` and does                   
+      74 -    nothing, but it stays focusable, so pressing it to the limi
+         -t never drops keyboard focus. It keeps the design's            
+      75 -    colour. In the reference, "−" at quantity 1 is the same col
+         -our as "+", so the only visual change is `cursor:              
+      76 -not-allowed`, and the default screenshot still matches.        
+      73 +  - **Buttons.** Both are `type="button"`, so they never submit
+         + the form. They step by 1. At its limit, a button              
+      74 +    is marked unavailable with `aria-disabled` and does nothing
+         +, but it stays focusable, so pressing it to the                
+      75 +    limit never drops keyboard focus. It keeps the design's col
+         +our. In the reference, "−" at quantity 1 is the                
+      76 +    same colour as "+", so the only visual change is the `not-a
+         +llowed` cursor, and the default screenshot still               
+      77 +    matches.                                                   
+      78    - **The field.** It has `inputMode="numeric"`, so phones show
+           a number pad, and its spinner arrows are hidden as
+      79      in the design. The arrow keys step natively within the rang
+          e. The mouse wheel never changes the value, even
+      80      while the field has focus.
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 6 lines, removed 4 lines
+       97  
+       98    Money is formatted with `Intl` in `en-US` and `USD`.
+       99  
+      100 -- R10 **Add to cart.** The box is a `form`. "Add to cart" subm
+          -its it, and so does Enter in the quantity field, after        
+      101 -  R8's correction. Enter on a radio button or on the frequency
+          - `select` never adds to the cart. Chromium submits a          
+      102 -  form on Enter in a radio (measured on 2026-11-03), so this i
+          -s blocked explicitly and behaves the same in every            
+      103 -  browser. Nothing is stored. The status line under the button
+          - shows the summary and is a polite live region:               
+      100 +- R10 **Add to cart.** The box is a `form` with `noValidate`. 
+          +Without it, Chrome's native `min`/`max` check would           
+      101 +  block Enter with 15 before our handler runs, and R8's correc
+          +tion would never happen. R8 is the only quantity              
+      102 +  validation. "Add to cart" submits the form, and so does Ente
+          +r in the quantity field, after R8's correction. Enter         
+      103 +  on a radio button or on the frequency `select` never adds to
+          + the cart. Chromium submits a form on Enter in a radio        
+      104 +  (measured on 2026-11-03), so this is blocked explicitly and 
+          +behaves the same in every browser. Nothing is stored.         
+      105 +  The status line under the button shows the summary and is a 
+          +polite live region:                                           
+      106    - subscription: "Added to cart: 2 × Vitamin D, delivered eve
+           ry 60 days, $50.92."
+      107    - one-time: "Added to cart: 1 × Vitamin D, one-time purchase
+           , $29.95."
+      108  
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      107    - one-time: "Added to cart: 1 × Vitamin D, one-time purchase
+           , $29.95."
+      108  
+      109    The line clears when the option, the frequency or the quanti
+           ty changes, so it never describes an old selection.
+      110 -  Pressing "Add to cart" again announces it again.            
+      110 +  Pressing "Add to cart" again announces it again. While empty
+          +, the line takes no height or margin, so the default          
+      111 +  screenshot matches. When a message appears, the trust points
+          + and the fine print move down. That shift is accepted.        
+      112  
+      113  - R11 **Quantity corrections are shown and announced.** When R
+           8 changes a typed value, the status line says
+      114    "Quantity set to {n}. You can order 1 to 10 at a time." It i
+           s visible as well as announced. It clears on the next
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 9 lines, removed 5 lines
+      112  
+      113  - R11 **Quantity corrections are shown and announced.** When R
+           8 changes a typed value, the status line says
+      114    "Quantity set to {n}. You can order 1 to 10 at a time." It i
+           s visible as well as announced. It clears on the next
+      115 -  change, as in R10. A correction made by submitting comes fir
+          -st on the line, then the R10 summary, so both are             
+      116 -  seen. Normal steps aren't announced, because the field's val
+          -ue is already read.                                           
+      117 -- R12 **Responsive.** At 1200px the layout is the design's two
+          - columns. Below a breakpoint chosen in the plan, it           
+      118 -  becomes one column: the photo, then the box. There is no hor
+          -izontal scroll at 1024px, 768px, 375px or 320px               
+      119 -  (WCAG 1.4.10), in any state. Everything below 1200px is our 
+          -own layout, because the design shows only 1200px.             
+      115 +  change, as in R10. When a submit follows a correction, the l
+          +ine shows the correction first, then the R10                  
+      116 +  summary, so both are seen. This holds whether the submit cor
+          +rects the field itself (Enter) or the correction              
+      117 +  came on blur just before the submit, for example when the sh
+          +opper taps "Add to cart" while the field has focus.           
+      118 +  Normal steps aren't announced, because the field's value is 
+          +already read.                                                 
+      119 +- R12 **Responsive.** At 1200px the two-column grid matches th
+          +e design exactly: 64 / 540 / 64 / 468 / 64. Between           
+      120 +  960px and 1200px the grid shrinks, the photo column first, s
+          +o the box keeps its width as long as it can. Below            
+      121 +  960px it becomes one column: the photo, then the box. There 
+          +is no horizontal scroll at 1024px, 768px, 375px or            
+      122 +  320px (WCAG 1.4.10), in any state. Everything below 1200px i
+          +s our own layout, because the design shows only               
+      123 +  1200px.                                                     
+      124  - R13 **Keyboard and focus.** Every control works by keyboard 
+           alone, in DOM order. Every focusable element has a
+      125    visible `:focus-visible` indicator. The design shows none, s
+           o the default screenshot is unaffected. There is one
+      126    `h1`, "Vitamin D". The photo has descriptive alt text from `
+           copy.ts`.
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 4 lines, removed 2 lines
+      148        and the ratio is recorded in the CHANGELOG.
+      149  - [ ] R2: The committed baseline is byte-identical to `public/
+           reference/buy-box.png`. Changing either file makes the
+      150        test fail.
+      151 -- [ ] R1: Every rendered text node and accessible-name attribu
+          -te comes from `copy.ts`, in each state. Inline text           
+      152 -      makes the test fail.                                    
+      151 +- [ ] R1: In each state, every rendered text node and accessib
+          +le-name attribute is in an expected set, built only           
+      152 +      from `copy.ts` values, the money formatter applied to `c
+          +opy.ts` prices and the state's totals, and the                
+      153 +      `copy.ts` templates. Formatted prices aren't literals in
+          + `copy.ts`, so they come from the formatter. The              
+      154 +      quantity field's value isn't a text node, so it isn't co
+          +llected. Inline text makes the test fail.                     
+      155  - [ ] R3: A screen reader gets "Rated 4.8 out of 5" once, and 
+           the stars are hidden from it.
+      156  - [ ] R4, R5: Given the default state, when "One-time purchase
+           " is selected, then its card gets the selected style,
+      157        the subscription details and the fine print are gone, an
+           d the button reads "Add to cart · $29.95".
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      162        selected.
+      163  - [ ] R6, R9: Given the subscription, when 90 days is chosen, 
+           then the fine print says "every 90 days".
+      164  - [ ] R8, R9: Given the subscription, when + is pressed twice,
+            then the field shows 3, the button reads "Add to cart ·
+      165 -      $76.38" and the fine print says "at $76.38". The option 
+          -rows still show $25.46 and $29.95.                            
+      165 +      $76.38" and the fine print says "at $76.38". The option 
+          +rows still show $25.46 and $29.95, and the status             
+      166 +      line stays empty, because the buttons never submit.     
+      167  - [ ] R8: At 1, "Decrease quantity" is `aria-disabled`, has th
+           e same colour as "Increase quantity" and keeps focus
+      168        when pressed. At 10, "Increase quantity" does the same.
+      169  - [ ] R8: The field has `inputMode="numeric"` and no visible s
+           pinner. With the field focused and the pointer over
+
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 4 lines, removed 1 line
+      176  - [ ] R10: Given 2 × subscription every 60 days, when "Add to 
+           cart" is pressed, then the status line reads "Added
+      177        to cart: 2 × Vitamin D, delivered every 60 days, $50.92.
+           " in a polite live region. A later change clears it.
+      178  - [ ] R10, R11: Pressing Enter in the quantity field with 15 c
+           orrects it to 10, then adds to the cart. The line shows
+      179 -      the correction, then the summary.                       
+      179 +      the correction, then the summary. The form has `noValida
+          +te`, so the browser's own range check doesn't block it.       
+      180 +- [ ] R11: Typing 15, then clicking "Add to cart" while the fi
+          +eld still has focus, corrects the field to 10 on blur         
+      181 +      and adds 10 to the cart. The line shows the correction, 
+          +then the summary.                                             
+      182 +- [ ] R1, R10: In the default state, the empty status line has
+          + zero height.                                                 
+      183  - [ ] R10: Enter on either radio, and on the frequency `select
+           `, doesn't add to the cart.
+      184  - [ ] R12: At 1024px and 768px there is no horizontal scroll. 
+           At 375px and 320px the layout is one column with no
+      185        horizontal scroll. Each is checked in the default and on
+           e-time states.
+● Update(SPECS/005-b-buy-box/spec.md)
+  ⎿  Added 2 lines
+      181        and adds 10 to the cart. The line shows the correction, 
+           then the summary.
+      182  - [ ] R1, R10: In the default state, the empty status line has
+            zero height.
+      183  - [ ] R10: Enter on either radio, and on the frequency `select
+           `, doesn't add to the cart.
+      184 +- [ ] R12: At 1200px the columns are 64 / 540 / 64 / 468 / 64 
+          +(the geometry test). At 1024px the layout is still two        
+      185 +      columns, with the photo column narrower and the box at f
+          +ull width.                                                    
+      186  - [ ] R12: At 1024px and 768px there is no horizontal scroll. 
+           At 375px and 320px the layout is one column with no
+      187        horizontal scroll. Each is checked in the default and on
+           e-time states.
+      188  - [ ] R13: A keyboard-only run reaches every control, picks on
+           e-time, the subscription, 60 days and a quantity of 2,
+
+● Spec's done. Next I'll mark the plan Approved, add noValidate to the markup,
+  and add the subtitle two-line assertion to the geometry test—first grepping
+  current line numbers since Prettier reflowed the plan.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # 005: Plan
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  Spec: [spec.md](spec.md) (Approved)
+      6  
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 1 line, removed 1 line
+      188        h1.title
+      189        p.subtitle
+      190        hr.divider
+      191 -      form(onSubmit, onKeyDown = Enter guard)                 
+      191 +      form(noValidate, onSubmit, onKeyDown = Enter guard)     
+      192          fieldset.options > legend.visuallyHidden
+      193            div.card(onClick = select this option)      one-time
+      194              label.header > input[type=radio] · span.label · sp
+           an.price
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 3 lines, removed 1 line
+      216    `no-static-element-interactions`) are disabled on that one l
+           ine, with a comment: the radio is the keyboard path,
+      217    and the handler is only a larger pointer target.
+      218  - **Enter guard (R10).** In the form's `onKeyDown`, Enter on a
+           n `input[type=radio]` or a `select` calls
+      219 -  `preventDefault()`. Enter in the quantity field still submit
+          -s.                                                            
+      219 +  `preventDefault()`. Enter in the quantity field still submit
+          +s. The form has `noValidate`, so Chrome's native              
+      220 +  `min`/`max` check can't block a submit with 15 before `cart/
+          +added` corrects it. Both stepper buttons are                  
+      221 +  `type="button"`, so they never submit.                      
+      222  - **Wheel guard (R8).** React's `onWheel` is passive and can't
+            cancel the event. So an effect adds a native
+      223    `wheel` listener with `{ passive: false }` that calls `preve
+           ntDefault()` while the field has focus.
+      224  - **Spinners (R8).** `appearance: textfield` and `::-webkit-in
+           ner-spin-button { appearance: none; margin: 0 }`.
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 5 lines, removed 1 line
+      310  1. **Byte check.** `e2e/__screenshots__/buy-box.png` equals `p
+           ublic/reference/buy-box.png` byte for byte. This runs
+      311     in Node and needs no page.
+      312  2. **Geometry.** With the nav hidden, the boxes of the photo c
+           ard, the image, the divider, both cards, the badge,
+      313 -   the select, the stepper and the button match the layout tab
+          -le within ±1 px.                                              
+      313 +   the select, the stepper and the button match the layout tab
+          +le within ±1 px. Two more checks:                             
+      314 +   - **Subtitle lines.** The subtitle renders on exactly two l
+          +ines: the distinct `top` values of                            
+      315 +     `Range.getClientRects()` over its text. If not, the test 
+          +fails with "Subtitle wraps to N lines, the design has         
+      316 +     2", so a change in font size, letter-spacing or column wi
+          +dth shows up by name, not as a vague pixel diff.              
+      317 +   - **Empty status line.** It has zero height (spec R1, R10).
+      318  3. **Pixels.** The test hides the nav with `page.addStyleTag`.
+            It waits for `document.fonts.ready` and fails with a
+      319     clear message if `document.fonts.check("600 44px Fraunces")
+           ` or the Inter check is false (the fonts load from
+      320     the network). Then:
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 3 lines, removed 1 line
+      236  ## Responsive (R12)
+      237  
+      238  - **At 960px and wider:** two columns, `minmax(0, 540px) minma
+           x(420px, 468px)`. Both the gap and the side padding
+      239 -  are `clamp(32px, 5.333vw, 64px)`, which is exactly 64 at 120
+          -0. The photo scales inside its square card.                   
+      239 +  are `clamp(32px, 5.333vw, 64px)`, which is exactly 64 at 120
+          +0. The photo column absorbs the shrink first. At              
+      240 +  1024px the padding and gap are about 54.6 each, the box keep
+          +s 468 and the photo column is about 392. The photo            
+      241 +  scales inside its square card.                              
+      242  - **Below 960px:** one column, `max-width: 560px`, centred, wi
+           th a 16px side padding. The photo comes first.
+      243  - **Option header:** a wrapping flex row. The badge drops to i
+           ts own line when space runs out, and the price block
+      244    stays top-right.
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 2 lines
+      286    - the card padding click
+      287    - `aria-disabled` at both limits, with focus kept
+      288    - typing and blur corrections
+      289 +  - 15, then clicking "Add to cart" while the field has focus,
+          + gives the correction, then the summary                       
+      290 +  - "+" pressed twice leaves the status line empty            
+      291    - a cleared field keeps the old total
+      292    - Enter on a radio or the select doesn't submit
+      293    - Enter in the field does
+
+● Now the task list, so T3 and T8 name the new points explicitly. Then the
+  CHANGELOG entry and Prettier:
+
+● Bash(python3 -I - <<'EOF'
+      p="SPECS/005-b-buy-box/task.md"; s=open(p).read()…)
+  ⎿  Updated SPECS/005-b-buy-box/task.md (+4 -2)
+       7        ignored case, the status clearing, `seq` on a repeated ad
+          d, and the correction before the summary on both
+       8        submit paths
+       9  - [ ] T3 (R1, R3–R11, R13): `BuyBox.tsx` markup and behaviour, 
+          with only enough CSS to work: the form, the fieldset,
+      10 -      a label around the header row only, the card click handle
+         -r, the select, the stepper with `aria-disabled`,               
+      10 +      a label around the header row only, the card click handle
+         +r, the select, the form with `noValidate`, the stepper with `ty
+         +pe="button"` and `aria-disabled`,                              
+      11        `inputMode`, the wheel guard and the Enter guard, the key
+          ed status line, the fine print and
+      12        `data-contrast-exception`. Component tests, including the
+           no-inline-text test
+      13  - [ ] T4 (R2): the `visual` Playwright project (1200×780, DPR 2
+          , its own `snapshotPathTemplate`), with `mobile` and
+     ...
+      15        with the diff image and the ratio attached. The font chec
+          k, the hidden nav and the 2400×1560 size check. The
+      16        pixel and geometry assertions are `test.fixme` until T5
+      17  - [ ] T5 (R2, R8): `BuyBox.module.css` to the plan's measuremen
+          ts and tokens. Tune the type against the diff, record
+      18 -      the final values in `plan.md`, turn on the geometry and p
+         -ixel tests, set `TOLERANCE`, and record both ratios in         
+      18 +      the final values in `plan.md`, turn on the geometry test 
+         +(including the subtitle's two lines and the zero-height status 
+         +line) and the pixel test, set `TOLERANCE`, and record both rati
+         +os in                                                          
+      19        the CHANGELOG
+      20  - [ ] T6 (R12): the layout below 1200px (two columns at 960px a
+          nd wider, one column below), plus the e2e reflow at
+      21        1024, 768, 375 and 320 in the default and one-time states
+          , and a quantity of 10 at 320
+     ...
+      25    - collapse and restore
+      26    - totals
+      27    - corrections, with the visible line
+      28 +  - 15, then clicking "Add to cart" while the field has focus: 
+         +the correction, then the summary                               
+      29 +  - Enter with 15: no native validation bubble, corrected to 10
+         +, then added                                                   
+      30    - Enter on the radios, the select and the field
+      31    - the wheel
+      32    - `aria-disabled` focus
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 26 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box: second spec review, plan Approved
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `spec.md`, with the human's 6 changes:                     
+       9 +    - R10: the form has `noValidate`                           
+      10 +    - R8: both stepper buttons are `type="button"`, and the "+ 
+         +twice" criterion now expects an empty status line              
+      11 +    - R1, R10: the empty status line takes no height, and the s
+         +hift below it is accepted                                      
+      12 +    - R11: a correction on blur followed by a submit also shows
+         + the correction, then the summary, with a new                  
+      13 +      criterion                                                
+      14 +    - R1: the no-inline-text criterion builds its expected set 
+         +from `copy.ts` values, the formatter and the                   
+      15 +      templates                                                
+      16 +    - R12: an exact 64/540/64/468/64 grid at 1200 that shrinks,
+         + the photo column first, down to 960                           
+      17 +  - `plan.md`, set to Approved:                                
+      18 +    - `noValidate` in the markup and the Enter guard           
+      19 +    - the geometry test also asserts that the subtitle has exac
+         +tly two lines (distinct `Range.getClientRects()`               
+      20 +      tops, with a named failure message) and that the empty st
+         +atus line has zero height                                      
+      21 +    - the 1024px figures                                       
+      22 +    - two more component-test cases                            
+      23 +  - `task.md`: T3, T5 and T8 name these points.                
+      24 +  - The R8 wording no longer splits `cursor: not-allowed` acros
+         +s a code-span line break, a Prettier reflow                    
+      25 +    artefact from the last pass.                               
+      26 +- **Decisions:** none beyond the human's. `noValidate` is requi
+         +red, not cosmetic. Without it, Chrome's                        
+      27 +  constraint validation stops the submit event, so neither the 
+         +R8 correction nor `cart/added` would run on Enter              
+      28 +  with 15.                                                     
+      29 +- **Verified:** `prettier --check .` passes. Docs only, so no c
+         +ode checks were needed.                                        
+      30 +                                                               
+      31  ## 2026-11-03: 005-b-buy-box: spec Approved, plan and tasks dra
+          fted
+      32  
+      33  - **Changed:**
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Prettier keeps prose as written, so lines 10 and 18 of task.md are now longer
+  than the 120 characters the rest of the file uses. I'll rewrap them:
+
+● Update(SPECS/005-b-buy-box/task.md)
+  ⎿  Added 3 lines, removed 3 lines
+       7        ignored case, the status clearing, `seq` on a repeated ad
+          d, and the correction before the summary on both
+       8        submit paths
+       9  - [ ] T3 (R1, R3–R11, R13): `BuyBox.tsx` markup and behaviour, 
+          with only enough CSS to work: the form, the fieldset,
+      10 -      a label around the header row only, the card click handle
+         -r, the select, the form with `noValidate`, the stepper with `ty
+         -pe="button"` and `aria-disabled`,                              
+      11 -      `inputMode`, the wheel guard and the Enter guard, the key
+         -ed status line, the fine print and                             
+      12 -      `data-contrast-exception`. Component tests, including the
+         - no-inline-text test                                           
+      10 +      a label around the header row only, the card click handle
+         +r, the select, the form with `noValidate`, the                 
+      11 +      stepper with `type="button"` and `aria-disabled`, `inputM
+         +ode`, the wheel guard and the Enter guard, the keyed           
+      12 +      status line, the fine print and `data-contrast-exception`
+         +. Component tests, including the no-inline-text test           
+      13  - [ ] T4 (R2): the `visual` Playwright project (1200×780, DPR 2
+          , its own `snapshotPathTemplate`), with `mobile` and
+      14        `desktop` ignoring it. The committed baseline copy and th
+          e byte-identical test. `e2e/visual.ts` `diffImages`,
+      15        with the diff image and the ratio attached. The font chec
+          k, the hidden nav and the 2400×1560 size check. The
+
+● Update(SPECS/005-b-buy-box/task.md)
+  ⎿  Added 2 lines, removed 2 lines
+      15        with the diff image and the ratio attached. The font chec
+          k, the hidden nav and the 2400×1560 size check. The
+      16        pixel and geometry assertions are `test.fixme` until T5
+      17  - [ ] T5 (R2, R8): `BuyBox.module.css` to the plan's measuremen
+          ts and tokens. Tune the type against the diff, record
+      18 -      the final values in `plan.md`, turn on the geometry test 
+         -(including the subtitle's two lines and the zero-height status 
+         -line) and the pixel test, set `TOLERANCE`, and record both rati
+         -os in                                                          
+      19 -      the CHANGELOG                                            
+      18 +      the final values in `plan.md`, turn on the geometry test 
+         +(including the subtitle's two lines and the                    
+      19 +      zero-height status line) and the pixel test, set `TOLERAN
+         +CE`, and record both ratios in the CHANGELOG                   
+      20  - [ ] T6 (R12): the layout below 1200px (two columns at 960px a
+          nd wider, one column below), plus the e2e reflow at
+      21        1024, 768, 375 and 320 in the default and one-time states
+          , and a quantity of 10 at 320
+      22  - [ ] T7 (R14): `expectAccessibleBuyBox` with the two axe runs,
+           and the Part B smoke test switched to it. E2e axe
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I made all six spec changes and the plan addition. spec.md
+  (SPECS/005-b-buy-box/spec.md) and plan.md (SPECS/005-b-buy-box/plan.md) are
+  both Approved, and I updated task.md (SPECS/005-b-buy-box/task.md) to match.
+  Prettier passes. Only docs changed, so I didn't run the code checks, and
+  nothing is committed yet.
+
+  Spec changes:
+  1. R10: the form has noValidate. Without it, Chrome's built-in range check
+     stops the submit, so Enter with 15 would never be corrected or added. The
+     R8 correction is now the only quantity validation.
+  2. R8: both stepper buttons are type="button". The "+ pressed twice" criterion
+     now also expects the status line to stay empty.
+  3. R1/R10: the empty status line takes no height. When a message appears, the
+     trust points and fine print move down, and the spec accepts that. A new
+     criterion checks the zero height in the default state.
+  4. R11: typing 15 and then clicking "Add to cart" while the field still has
+     focus shows the correction, then the summary, the same as Enter does.
+     There's a new criterion for exactly that click.
+  5. R1 criterion: the expected text is built from copy.ts values, the money
+     formatter and the templates. The field's value is a property, not a text
+     node, so the test doesn't collect it.
+  6. R12: at 1200px the columns are exactly 64/540/64/468/64. Between 960 and
+     1200px the photo column shrinks first; at 1024px the box keeps its full
+     468px and the photo column is about 392px. There's a new criterion for
+     this.
+
+  Plan: the geometry test now also checks that the subtitle renders on exactly
+  two lines. If it doesn't, it fails with "Subtitle wraps to N lines, the design
+  has 2", so a font or width change is named instead of showing up as a vague
+  pixel difference. The plan also adds noValidate and type="button" to the
+  markup notes, the 1024px figures, and two more component tests.
+
+  Tasks: T3, T5 and T8 now list these points, including an e2e check that Enter
+  with 15 shows no browser validation popup.
+
+  While editing, I also fixed a formatting problem from the last pass: Prettier
+  had split cursor: not-allowed in R8 across two lines inside a code span. A
+  CHANGELOG (SPECS/CHANGELOG.md) entry records this review.
+
+  I'll start T1 when you say go: the copy.ts additions and the buyBox.ts
+  helpers, with their unit tests.

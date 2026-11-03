@@ -1,0 +1,1148 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/005-b-buy-box/task.md in the IDE.
+  This may or may not be related to the current task.</ide_opened_file>
+
+❯ lets start with T5
+
+  Read 3 files, listed 1 directory, ran 3 shell commands (ctrl+o to expand)
+
+● Reading the reference image and the app shell so I can write the CSS against
+  the plan's measurements.
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● Writing the full stylesheet from the plan's measurements, then I'll screenshot
+  it and diff against the reference to tune.
+
+● Write(src/part-b/BuyBox.module.css)
+  ⎿  Added 412 lines, removed 7 lines
+       1 -/* 005: only what the behaviour needs (T3). T5 adds the measure
+         -d layout, tokens and type from plan.md. */                     
+       1 +/*                                                             
+       2 + * 005: the buy box, to the measurements and tokens in SPECS/00
+         +5-b-buy-box/plan.md.                                           
+       3 + * Layout values are CSS px at 1200×780. The type values are tu
+         +ned against the diff (plan.md, "Type").                        
+       4 + */                                                            
+       5  
+       6 +/* The design has no body margin and a warm page colour. Scoped
+         + with :has() so Part A is untouched. */                        
+       7 +:global(body):has(.page) {                                     
+       8 +  margin: 0;                                                   
+       9 +  background: #fbf8f3;                                         
+      10 +}                                                              
+      11 +                                                               
+      12 +.page {                                                        
+      13 +  --page: #fbf8f3;                                             
+      14 +  --surface: #fff;                                             
+      15 +  --tint: #f3f6f2;                                             
+      16 +  --ink: #1c2420;                                              
+      17 +  --ink-muted: #4a5550;                                        
+      18 +  --ink-subtle: #6b7a70;                                       
+      19 +  --ink-faint: #8a948e;                                        
+      20 +  --brand: #17402f;                                            
+      21 +  --line: #e7e1d6;                                             
+      22 +  --line-option: #e1dbcf;                                      
+      23 +  --line-control: #cfd6d0;                                     
+      24 +  --radio-off: #9aa59e;                                        
+      25 +  --star: #d8a23a;                                             
+      26 +  --badge-bg: #f6e7c4;                                         
+      27 +  --badge-ink: #7a5a12;                                        
+      28 +                                                               
+      29 +  box-sizing: border-box;                                      
+      30 +  min-block-size: 100vh;                                       
+      31 +  padding: 56px clamp(32px, 5.333vw, 64px);                    
+      32 +  background: var(--page);                                     
+      33 +  color: var(--ink);                                           
+      34 +  font-family: Inter, system-ui, sans-serif;                   
+      35 +  font-size: 16px;                                             
+      36 +  -webkit-font-smoothing: antialiased;                         
+      37 +}                                                              
+      38 +                                                               
+      39 +.page *,                                                       
+      40 +.page *::before,                                               
+      41 +.page *::after {                                               
+      42 +  box-sizing: border-box;                                      
+      43 +}                                                              
+      44 +                                                               
+      45  .visuallyHidden {
+      46    position: absolute;
+      47    width: 1px;
+     ...
+       54    border: 0;
+       55  }
+       56  
+       57 +/* R13: one visible focus style for every control. */         
+       58 +.page :focus-visible {                                        
+       59 +  outline: 2px solid var(--brand);                            
+       60 +  outline-offset: 2px;                                        
+       61 +}                                                             
+       62 +                                                              
+       63 +/* R12: 64 / 540 / 64 / 468 / 64 at 1200. The photo column abs
+          +orbs the shrink first. */                                     
+       64 +.layout {                                                     
+       65 +  display: grid;                                              
+       66 +  grid-template-columns: minmax(0, 540px) minmax(420px, 468px)
+          +;                                                             
+       67 +  justify-content: start;                                     
+       68 +  column-gap: clamp(32px, 5.333vw, 64px);                     
+       69 +  align-items: start;                                         
+       70 +}                                                             
+       71 +                                                              
+       72 +@media (max-width: 959px) {                                   
+       73 +  .page {                                                     
+       74 +    padding: 24px 16px;                                       
+       75 +  }                                                           
+       76 +                                                              
+       77 +  .layout {                                                   
+       78 +    grid-template-columns: minmax(0, 1fr);                    
+       79 +    max-inline-size: 560px;                                   
+       80 +    margin-inline: auto;                                      
+       81 +    row-gap: 24px;                                            
+       82 +  }                                                           
+       83 +}                                                             
+       84 +                                                              
+       85 +/* Photo card: 540×540, the 500×500 photo centred in it. */   
+       86 +.photoCard {                                                  
+       87 +  display: grid;                                              
+       88 +  place-items: center;                                        
+       89 +  aspect-ratio: 1;                                            
+       90 +  border: 1px solid var(--line);                              
+       91 +  border-radius: 20px;                                        
+       92 +  background: var(--surface);                                 
+       93 +}                                                             
+       94 +                                                              
+       95 +.photo {                                                      
+       96 +  display: block;                                             
+       97 +  inline-size: calc(100% - 38px);                             
+       98 +  block-size: auto;                                           
+       99 +  aspect-ratio: 1;                                            
+      100 +}                                                             
+      101 +                                                              
+      102 +.box {                                                        
+      103 +  min-inline-size: 0;                                         
+      104 +}                                                             
+      105 +                                                              
+      106 +.eyebrow {                                                    
+      107 +  margin: 0;                                                  
+      108 +  color: var(--ink-subtle);                                   
+      109 +  font-size: 13px;                                            
+      110 +  font-weight: 600;                                           
+      111 +  line-height: 15px;                                          
+      112 +  letter-spacing: 0.12em;                                     
+      113 +  text-transform: uppercase;                                  
+      114 +}                                                             
+      115 +                                                              
+      116 +.rating {                                                     
+      117 +  display: flex;                                              
+      118 +  align-items: center;                                        
+      119 +  gap: 8px;                                                   
+      120 +  margin: 11px 0 0;                                           
+      121 +  font-size: 15px;                                            
+      122 +  line-height: 22px;                                          
+      123 +}                                                             
+      124 +                                                              
+      125 +.stars {                                                      
+      126 +  display: inline-flex;                                       
+      127 +  align-items: center;                                        
+      128 +  gap: 4px;                                                   
+      129 +  color: var(--ink);                                          
+      130 +  font-weight: 600;                                           
+      131 +}                                                             
+      132 +                                                              
+      133 +.stars svg {                                                  
+      134 +  color: var(--star);                                         
+      135 +}                                                             
+      136 +                                                              
+      137 +.stars svg:last-of-type {                                     
+      138 +  margin-inline-end: 5.5px;                                   
+      139 +}                                                             
+      140 +                                                              
+      141 +.reviews {                                                    
+      142 +  color: var(--ink-subtle);                                   
+      143 +  text-decoration: underline;                                 
+      144 +  text-underline-offset: 3px;                                 
+      145 +  text-decoration-thickness: 1px;                             
+      146 +}                                                             
+      147 +                                                              
+      148 +.title {                                                      
+      149 +  margin: 8px 0 0;                                            
+      150 +  color: var(--brand);                                        
+      151 +  font-family: Fraunces, Georgia, serif;                      
+      152 +  font-size: 44px;                                            
+      153 +  font-weight: 600;                                           
+      154 +  line-height: 1.1;                                           
+      155 +}                                                             
+      156 +                                                              
+      157 +.subtitle {                                                   
+      158 +  margin: 13px 0 0;                                           
+      159 +  color: var(--ink-muted);                                    
+      160 +  font-size: 17px;                                            
+      161 +  line-height: 25.5px;                                        
+      162 +}                                                             
+      163 +                                                              
+      164 +.divider {                                                    
+      165 +  margin: 27px 0 24px;                                        
+      166 +  border: 0;                                                  
+      167 +  border-block-start: 1px solid var(--line);                  
+      168 +}                                                             
+      169 +                                                              
+      170 +.form {                                                       
+      171 +  margin: 0;                                                  
+      172 +}                                                             
+      173 +                                                              
+      174 +.options {                                                    
+      175 +  display: flex;                                              
+      176 +  flex-direction: column;                                     
+      177 +  gap: 12px;                                                  
+      178 +  margin: 0;                                                  
+      179 +  padding: 0;                                                 
+      180 +  border: 0;                                                  
+      181 +  min-inline-size: 0;                                         
+      182 +}                                                             
+      183 +                                                              
+      184  /* R4: the card's padding is a pointer target. The radio stays
+            the keyboard path. */
+      185  .card {
+      186 +  padding: 19px 20px;                                         
+      187 +  border: 1px solid var(--line-option);                       
+      188 +  border-radius: 12px;                                        
+      189 +  background: var(--surface);                                 
+      190    cursor: pointer;
+      191  }
+      192  
+       20 -/* R14 (WCAG 2.5.8): unstyled, these targets are under 24px an
+          -d adjacent. T5 sets the design's 56px row. */                 
+      193 +/* R4: both cards have a 1px border, and the selected one adds
+          + a 1px inset ring, so nothing shifts. */                      
+      194 +.card:has(input:checked) {                                    
+      195 +  border-color: var(--brand);                                 
+      196 +  background: var(--tint);                                    
+      197 +  box-shadow: inset 0 0 0 1px var(--brand);                   
+      198 +}                                                             
+      199 +                                                              
+      200 +.header {                                                     
+      201 +  display: flex;                                              
+      202 +  align-items: center;                                        
+      203 +  flex-wrap: wrap;                                            
+      204 +  gap: 4px 12px;                                              
+      205 +  min-block-size: 20px;                                       
+      206 +  cursor: pointer;                                            
+      207 +}                                                             
+      208 +                                                              
+      209 +.radio {                                                      
+      210 +  appearance: none;                                           
+      211 +  flex: none;                                                 
+      212 +  inline-size: 20px;                                          
+      213 +  block-size: 20px;                                           
+      214 +  margin: 0;                                                  
+      215 +  border: 1.5px solid var(--radio-off);                       
+      216 +  border-radius: 50%;                                         
+      217 +  background: var(--surface);                                 
+      218 +  cursor: pointer;                                            
+      219 +}                                                             
+      220 +                                                              
+      221 +.radio:checked {                                              
+      222 +  border: 2px solid var(--brand);                             
+      223 +  background: var(--brand);                                   
+      224 +  box-shadow: inset 0 0 0 3px var(--tint);                    
+      225 +}                                                             
+      226 +                                                              
+      227 +.label {                                                      
+      228 +  font-size: 17px;                                            
+      229 +  font-weight: 600;                                           
+      230 +  line-height: 20px;                                          
+      231 +}                                                             
+      232 +                                                              
+      233 +.price {                                                      
+      234 +  margin-inline-start: auto;                                  
+      235 +  font-size: 19px;                                            
+      236 +  font-weight: 600;                                           
+      237 +  line-height: 20px;                                          
+      238 +}                                                             
+      239 +                                                              
+      240 +.badge {                                                      
+      241 +  padding: 0 12px;                                            
+      242 +  border-radius: 999px;                                       
+      243 +  background: var(--badge-bg);                                
+      244 +  color: var(--badge-ink);                                    
+      245 +  font-size: 11px;                                            
+      246 +  font-weight: 700;                                           
+      247 +  line-height: 21px;                                          
+      248 +  letter-spacing: 0.08em;                                     
+      249 +  text-transform: uppercase;                                  
+      250 +}                                                             
+      251 +                                                              
+      252 +.prices {                                                     
+      253 +  display: flex;                                              
+      254 +  flex-direction: column;                                     
+      255 +  align-items: flex-end;                                      
+      256 +  margin-inline-start: auto;                                  
+      257 +}                                                             
+      258 +                                                              
+      259 +.prices .price {                                              
+      260 +  margin: 0;                                                  
+      261 +  line-height: 22px;                                          
+      262 +}                                                             
+      263 +                                                              
+      264 +.compare {                                                    
+      265 +  margin-block-start: 2px;                                    
+      266 +  color: var(--ink-faint);                                    
+      267 +  font-size: 13px;                                            
+      268 +  font-weight: 400;                                           
+      269 +  line-height: 16px;                                          
+      270 +}                                                             
+      271 +                                                              
+      272 +/* R5: shown only while subscribed. Indented to the label's x 
+          +(radio 20 + gap 12). */                                       
+      273 +.details {                                                    
+      274 +  margin-block-start: 13px;                                   
+      275 +  padding-inline-start: 32px;                                 
+      276 +  cursor: default;                                            
+      277 +}                                                             
+      278 +                                                              
+      279 +.frequency {                                                  
+      280 +  display: flex;                                              
+      281 +  align-items: center;                                        
+      282 +  gap: 10px;                                                  
+      283 +  color: var(--ink-muted);                                    
+      284 +  font-size: 15px;                                            
+      285 +}                                                             
+      286 +                                                              
+      287 +.selectWrap {                                                 
+      288 +  position: relative;                                         
+      289 +  display: inline-flex;                                       
+      290 +  color: var(--ink-muted);                                    
+      291 +}                                                             
+      292 +                                                              
+      293 +.select {                                                     
+      294 +  appearance: none;                                           
+      295 +  block-size: 33px;                                           
+      296 +  min-inline-size: 115.5px;                                   
+      297 +  margin: 0;                                                  
+      298 +  padding: 0 34px 0 13px;                                     
+      299 +  border: 1px solid var(--line-control);                      
+      300 +  border-radius: 8px;                                         
+      301 +  background: var(--surface);                                 
+      302 +  color: var(--ink);                                          
+      303 +  font: inherit;                                              
+      304 +  font-size: 15px;                                            
+      305 +  cursor: pointer;                                            
+      306 +}                                                             
+      307 +                                                              
+      308 +.selectWrap svg {                                             
+      309 +  position: absolute;                                         
+      310 +  inset-block-start: 50%;                                     
+      311 +  inset-inline-end: 12px;                                     
+      312 +  translate: 0 -50%;                                          
+      313 +  pointer-events: none;                                       
+      314 +}                                                             
+      315 +                                                              
+      316 +.perks {                                                      
+      317 +  display: grid;                                              
+      318 +  gap: 5px;                                                   
+      319 +  margin: 12px 0 0;                                           
+      320 +  padding: 0;                                                 
+      321 +  list-style: none;                                           
+      322 +  color: var(--ink-muted);                                    
+      323 +  font-size: 15px;                                            
+      324 +  line-height: 20px;                                          
+      325 +}                                                             
+      326 +                                                              
+      327 +.perks li {                                                   
+      328 +  display: flex;                                              
+      329 +  align-items: center;                                        
+      330 +  gap: 10px;                                                  
+      331 +}                                                             
+      332 +                                                              
+      333 +.perks svg {                                                  
+      334 +  flex: none;                                                 
+      335 +  margin-inline-start: 2px;                                   
+      336 +  color: var(--brand);                                        
+      337 +}                                                             
+      338 +                                                              
+      339 +.purchaseRow {                                                
+      340 +  display: flex;                                              
+      341 +  flex-wrap: wrap;                                            
+      342 +  gap: 12px;                                                  
+      343 +  margin-block-start: 24px;                                   
+      344 +}                                                             
+      345 +                                                              
+      346 +.stepper {                                                    
+      347 +  display: grid;                                              
+      348 +  grid-template-columns: 44px minmax(0, 1fr) 44px;            
+      349 +  align-items: stretch;                                       
+      350 +  flex: 0 0 128px;                                            
+      351 +  block-size: 56px;                                           
+      352 +  border: 1px solid var(--line-control);                      
+      353 +  border-radius: 10px;                                        
+      354 +  background: var(--surface);                                 
+      355 +}                                                             
+      356 +                                                              
+      357 +/* R14 (WCAG 2.5.8): the targets are at least 44px. */        
+      358  .step,
+      359  .quantity,
+      360  .addToCart {
+     ...
+      362    min-block-size: 44px;
+      363  }
+      364  
+       28 -/* R8: no spinner arrows, as in the design. The arrow keys sti
+          -ll step natively. */                                          
+      365 +.step {                                                       
+      366 +  display: grid;                                              
+      367 +  place-items: center;                                        
+      368 +  padding: 0;                                                 
+      369 +  border: 0;                                                  
+      370 +  background: none;                                           
+      371 +  color: var(--ink-muted);                                    
+      372 +  cursor: pointer;                                            
+      373 +}                                                             
+      374 +                                                              
+      375 +/* R8: at a limit the button keeps its colour. The cursor is t
+          +he only visual change. */                                     
+      376 +.step[aria-disabled="true"] {                                 
+      377 +  cursor: not-allowed;                                        
+      378 +}                                                             
+      379 +                                                              
+      380  .quantity {
+      381 +  inline-size: 100%;                                          
+      382 +  min-inline-size: 0;                                         
+      383 +  margin: 0;                                                  
+      384 +  padding: 0;                                                 
+      385 +  border: 0;                                                  
+      386 +  background: none;                                           
+      387 +  color: var(--ink);                                          
+      388 +  font: inherit;                                              
+      389 +  font-size: 16px;                                            
+      390 +  font-weight: 600;                                           
+      391 +  text-align: center;                                         
+      392 +  /* R8: no spinner arrows, as in the design. The arrow keys s
+          +till step natively. */                                        
+      393    appearance: textfield;
+      394  }
+      395  
+     ...
+      399    margin: 0;
+      400  }
+      401  
+       39 -/* R8: at a limit the button keeps its colour. The cursor is t
+          -he only visual change. */                                     
+       40 -.step[aria-disabled="true"] {                                 
+       41 -  cursor: not-allowed;                                        
+      402 +.addToCart {                                                  
+      403 +  flex: 1 1 180px;                                            
+      404 +  block-size: 56px;                                           
+      405 +  padding: 0 16px;                                            
+      406 +  border: 0;                                                  
+      407 +  border-radius: 10px;                                        
+      408 +  background: var(--brand);                                   
+      409 +  color: #fff;                                                
+      410 +  font: inherit;                                              
+      411 +  font-size: 17px;                                            
+      412 +  font-weight: 600;                                           
+      413 +  cursor: pointer;                                            
+      414  }
+      415  
+       44 -/* R1, R10: the empty status line takes no height or margin, s
+          -o the default screenshot is unaffected. */                    
+      416 +/* R10, R11: visible, and the empty line takes no height or ma
+          +rgin, so the default screenshot is unaffected. */             
+      417 +.status {                                                     
+      418 +  margin: 12px 0 0;                                           
+      419 +  color: var(--ink-muted);                                    
+      420 +  font-size: 14px;                                            
+      421 +  line-height: 20px;                                          
+      422 +}                                                             
+      423 +                                                              
+      424  .status:empty {
+      425    margin: 0;
+      426  }
+      427 +                                                              
+      428 +.trust {                                                      
+      429 +  display: flex;                                              
+      430 +  flex-wrap: wrap;                                            
+      431 +  gap: 6px 24px;                                              
+      432 +  margin: 18px 0 0;                                           
+      433 +  padding: 0;                                                 
+      434 +  list-style: none;                                           
+      435 +  color: var(--brand);                                        
+      436 +  font-size: 13px;                                            
+      437 +  font-weight: 500;                                           
+      438 +  line-height: 20px;                                          
+      439 +}                                                             
+      440 +                                                              
+      441 +.trust li {                                                   
+      442 +  display: flex;                                              
+      443 +  align-items: center;                                        
+      444 +  gap: 7.5px;                                                 
+      445 +}                                                             
+      446 +                                                              
+      447 +.finePrint {                                                  
+      448 +  margin: 14px 0 0;                                           
+      449 +  color: var(--ink-subtle);                                   
+      450 +  font-size: 13px;                                            
+      451 +  line-height: 18.5px;                                        
+      452 +}                                                             
+
+  Read 1 file, ran 3 shell commands (ctrl+o to expand)
+
+● Layout is already within a couple of CSS px. The Inter sizes read about 5–8%
+  too large, so I'm tuning type from measured text widths. First, title variants
+  scored by region diff.
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+● Bash(cd /home/eiffelike/work/natura_wellness/src/part-b && python3 - <<'EOF'
+      import re…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+16 -9)
+      106  .eyebrow {
+      107    margin: 0;
+      108    color: var(--ink-subtle);
+      109 -  font-size: 13px;                                            
+      109 +  font-size: 12px;                                            
+      110    font-weight: 600;
+      111    line-height: 15px;
+      112    letter-spacing: 0.12em;
+     ...
+      118    align-items: center;
+      119    gap: 8px;
+      120    margin: 11px 0 0;
+      121 -  font-size: 15px;                                            
+      121 +  font-size: 14px;                                            
+      122    line-height: 22px;
+      123  }
+      124  
+     ...
+      146  }
+      147  
+      148  .title {
+      149 -  margin: 8px 0 0;                                            
+      149 +  margin: 9.5px 0 0;                                          
+      150    color: var(--brand);
+      151    font-family: Fraunces, Georgia, serif;
+      152    font-size: 44px;
+      153 -  font-weight: 600;                                           
+      153 +  font-weight: 500;                                           
+      154    line-height: 1.1;
+      155 +  letter-spacing: -0.005em;                                   
+      156  }
+      157  
+      158  .subtitle {
+      159    margin: 13px 0 0;
+      160    color: var(--ink-muted);
+      160 -  font-size: 17px;                                            
+      161 +  font-size: 16px;                                            
+      162    line-height: 25.5px;
+      163  }
+      164  
+     ...
+      226  }
+      227  
+     … 40 more lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p="BuyBox.module.css"; s=open(p).read()…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+22 -9)
+      146  }
+      147  
+      148  .title {
+      149 -  margin: 9.5px 0 0;                                          
+      149 +  margin: 9px 0 0;                                            
+      150    color: var(--brand);
+      151    font-family: Fraunces, Georgia, serif;
+      152    font-size: 44px;
+     ...
+      156  }
+      157  
+      158  .subtitle {
+      159 -  margin: 13px 0 0;                                           
+      159 +  margin: 12.5px 0 0;                                         
+      160    color: var(--ink-muted);
+      161    font-size: 16px;
+      162    line-height: 25.5px;
+      163 +  letter-spacing: -0.005em;                                   
+      164  }
+      165  
+      166  .divider {
+     ...
+      192    cursor: pointer;
+      193  }
+      194  
+      195 +/* The subscription card's header is taller, so its top paddin
+          +g is tuned to put the badge at y 376.5. */                    
+      196 +.card:has(.prices) {                                          
+      197 +  padding-block: 18.5px;                                      
+      198 +}                                                             
+      199 +                                                              
+      200  /* R4: both cards have a 1px border, and the selected one adds
+            a 1px inset ring, so nothing shifts. */
+      201  .card:has(input:checked) {
+      202    border-color: var(--brand);
+     ...
+      232  }
+      233  
+      234  .label {
+      235 +  /* Optical: the design sets its text about 2px above the cen
+          +tre of the row. */                                            
+      236 +  translate: 0 -2px;                                          
+      237    font-size: 16px;
+      238    font-weight: 600;
+      239    line-height: 20px;
+     ...
+      241  
+     … 58 more lines (ctrl+o to expand)
+
+● Tuning the card and type now. I'm dropping a half-pixel hack, then
+  re-measuring.
+
+● Bash(sed -i '/margin-block-end: -0.5px;/d' BuyBox.module.css
+      S=/tmp/claude-1000/-home-eiffelike-work-natura-wellness/3603be20-b136-412e
+      -a0b6-0e52e1d36311/scratchpad…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+0 -1)
+      281  /* R5: shown only while subscribed. Indented to the label's x 
+           (radio 20 + gap 12). */
+      282  .details {
+      283    margin-block-start: 15px;
+      284 -  margin-block-end: -0.5px;                                   
+      284    padding-inline-start: 32px;
+      285    cursor: default;
+      286  }
+
+● Bash(cd /home/eiffelike/work/natura_wellness/src/part-b && python3 - <<'EOF'
+      p="BuyBox.module.css"; s=open(p).read()…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+12 -10)
+      146  }
+      147  
+      148  .title {
+      149 -  margin: 9px 0 0;                                            
+      149 +  margin: 9.5px 0 0;                                          
+      150    color: var(--brand);
+      151    font-family: Fraunces, Georgia, serif;
+      152    font-size: 44px;
+     ...
+      156  }
+      157  
+      158  .subtitle {
+      159 -  margin: 12.5px 0 0;                                         
+      159 +  /* 450px, not the column's 468: "day," is a hair too long to
+          + fit the first line, and a wider box would let it. */         
+      160 +  max-inline-size: 450px;                                     
+      161 +  margin: 11.5px 0 0;                                         
+      162    color: var(--ink-muted);
+      163    font-size: 16px;
+      164    line-height: 25.5px;
+     ...
+      196  
+      197  /* The subscription card's header is taller, so its top paddin
+           g is tuned to put the badge at y 376.5. */
+      198  .card:has(.prices) {
+      197 -  padding-block: 18.5px;                                      
+      199 +  padding-block: 18px;                                        
+      200  }
+      201  
+      202  /* R4: both cards have a 1px border, and the selected one adds
+            a 1px inset ring, so nothing shifts. */
+     ...
+      235  
+      236  .label {
+      237    /* Optical: the design sets its text about 2px above the cen
+           tre of the row. */
+      236 -  translate: 0 -2px;                                          
+      238 +  translate: 0 -1px;                                          
+      239    font-size: 16px;
+      240    font-weight: 600;
+      241    line-height: 20px;
+     ...
+      273  }
+      274  
+      275  .compare {
+      274 -  margin-block-start: 0;                                      
+      276 +  margin-block-start: 1px;                                    
+      277    color: var(--ink-faint);
+     … 36 more lines (ctrl+o to expand)
+
+● Bash(cd /home/eiffelike/work/natura_wellness/src/part-b && python3 - <<'EOF'
+      p="BuyBox.module.css"; s=open(p).read()…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+5 -2)
+      196  
+      197  /* The subscription card's header is taller, so its top paddin
+           g is tuned to put the badge at y 376.5. */
+      198  .card:has(.prices) {
+      199 -  padding-block: 18px;                                        
+      199 +  padding-block: 18px 16px;                                   
+      200  }
+      201  
+      202  /* R4: both cards have a 1px border, and the selected one adds
+            a 1px inset ring, so nothing shifts. */
+     ...
+      242  }
+      243  
+      244  .price {
+      245 +  /* Optical: the design's prices sit about a pixel below the 
+          +row's centre. */                                              
+      246 +  translate: 0 0.5px;                                         
+      247    margin-inline-start: auto;
+      248    font-size: 18px;
+      249    font-weight: 600;
+     ...
+      266    display: flex;
+      267    flex-direction: column;
+      268    align-items: flex-end;
+      269 +  translate: 0 0.5px;                                         
+      270    margin-inline-start: auto;
+      271  }
+      272  
+     ...
+      453    display: flex;
+      454    flex-wrap: wrap;
+      455    gap: 6px 26px;
+      453 -  margin: 17.5px 0 0;                                         
+      456 +  margin: 18.5px 0 0;                                         
+      457    padding: 0;
+      458    list-style: none;
+      459    color: var(--brand);
+  ⎿  Updated src/part-b/icons.tsx (+2 -2)
+      39  export function MinusIcon() {
+      40    return (
+      41      <svg {...hidden} viewBox="0 0 16 16" width="16" height="16"
+           fill="none" stroke="currentColor" strokeWidth="1.6">
+      42 -      <path d="M3 8h10" strokeLinecap="round" />               
+      42 +      <path d="M4 8h8" strokeLinecap="round" />                
+      43      </svg>
+      44    );
+      45  }
+     ...
+      47  export function PlusIcon() {
+      48    return (
+      49      <svg {...hidden} viewBox="0 0 16 16" width="16" height="16"
+           fill="none" stroke="currentColor" strokeWidth="1.6">
+      50 -      <path d="M3 8h10M8 3v10" strokeLinecap="round" />        
+      50 +      <path d="M4 8h8M8 4v8" strokeLinecap="round" />          
+      51      </svg>
+      52    );
+      53  }
+
+● Helper ratio is already 1.45%. Checking where the remaining differing pixels
+  sit before finalising.
+
+● Bash(cd /home/eiffelike/work/natura_wellness; S=/tmp/claude-1000/-home-eiffeli
+      ke-work-natura-wellness/3603be20-b136-412e-a0b6-0e52e1d36311/scratchpad
+      sed -i 's/^\.st…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+4 -0)
+      391  }
+      392  
+      393  /* R8: at a limit the button keeps its colour. The cursor is t
+           he only visual change. */
+      394 +.step svg {                                                   
+      395 +  translate: 0 1.5px;                                         
+      396 +}                                                             
+      397 +                                                              
+      398  .step[aria-disabled="true"] {
+      399    cursor: not-allowed;
+      400  }
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(cd /home/eiffelike/work/natura_wellness; S=/tmp/claude-1000/-home-eiffeli
+      ke-work-natura-wellness/3603be20-b136-412e-a0b6-0e52e1d36311/scratchpad
+      python3 - <<'EO…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+2 -2)
+      151    font-family: Fraunces, Georgia, serif;
+      152    font-size: 44px;
+      153    font-weight: 500;
+      154 -  line-height: 1.1;                                           
+      154 +  line-height: 48px;                                          
+      155    letter-spacing: -0.005em;
+      156  }
+      157  
+      158  .subtitle {
+      159    /* 450px, not the column's 468: "day," is a hair too long to
+            fit the first line, and a wider box would let it. */
+      160    max-inline-size: 450px;
+      161 -  margin: 11.5px 0 0;                                         
+      161 +  margin: 12px 0 0;                                           
+      162    color: var(--ink-muted);
+      163    font-size: 16px;
+      164    line-height: 25.5px;
+
+  Read 4 files, ran 1 shell command (ctrl+o to expand)
+
+● Bash(cd /home/eiffelike/work/natura_wellness; S=/tmp/claude-1000/-home-eiffeli
+      ke-work-natura-wellness/3603be20-b136-412e-a0b6-0e52e1d36311/scratchpad
+      python3 - <<'EO…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+4 -4)
+      221    inline-size: 20px;
+      222    block-size: 20px;
+      223    margin: 0;
+      224 -  border: 1.5px solid var(--radio-off);                       
+      224 +  border: 2px solid var(--radio-off);                         
+      225    border-radius: 50%;
+      226    background: var(--surface);
+      227    cursor: pointer;
+     ...
+      230  .radio:checked {
+      231    border: 2px solid var(--brand);
+      232    background: var(--brand);
+      233 -  box-shadow: inset 0 0 0 3px var(--tint);                    
+      233 +  box-shadow: inset 0 0 0 3px var(--surface);                 
+      234  }
+      235  
+      236  .label {
+     ...
+      475  .finePrint {
+      476    margin: 13.5px 0 0;
+      477    color: var(--ink-subtle);
+      478 -  font-size: 13px;                                            
+      479 -  line-height: 18.5px;                                        
+      478 +  font-size: 12px;                                            
+      479 +  line-height: 18px;                                          
+      480  }
+
+● Bash(cd /home/eiffelike/work/natura_wellness; S=/tmp/claude-1000/-home-eiffeli
+      ke-work-natura-wellness/3603be20-b136-412e-a0b6-0e52e1d36311/scratchpad
+      python3 - <<'EO…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+2 -2)
+      456  .trust {
+      457    display: flex;
+      458    flex-wrap: wrap;
+      459 -  gap: 6px 26px;                                              
+      460 -  margin: 18.5px 0 0;                                         
+      459 +  gap: 6px 25px;                                              
+      460 +  margin: 17.5px 0 0;                                         
+      461    padding: 0;
+      462    list-style: none;
+      463    color: var(--brand);
+  ⎿  Updated playwright.config.ts (+8 -1)
+      37        name: "visual",
+      38        testMatch: visualSpec,
+      39        snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ex
+          t}",
+      40 -      use: { ...devices["Desktop Chrome"], viewport: { width: 1
+         -200, height: 780 }, deviceScaleFactor: 2 },                    
+      40 +      use: {                                                   
+      41 +        ...devices["Desktop Chrome"],                          
+      42 +        viewport: { width: 1200, height: 780 },                
+      43 +        deviceScaleFactor: 2,                                  
+      44 +        // The design was rendered on macOS: no font hinting an
+         +d greyscale anti-aliasing. Without these two flags,            
+      45 +        // Linux Chromium hints glyph shapes and draws coloured
+         + sub-pixel fringes, which the pixel diff counts.               
+      46 +        launchOptions: { args: ["--font-render-hinting=none", "
+         +--disable-lcd-text"] },                                        
+      47 +      },                                                       
+      48      },
+      49    ],
+      50    webServer: {
+
+● Bash(cd /home/eiffelike/work/natura_wellness; S=/tmp/claude-1000/-home-eiffeli
+      ke-work-natura-wellness/3603be20-b136-412e-a0b6-0e52e1d36311/scratchpad
+      sed -i '/  line…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+0 -1)
+      162    color: var(--ink-muted);
+      163    font-size: 16px;
+      164    line-height: 25.5px;
+      165 -  letter-spacing: -0.005em;                                   
+      165  }
+      166  
+      167  .divider {
+
+● Bash(cd /home/eiffelike/work/natura_wellness; S=/tmp/claude-1000/-home-eiffeli
+      ke-work-natura-wellness/3603be20-b136-412e-a0b6-0e52e1d36311/scratchpad
+      python3 - <<'EO…)  ⎿  Updated src/part-b/BuyBox.module.css (+3 -3)
+      109    font-size: 12px;
+      110    font-weight: 600;
+      111    line-height: 15px;
+      112 -  letter-spacing: 0.12em;                                     
+      112 +  letter-spacing: 0.135em;                                    
+      113    text-transform: uppercase;
+      114  }
+      115  
+     ...
+      152    font-size: 44px;
+      153    font-weight: 500;
+      154    line-height: 48px;
+      155 -  letter-spacing: -0.005em;                                   
+      155 +  letter-spacing: -0.008em;                                   
+      156  }
+      157  
+      158  .subtitle {
+     ...
+      312    block-size: 33px;
+      313    min-inline-size: 115.5px;
+      314    margin: 0;
+      315 -  padding: 0 34px 0 13px;                                     
+      315 +  padding: 0 34px 0 11.5px;                                   
+      316    border: 1px solid var(--line-control);
+      317    border-radius: 8px;
+      318    background: var(--surface);
+
+● Bash(cd /home/eiffelike/work/natura_wellness; python3 - <<'EOF'
+      p="src/part-b/BuyBox.module.css"; s=open(p).read()…)
+  ⎿  Updated src/part-b/BuyBox.module.css (+2 -2)
+      146  }
+      147  
+      148  .title {
+      149 -  margin: 9.5px 0 0;                                          
+      149 +  margin: 9px 0 0;                                            
+      150    color: var(--brand);
+      151    font-family: Fraunces, Georgia, serif;
+      152    font-size: 44px;
+     ...
+      158  .subtitle {
+      159    /* 450px, not the column's 468: "day," is a hair too long to
+            fit the first line, and a wider box would let it. */
+      160    max-inline-size: 450px;
+      161 -  margin: 12px 0 0;                                           
+      161 +  margin: 12.5px 0 0;                                         
+      162    color: var(--ink-muted);
+      163    font-size: 16px;
+      164    line-height: 25.5px;
+  ⎿  Updated e2e/b-visual.spec.ts (+5 -5)
+       8  const SIZE = { width: 2400, height: 1560 };
+       9  
+      10  /**
+      11 - * The largest diff ratio the gate accepts. T5 sets it after tu
+         -ning: the helper's measured ratio rounded up to the next       
+      12 - * 0.5%, with a ceiling of 3% (plan.md, Tolerance). Until then 
+         -it is the ceiling, and the gate is `fixme`.                    
+      11 + * The largest diff ratio the gate accepts: the helper's tuned 
+         +ratio (0.77%) rounded up to the next 0.5%, under the           
+      12 + * 3% ceiling (plan.md, Tolerance). The rest is text anti-alias
+         +ing that differs between macOS and Linux.                      
+      13   */
+      14 -const TOLERANCE = 0.03;                                        
+      14 +const TOLERANCE = 0.01;                                        
+      15  
+      16  /** Element boxes in CSS px, from plan.md's layout table. Each 
+          edge may be off by 1px. */
+      17  const LAYOUT = {
+     ...
+      84    expect(diff.totalPixels).toBe(SIZE.width * SIZE.height);
+      85  });
+      86  
+      87 -test.fixme("matches the reference's layout within 1px (T5)", as
+         -ync ({ page }) => {                                            
+      87 +test("matches the reference's layout within 1px", async ({ page
+         + }) => {                                                       
+      88    await openDefaultState(page);
+      89    const photo = page.getByRole("img", { name: copy.photoAlt });
+      90    const cardOf = (name: RegExp) => page.getByRole("radio", { na
+          me }).locator("xpath=../..");
+     ...
+      125    expect((await page.getByRole("status").boundingBox())?.heigh
+           t).toBe(0);
+      126  });
+      127  
+      128 -test.fixme("matches the reference's pixels within the toleranc
+          -e (T5)", async ({ page }) => {                                
+      128 +test("matches the reference's pixels within the tolerance", as
+          +ync ({ page }) => {                                           
+      129    await openDefaultState(page);
+      130    const screenshot = await page.screenshot({ scale: "device", 
+           animations: "disabled", caret: "hide" });
+      131    const diff = await diffImages(page, screenshot, readFileSync
+           (REFERENCE));
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Visual and geometry tests pass: my diff ratio is 0.775% and Playwright's own
+  is 0.273% (10,211 px). Next I'm recording the final values in plan.md, then
+  running the full check.
+
+● Bash(cd /home/eiffelike/work/natura_wellness; python3 - <<'EOF'
+      p="SPECS/005-b-buy-box/plan.md"; s=open(p).read()…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+37 -18)
+       79  
+       80  "−" and "+" are both `#4a5550` in the reference, which confirm
+           s R8's rule: `aria-disabled` keeps the colour.
+       81  
+       82 -### Type, as starting values                                  
+       82 +### Type, final values (tuned in T5)                          
+       83  
+       84 -These come from cap heights (Inter's cap height is 0.727 em). 
+          -T5 tunes them against the diff, and the final values          
+       85 -are recorded here.                                            
+       84 +The starting values came from cap heights and were about 5–8% 
+          +too large for Inter. T5 matched text widths and ink           
+       85 +weight against the reference instead. All sizes are CSS px.   
+       86  
+       87 -| Text                    | Start                             
+          -                                     |                        
+       88 -| ----------------------- | ----------------------------------
+          ------------------------------------- |                        
+       89 -| Eyebrow                 | Inter 600, 12–13px, uppercase thro
+          -ugh CSS, letter-spacing ≈ 0.12em     |                        
+       90 -| "4.8" / reviews         | Inter 600 / 400, 14–15px          
+          -                                     |                        
+       91 -| Title                   | Fraunces 600, ≈ 44px (cap 31), lin
+          -e-height 1.1, optical size automatic |                        
+       92 -| Subtitle                | Inter 400, 17px / 25.5px          
+          -                                     |                        
+       93 -| Option labels           | Inter 600, 17px                   
+          -                                     |                        
+       94 -| Option prices           | Inter 600–700, 18–19px            
+          -                                     |                        
+       95 -| Struck-through price    | Inter 400, 13px                   
+          -                                     |                        
+       96 -| Badge                   | Inter 700, 11px, uppercase through
+          - CSS, letter-spacing ≈ 0.08em        |                        
+       97 -| Delivered every / perks | Inter 400, 14–15px, perk pitch 25 
+          -                                     |                        
+       98 -| Quantity / button       | Inter 500 / 600, 16–17px          
+          -                                     |                        
+       99 -| Trust                   | Inter 500, 13px                   
+          -                                     |                        
+      100 -| Fine print              | Inter 400, 12–13px, line pitch ≈ 1
+          -8.5                                  |                        
+       87 +| Text                    | Final                             
+          +                                                           |  
+       88 +| ----------------------- | ----------------------------------
+          +---------------------------------------------------------- |  
+       89 +| Eyebrow                 | Inter 600, 12px / 15px, uppercase 
+          +through CSS, letter-spacing 0.135em                        |  
+       90 +| "4.8" / reviews         | Inter 600 / 400, 14px / 22px. The 
+          +link is underlined, offset 3px                             |  
+       91 +| Title                   | Fraunces **500** (not 600: the ink
+          + weight matches 500), 44px / 48px, letter-spacing −0.008em |  
+       92 +| Subtitle                | Inter 400, 16px / 25.5px, in a box
+          + capped at 450px so "day," can never fit the first line    |  
+       93 +| Option labels           | Inter 600, 16px / 20px            
+          +                                                           |  
+       94 +| Option prices           | Inter 600, 18px (22px lines in the
+          + subscription card)                                        |  
+       95 +| Struck-through price    | Inter 400, 13px / 16px            
+          +                                                           |  
+       96 +| Badge                   | Inter 700, 10px / 21px, uppercase 
+          +through CSS, letter-spacing 0.14em, padding 0 11px         |  
+       97 +| Delivered every / perks | Inter 400, 14px (perks 20px lines,
+          + 5px apart)                                                |  
+       98 +| Select / quantity       | Inter 400, 15px / Inter 600, 16px 
+          +                                                           |  
+       99 +| Button                  | Inter 600, 16px. The "·" has 6px o
+          +f margin each side and 60% opacity                         |  
+      100 +| Trust                   | Inter 500, 13px / 20px, 25px betwe
+          +en items, 7.5px between icon and text                      |  
+      101 +| Fine print              | Inter 400, 12px / 18px            
+          +                                                           |  
+     … 30 more lines (ctrl+o to expand)
+  ⎿  Updated SPECS/005-b-buy-box/task.md (+1 -1)
+      14        `desktop` ignoring it. The committed baseline copy and th
+          e byte-identical test. `e2e/visual.ts` `diffImages`,
+      15        with the diff image and the ratio attached. The font chec
+          k, the hidden nav and the 2400×1560 size check. The
+      16        pixel and geometry assertions are `test.fixme` until T5
+      17 -- [ ] T5 (R2, R8): `BuyBox.module.css` to the plan's measuremen
+         -ts and tokens. Tune the type against the diff, record          
+      17 +- [x] T5 (R2, R8): `BuyBox.module.css` to the plan's measuremen
+         +ts and tokens. Tune the type against the diff, record          
+      18        the final values in `plan.md`, turn on the geometry test 
+          (including the subtitle's two lines and the
+      19        zero-height status line) and the pixel test, set `TOLERAN
+          CE`, and record both ratios in the CHANGELOG
+      20  - [ ] T6 (R12): the layout below 1200px (two columns at 960px a
+          nd wider, one column below), plus the e2e reflow at
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The smoke test fails on the four design colours that R14 exempts from
+  contrast. That is T7's helper, so I'm pulling the two-run axe part forward to
+  keep check green.
+
+● Bash(cd /home/eiffelike/work/natura_wellness; cat >> e2e/a11y.ts <<'EOF'…)
+  ⎿  Updated e2e/a11y.ts (+14 -0)
+      13    });
+      14    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+      15  }
+      16 +                                                               
+      17 +/** 005 R14: the four design colours that fail AA carry this at
+         +tribute, and only they are left out of the contrast run. */    
+      18 +const CONTRAST_EXCEPTION = "[data-contrast-exception]";        
+      19 +                                                               
+      20 +/**                                                            
+      21 + * 005 R14: two axe runs on the whole page. `.exclude()` turns 
+         +off every rule for an element, so it is used only in           
+      22 + * the contrast run, and the four exceptions still get every ot
+         +her check in the first run.                                    
+      23 + */                                                            
+      24 +export async function expectAccessibleBuyBox(page: Page) {     
+      25 +  const rules = await new AxeBuilder({ page }).withTags(WCAG).d
+         +isableRules(["color-contrast"]).analyze();                     
+      26 +  expect(rules.violations).toEqual([]);                        
+      27 +  const contrast = await new AxeBuilder({ page }).withRules(["c
+         +olor-contrast"]).exclude(CONTRAST_EXCEPTION).analyze();        
+      28 +  expect(contrast.violations).toEqual([]);                     
+      29 +}                                                              
+  ⎿  Updated e2e/smoke.spec.ts (+10 -4)
+      1  import AxeBuilder from "@axe-core/playwright";
+      2 +import { expectAccessibleBuyBox } from "./a11y";                
+      3  import { expect, test } from "./test";
+      4  
+      5  const pages = [
+     ...
+      18      await page.goto(path);
+      19      await expect(page.locator("#root")).not.toBeEmpty();
+      20  
+      20 -    const axe = await new AxeBuilder({ page })                 
+      21 -      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "w
+         -cag22aa"])                                                     
+      22 -      .analyze();                                              
+      23 -    expect(axe.violations).toEqual([]);                        
+      21 +    if (name === "Part B") {                                   
+      22 +      // 005 R14: two axe runs, with the design's four known co
+         +ntrast failures excluded from the second.                      
+      23 +      await expectAccessibleBuyBox(page);                      
+      24 +    } else {                                                   
+      25 +      const axe = await new AxeBuilder({ page })               
+      26 +        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", 
+         +"wcag22aa"])                                                   
+      27 +        .analyze();                                            
+      28 +      expect(axe.violations).toEqual([]);                      
+      29 +    }                                                          
+      30      expect(errors).toEqual([]);
+      31    });
+      32  }
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● T5 is done and npm run check is green (118 e2e tests passed, 14 skipped). I
+  haven't committed anything.
+
+  Visual result
+  - The geometry test passes: every box is within 1px of the design, the
+    subtitle wraps to two lines, and the empty status line has zero height.
+  - My diff helper reports 0.775% of pixels differing. Playwright's own count at
+    maxDiffPixelRatio: 0 is 0.273% (10,211 px). I measured that once with a
+    temporary spec and removed it.
+  - TOLERANCE is 1%, which is 0.775% rounded up to the next 0.5%. That is well
+    under the 3% ceiling.
+  - The pixels that still differ are mostly text anti-aliasing.
+
+  Changes you may not expect
+  - Title weight: Fraunces 500, not the plan's 600. The reference's ink weight
+    matches 500 (1556 against 1555), and 600 measured 1764.
+  - Inter sizes: about 6% smaller than the plan's starting values (labels 16px,
+    perks 14px, fine print 12px). I matched them to the reference's text widths.
+    All final values are now in plan.md.
+  - Chromium flags: I added --font-render-hinting=none --disable-lcd-text to the
+    visual project in playwright.config.ts. The design was rendered on macOS,
+    and without the flags the same CSS scores 1.7%. They affect only that
+    project.
+  - Subtitle width: capped at 450px. At the full 468px, the word "day," misses
+    the first line by about a pixel, which was too fragile.
+  - Pulled forward from T7: I added expectAccessibleBuyBox (the two axe runs)
+    and switched the Part B smoke test to it. With the real colours in place,
+    the old single axe run failed on the four contrast exceptions R14 allows. I
+    noted this on T7 in task.md and in the CHANGELOG.
+  - Layout below 960px: I included the one-column rule so the page isn't broken,
+    but T6 still owns testing and tuning it.
+
+  The CHANGELOG entry records both ratios. My dev server on port 5179 was
+  stopped when npm run check was interrupted at the end, and the check re-ran
+  fine without it.
+
+  Next is T6, the layout below 1200px and the reflow e2e at 1024, 768, 375 and
+  320. Do you want me to start it?

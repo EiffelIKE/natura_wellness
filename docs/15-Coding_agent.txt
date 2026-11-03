@@ -1,0 +1,2285 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/005-b-buy-box/task.md in the IDE.
+  This may or may not be related to the current task.</ide_opened_file>
+
+❯ start T1: the copy.ts additions and the buyBox.ts helpers, with their unit
+  tests.
+
+● I'll start by reading the spec and the existing Part B code.
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+● The spec and plan define T1 completely. Next I'll check Part A's helper and
+  test style, plus a task-level changelog entry, so I can match them.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I'll make parseQuantity strict to the HTML "valid floating-point number"
+  grammar—rejecting things like "0x10", " 5 ", and "Infinity"—since real number
+  fields never produce anything else anyway. I'm also adding a small
+  isValidQuantity helper needed by the T2 reducer, which I'll list in the plan's
+  file table first.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/005-b-buy-box/plan.md'…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+19 -16)
+      101  
+      102  ## Files
+      103  
+      104 -| File                              | Change                  
+          -                                                              
+          -                            |                                 
+      105 -| --------------------------------- | ------------------------
+          ---------------------------------------------------------------
+          ---------------------------- |                                 
+      106 -| `src/part-b/copy.ts`              | new keys and templates o
+          -nly. The existing values stay byte-for-byte                   
+          -                            |                                 
+      107 -| `src/part-b/buyBox.ts`            | `MIN_QUANTITY`, `MAX_QUA
+          -NTITY`, `formatMoney`, `unitPriceCents`, `totalCents`, `parseQ
+          -uantity`, `correctQuantity` |                                 
+      108 -| `src/part-b/buyBoxReducer.ts`     | state, actions and reduc
+          -er                                                            
+          -                            |                                 
+      109 -| `src/part-b/BuyBox.tsx`           | page markup and behaviou
+          -r                                                             
+          -                            |                                 
+      110 -| `src/part-b/icons.tsx`            | inline SVGs: star, check
+          -, check-circle, chevron, minus, plus. All `aria-hidden`       
+          -                            |                                 
+      111 -| `src/part-b/BuyBox.module.css`    | tokens, layout, the narr
+          -ow layout below 960px                                         
+          -                            |                                 
+      112 -| `src/part-b/*.test.ts(x)`         | unit and component tests
+          -                                                              
+          -                            |                                 
+      113 -| `e2e/a11y.ts`                     | `expectAccessibleBuyBox`
+          -: R14's two axe runs plus the reflow check                    
+          -                            |                                 
+      114 -| `e2e/smoke.spec.ts`               | Part B uses `expectAcces
+          -sibleBuyBox`. Part A is unchanged                             
+          -                            |                                 
+      115 -| `e2e/visual.ts`                   | `diffImages`: the in-bro
+          -wser diff for R2's attachment and ratio                       
+          -                            |                                 
+      116 -| `e2e/b-visual.spec.ts`            | byte check, geometry, pi
+          -xel test (project `visual` only)                              
+          -                            |                                 
+      117 -| `e2e/b-buy-box.spec.ts`           | the flows on `mobile` an
+          -d `desktop`                                                   
+          -                            |                                 
+      118 -| `e2e/__screenshots__/buy-box.png` | committed copy of the re
+          -ference, the pixel test's baseline                            
+          -                            |                                 
+      119 -| `playwright.config.ts`            | the `visual` project. `m
+          -obile` and `desktop` ignore `b-visual.spec.ts`                
+          -                            |                                 
+      104 +| File                              | Change                  
+          +                                                              
+          +                                               |              
+      105 +| --------------------------------- | ------------------------
+          +--------------------------------------------------------------
+          +---------------------------------------------- |              
+      106 +| `src/part-b/copy.ts`              | new keys and templates o
+          +nly. The existing values stay byte-for-byte                   
+          +                                               |              
+      107 +| `src/part-b/buyBox.ts`            | `MIN_QUANTITY`, `MAX_QUA
+          +NTITY`, `formatMoney`, `unitPriceCents`, `totalCents`, `parseQ
+          +uantity`, `isValidQuantity`, `correctQuantity` |              
+      108 +| `src/part-b/buyBoxReducer.ts`     | state, actions and reduc
+          +er                                                            
+          +                                               |              
+      109 +| `src/part-b/BuyBox.tsx`           | page markup and behaviou
+          +r                                                             
+          +                                               |              
+      110 +| `src/part-b/icons.tsx`            | inline SVGs: star, check
+          +, check-circle, chevron, minus, plus. All `aria-hidden`       
+          +                                               |              
+      111 +| `src/part-b/BuyBox.module.css`    | tokens, layout, the narr
+          +ow layout below 960px                                         
+          +                                               |              
+      112 +| `src/part-b/*.test.ts(x)`         | unit and component tests
+          +                                                              
+          +                                               |              
+      113 +| `e2e/a11y.ts`                     | `expectAccessibleBuyBox`
+          +: R14's two axe runs plus the reflow check                    
+          +                                               |              
+      114 +| `e2e/smoke.spec.ts`               | Part B uses `expectAcces
+          +sibleBuyBox`. Part A is unchanged                             
+          +                                               |              
+      115 +| `e2e/visual.ts`                   | `diffImages`: the in-bro
+          +wser diff for R2's attachment and ratio                       
+          +                                               |              
+      116 +| `e2e/b-visual.spec.ts`            | byte check, geometry, pi
+          +xel test (project `visual` only)                              
+          +                                               |              
+      117 +| `e2e/b-buy-box.spec.ts`           | the flows on `mobile` an
+          +d `desktop`                                                   
+          +                                               |              
+      118 +| `e2e/__screenshots__/buy-box.png` | committed copy of the re
+          +ference, the pixel test's baseline                            
+          +                                               |              
+      119 +| `playwright.config.ts`            | the `visual` project. `m
+          +obile` and `desktop` ignore `b-visual.spec.ts`                
+          +                                               |              
+      120  
+      121  ## `copy.ts` additions
+      122  
+     ...
+      170  - **The correction stays first.** Clicking "Add to cart" blurs
+            the field first, so the correction arrives as
+      171    `quantity/committed` and `cart/added` follows it. Enter subm
+           its without a blur, so `cart/added` commits itself.
+     … 7 more lines (ctrl+o to expand)
+
+● Now the code. copy.ts gets the new keys appended, and the existing ones stay
+  untouched:
+
+● Update(src/part-b/copy.ts)
+  ⎿  Added 16 lines
+      18    trust: ["Third-party tested", "Non-GMO", "Made in the USA"],
+      19    finePrint:
+      20      "Your subscription renews every 30 days at $25.46 until you
+           cancel. Skip or cancel anytime from your account.",
+      21 +                                                               
+      22 +  // 005: everything below was added for the buy box. The keys 
+         +above are the provided copy, unchanged.                        
+      23 +  photoAlt: "Natura Wellness Vitamin D bottle, 60 softgels",   
+      24 +  ratingLabel: (rating: string) => `Rated ${rating} out of 5`, 
+      25 +  optionsLegend: "Purchase option",                            
+      26 +  originally: "originally",                                    
+      27 +  quantity: { label: "Quantity", decrease: "Decrease quantity",
+         + increase: "Increase quantity" },                              
+      28 +  separator: "·",                                              
+      29 +  renewalNotice: (frequency: string, total: string) =>         
+      30 +    `Your subscription renews every ${frequency} at ${total} un
+         +til you cancel. Skip or cancel anytime from your account.`,    
+      31 +  added: (quantity: number, title: string, plan: string, total:
+         + string) =>                                                    
+      32 +    `Added to cart: ${quantity} × ${title}, ${plan}, ${total}.`
+         +,                                                              
+      33 +  planOneTime: "one-time purchase",                            
+      34 +  planEvery: (frequency: string) => `delivered every ${frequenc
+         +y}`,                                                           
+      35 +  quantityCorrected: (n: number, min: number, max: number) =>  
+      36 +    `Quantity set to ${n}. You can order ${min} to ${max} at a 
+         +time.`,                                                        
+      37  };
+
+● Write(src/part-b/buyBox.ts)
+  ⎿  Wrote 49 lines to src/part-b/buyBox.ts
+       1 // 005: the buy box's pure rules. Money, totals, and parsing and
+          correcting the quantity field.
+       2 import { copy } from "./copy";
+       3
+       4 export type PurchaseOption = "one-time" | "subscribe";
+       5
+       6 /** R8: the quantity range. */
+       7 export const MIN_QUANTITY = 1;
+       8 export const MAX_QUANTITY = 10;
+       9
+     … +40 lines (ctrl+o to expand)
+
+● Now the unit tests: every case the plan lists, plus the boundaries of the
+  strict parse.
+
+● Write(src/part-b/buyBox.test.ts)
+  ⎿  Wrote 151 lines to src/part-b/buyBox.test.ts
+       1 import { describe, expect, it } from "vitest";
+       2 import {
+       3   correctQuantity,
+       4   formatMoney,
+       5   isValidQuantity,
+       6   MAX_QUANTITY,
+       7   MIN_QUANTITY,
+       8   parseQuantity,
+       9   totalCents,
+      10   unitPriceCents,
+     … +141 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All 71 pass, and copy.ts has no removed lines. Next I'll make three temporary
+  breaks to check the tests actually fail when they should:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Each break was caught and reverted. Now the full npm run check:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● npm run check is green. Last steps: tick T1 and add the changelog entry.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/005-b-buy-box/task.md'…)
+  ⎿  Updated SPECS/005-b-buy-box/task.md (+1 -1)
+      1  # 005: Tasks
+      2  
+      3 -- [ ] T1 (R1, R7, R9–R11): `copy.ts` additions, with the existin
+        -g values unchanged. `buyBox.ts` with `formatMoney`,             
+      3 +- [x] T1 (R1, R7, R9–R11): `copy.ts` additions, with the existin
+        +g values unchanged. `buyBox.ts` with `formatMoney`,             
+      4        `unitPriceCents`, `totalCents`, `parseQuantity` and `corre
+         ctQuantity`. Unit tests, including
+      5        `renewalNotice("30 days", "$25.46") === copy.finePrint`, $
+         76.38 at 3, $254.60 at 10, and 15/0/2.6/""/"abc"
+      6  - [ ] T2 (R4–R6, R8–R11): `buyBoxReducer.ts` with the six action
+         s, plus unit tests for every transition, every
+  ⎿  Updated SPECS/CHANGELOG.md (+29 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box / T1: copy additions and buy box r
+         +ules                                                           
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-b/copy.ts`: the plan's new keys and templates, ap
+         +pended under a comment. `git diff` shows no removed            
+       9 +    or changed lines, so the provided copy is byte-for-byte as 
+         +given.                                                         
+      10 +  - New `src/part-b/buyBox.ts`:                                
+      11 +    - `PurchaseOption`, `MIN_QUANTITY` and `MAX_QUANTITY`      
+      12 +    - `formatMoney` (en-US, USD), `unitPriceCents` and `totalCe
+         +nts` (unit price × quantity)                                   
+      13 +    - `parseQuantity`, `isValidQuantity` and `correctQuantity` 
+      14 +  - `plan.md`: `isValidQuantity` added to the file table, and `
+         +parseQuantity`'s contract written down, before the             
+      15 +    code.                                                      
+      16 +  - New `src/part-b/buyBox.test.ts` (71 tests).                
+      17 +- **Decisions:**                                               
+      18 +  - `parseQuantity` accepts only an HTML valid floating-point n
+         +umber and returns `null` for anything else (`" 5 "`,           
+      19 +    `"+5"`, `"0x10"`, `"Infinity"`). A number field only ever r
+         +eports `""` or such a string, so this matches the              
+      20 +    browser and keeps direct callers predictable. `"1e400"` par
+         +ses to `Infinity` and is corrected to 10.                      
+      21 +  - `isValidQuantity` is new. The plan's `quantity/typed` rule 
+         +("a whole number from 1 to 10") needs it, so T2's              
+      22 +    reducer and the tests share one definition.                
+      23 +  - Halves round up (`Math.round`), so 2.5 becomes 3. Negatives
+         + clamp to 1.                                                   
+      24 +  - `PurchaseOption` lives in `buyBox.ts`, not the reducer, bec
+         +ause the price helpers take it. T2 imports it.                 
+      25 +  - Template tests pin `renewalNotice("30 days", "$25.46") === 
+         +copy.finePrint`, both spec summaries, the correction           
+      26 +    message and "Rated 4.8 out of 5".                          
+      27 +- **Verified:**                                                
+      28 +  - `buyBox.test.ts`: 71 passed.                               
+      29 +  - Three temporary breaks, each caught and then reverted: `Mat
+         +h.trunc` for `Math.round` (2 failures), a discount             
+      30 +    rounded on the total, as in Part A's mock (4), and "anytime
+         +" changed to "any time" in `renewalNotice` (2).                
+      31 +  - `npm run check` passed: 517 unit and component tests, and e
+         +2e 114 passed, 14 skipped. Those 14 are the existing           
+      32 +    viewport-specific tests, skipped as before.                
+      33 +                                                               
+      34  ## 2026-11-03: 005-b-buy-box: second spec review, plan Approved
+      35  
+      36  - **Changed:**
+
+● Before deciding whether to commit, I'll check the memory note about committing
+  and the untracked docs/ file that I didn't create:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● T1 is finished and npm run check passes: 517 unit and component tests, and 114
+  e2e passed, with 14 skipped (the same viewport-specific skips as before).
+  Nothing is committed; your notes say to commit only when you ask.
+
+  What changed
+  - copy.ts (src/part-b/copy.ts): the plan's new keys and templates are added
+    after the provided copy. git diff shows no removed or changed lines, so the
+    original values are exactly as given.
+  - buyBox.ts (src/part-b/buyBox.ts): the money and total helpers (formatMoney,
+    unitPriceCents, totalCents), the three quantity helpers (parseQuantity,
+    isValidQuantity, correctQuantity), the 1–10 limits and the PurchaseOption
+    type.
+  - buyBox.test.ts (src/part-b/buyBox.test.ts): 71 tests. They cover all the
+    cases the task and plan name: $76.38 at 3, $254.60 at 10,
+    15/0/−3/2.6/2.4/""/"abc"/"1e1", and renewalNotice("30 days", "$25.46") ===
+    copy.finePrint. They also check both add-to-cart summaries from the spec,
+    the correction message and "Rated 4.8 out of 5".
+
+  Decisions I made
+  - Strict parsing. parseQuantity only accepts what a browser number field can
+    report ("" or a properly formed number). Text like " 5 ", "+5", "0x10" or
+    "Infinity" returns null, and the field goes back to the last valid quantity.
+    This makes no difference in a real browser.
+  - New helper. I added isValidQuantity (a whole number from 1 to 10) because
+    T2's reducer needs that rule, and it's better defined once. It wasn't in the
+    plan's file list, so I added it to plan.md (SPECS/005-b-buy-box/plan.md)
+    before writing the code.
+  - Rounding. Halves round up, so 2.5 becomes 3, and negative numbers become 1.
+
+  Checking the tests can fail
+  I made three temporary breaks, and the tests caught each one before I reverted
+  it:
+  - truncating instead of rounding: 2 failures
+  - rounding the discount on the total, the way Part A's mock does: 4 failures
+  - changing "anytime" to "any time" in the fine print template: 2 failures
+
+  T1 is ticked in task.md (SPECS/005-b-buy-box/task.md) and logged in
+  CHANGELOG.md (SPECS/CHANGELOG.md). There's also an untracked
+  docs/13-Coding_agent.txt that looks like one of your conversation exports; I
+  left it alone.
+
+  Next is T2, the reducer. Should I commit T1 first?
+
+● T1 is finished and npm run check passes: 517 unit and component tests, and 114
+  e2e passed, with 14 skipped (the same viewport-specific skips as before).
+  Nothing is committed; your notes say to commit only when you ask.
+
+  What changed
+  - copy.ts (src/part-b/copy.ts): the plan's new keys and templates are added
+    after the provided copy. git diff shows no removed or changed lines, so the
+    original values are exactly as given.
+  - buyBox.ts (src/part-b/buyBox.ts): the money and total helpers (formatMoney,
+    unitPriceCents, totalCents), the three quantity helpers (parseQuantity,
+    isValidQuantity, correctQuantity), the 1–10 limits and the PurchaseOption
+    type.
+  - buyBox.test.ts (src/part-b/buyBox.test.ts): 71 tests. They cover all the
+    cases the task and plan name: $76.38 at 3, $254.60 at 10,
+    15/0/−3/2.6/2.4/""/"abc"/"1e1", and renewalNotice("30 days", "$25.46") ===
+    copy.finePrint. They also check both add-to-cart summaries from the spec,
+    the correction message and "Rated 4.8 out of 5".
+
+  Decisions I made
+  - Strict parsing. parseQuantity only accepts what a browser number field can
+    report ("" or a properly formed number). Text like " 5 ", "+5", "0x10" or
+    "Infinity" returns null, and the field goes back to the last valid quantity.
+    This makes no difference in a real browser.
+  - New helper. I added isValidQuantity (a whole number from 1 to 10) because
+    T2's reducer needs that rule, and it's better defined once. It wasn't in the
+    plan's file list, so I added it to plan.md (SPECS/005-b-buy-box/plan.md)
+    before writing the code.
+  - Rounding. Halves round up, so 2.5 becomes 3, and negative numbers become 1.
+
+  Checking the tests can fail
+  I made three temporary breaks, and the tests caught each one before I reverted
+  it:
+  - truncating instead of rounding: 2 failures
+  - rounding the discount on the total, the way Part A's mock does: 4 failures
+  - changing "anytime" to "any time" in the fine print template: 2 failures
+
+  T1 is ticked in task.md (SPECS/005-b-buy-box/task.md) and logged in
+  CHANGELOG.md (SPECS/CHANGELOG.md). There's also an untracked
+  docs/13-Coding_agent.txt that looks like one of your conversation exports; I
+  left it alone.
+
+  Next is T2, the reducer. Should I commit T1 first?
+
+❯ /compact
+  ⎿  Compacted
+  ⎿  Read src/part-b/copy.ts (38 lines)
+  ⎿  Read src/part-b/buyBox.ts (50 lines)
+  ⎿  Read src/part-b/buyBox.test.ts (152 lines)
+❯ Lets start with T2 --> T4
+
+● I'll read the spec, plan and tasks for T2–T4 first.
+
+  Read 2 files, listed 1 directory (ctrl+o to expand)
+
+● Now the existing code: the BuyBox placeholder, a Part A reducer and its tests,
+  the Playwright config and the e2e folder.
+
+  Listed 2 directories, ran 1 shell command (ctrl+o to expand)
+
+● I have the spec, plan, tasks and the existing patterns. Next I'll check the
+  CHANGELOG format, whether @types/node is available for the e2e byte check, and
+  the reference image's header.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The reference image is 2400×1560 as expected, but @types/node isn't installed,
+  so I'm checking what TypeScript resolves for node:fs and Buffer in e2e/
+  before deciding how to read the two files for the T4 byte check.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Adding @types/node for the e2e types is a new dependency, so I'll ask you
+  before T4 needs it. I've also settled three ambiguities in the reducer table
+  by writing their resolutions into the plan first, starting with T2.
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 12 lines, removed 4 lines
+      159  
+      160  | Action               | Result                               
+                                                                         
+                                                        |
+      161  | -------------------- | -------------------------------------
+           --------------------------------------------------------------
+           -------------------------------------------- |
+      162 -| `option/chosen`      | sets `option`. The status is cleared 
+          -                                                              
+          -                                             |                
+      163 -| `frequency/chosen`   | sets `frequency`, if it's one of the 
+          -options. The status is cleared                                
+          -                                             |                
+      162 +| `option/chosen`      | sets `option`. The status is cleared.
+          + Choosing the option already selected is ignored              
+          +                                             |                
+      163 +| `frequency/chosen`   | sets `frequency`, if it's one of the 
+          +options and not the current one. The status is cleared. Otherw
+          +ise it's ignored                             |                
+      164  | `quantity/stepped`   | ±1 if the result is within 1–10, and 
+           `draft` follows. The status is cleared. At a limit it's ignore
+           d and returns the same state (R8)            |
+      165  | `quantity/typed`     | sets `draft`. If `parseQuantity(draft
+           )` is a whole number from 1 to 10, `quantity` follows. Otherwi
+           se it stays (R9). The status is cleared      |
+      166 -| `quantity/committed` | `correctQuantity(draft, quantity)` (R
+          -8). If the field's text changes, `correction` is set and `seq`
+          - increments (R11). Otherwise nothing happens |                
+      167 -| `cart/added`         | runs `quantity/committed` first, then
+          - sets `summary` and increments `seq`, keeping any `correction`
+          - still on the line (R10, R11)                |                
+      166 +| `quantity/committed` | `correctQuantity(draft, quantity)` (R
+          +8). If the value changes, `correction` is set and `seq` increm
+          +ents (R11). See below                        |                
+      167 +| `cart/added`         | runs `quantity/committed` first, then
+          + sets `summary` and increments `seq`, keeping a `correction` t
+          +hat no summary has followed yet (R10, R11)    |               
+      168  
+      169  - **"Clears" means** `correction` and `summary` become null. `
+           seq` keeps counting.
+      170 +- **"Ignored" means** the reducer returns the same state objec
+          +t, so nothing re-renders and the status line stays.           
+      171 +- **A commit announces a change of value, not of text (R8: "if
+          + the value changes").** `"15"`, `"0"`, `"2.6"`, `""`          
+      172 +  and `"abc"` change the value, so the correction is shown. `"
+          +1e1"`, `"05"` and `"3.0"` already mean the number they        
+      173 +  become, so the field's text is tidied (`"10"`, `"5"`, `"3"`)
+          + without a message. A draft that already reads as the         
+      174 +  quantity is ignored.                                        
+      175 +- **A repeated add announces only the summary.** A correction 
+          +stays on the line only until a summary has followed           
+      176 +  it, so the first add after a correction shows both (R11), an
+          +d pressing "Add to cart" again shows the summary alone,       
+      177 +  in a new `span`.                                            
+      178  - **The correction stays first.** Clicking "Add to cart" blurs
+            the field first, so the correction arrives as
+      179    `quantity/committed` and `cart/added` follows it. Enter subm
+           its without a blur, so `cart/added` commits itself.
+      180    Both paths end with the correction first, then the summary (
+           R11).
+
+● Write(src/part-b/buyBoxReducer.ts)
+  ⎿  Wrote 124 lines to src/part-b/buyBoxReducer.ts
+       1 // 005: the buy box's state. Every rule in R4–R11 is a transitio
+         n here, following plan.md's table.
+       2 import {
+       3   correctQuantity,
+       4   formatMoney,
+       5   isValidQuantity,
+       6   MAX_QUANTITY,
+       7   MIN_QUANTITY,
+       8   parseQuantity,
+       9   type PurchaseOption,
+     … +115 lines (ctrl+o to expand)
+
+● Now the reducer tests: one describe per action, following the plan's table.
+
+● Write(src/part-b/buyBoxReducer.test.ts)
+  ⎿  Wrote 261 lines to src/part-b/buyBoxReducer.test.ts
+       1 // 005: buyBoxReducer, one describe per action, following plan.m
+         d's transition table.
+       2 import { describe, expect, it } from "vitest";
+       3 import { type Action, buyBoxReducer, initialState, type State, s
+         ummaryOf, total } from "./buyBoxReducer";
+       4 import { copy } from "./copy";
+       5
+       6 const run = (actions: Action[], from: State = initialState) => a
+         ctions.reduce(buyBoxReducer, from);
+       7
+     … +254 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● 55 pass. Next I'll check that these tests can actually fail: four temporary
+  breaks in the reducer, one at a time, restoring the file after each.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All four breaks were caught, and the reducer is restored. Now I'll tick T2 and
+  add its CHANGELOG entry.
+
+● Bash(sed -i 's/^- \[ \] T2 /- [x] T2 /' SPECS/005-b-buy-box/task.md && grep -n
+      "T2 " SPECS/005-b-buy-box/task.md && python3 - <<'EOF'
+      p="SPECS/CHANGELOG.md"; s=open(…)
+  ⎿  Updated SPECS/005-b-buy-box/task.md (+1 -1)
+      3  - [x] T1 (R1, R7, R9–R11): `copy.ts` additions, with the existin
+         g values unchanged. `buyBox.ts` with `formatMoney`,
+      4        `unitPriceCents`, `totalCents`, `parseQuantity` and `corre
+         ctQuantity`. Unit tests, including
+      5        `renewalNotice("30 days", "$25.46") === copy.finePrint`, $
+         76.38 at 3, $254.60 at 10, and 15/0/2.6/""/"abc"
+      6 -- [ ] T2 (R4–R6, R8–R11): `buyBoxReducer.ts` with the six action
+        -s, plus unit tests for every transition, every                  
+      6 +- [x] T2 (R4–R6, R8–R11): `buyBoxReducer.ts` with the six action
+        +s, plus unit tests for every transition, every                  
+      7        ignored case, the status clearing, `seq` on a repeated add
+         , and the correction before the summary on both
+      8        submit paths
+      9  - [ ] T3 (R1, R3–R11, R13): `BuyBox.tsx` markup and behaviour, w
+         ith only enough CSS to work: the form, the fieldset,
+  ⎿  Updated SPECS/CHANGELOG.md (+26 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box / T2: buy box reducer             
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - New `src/part-b/buyBoxReducer.ts`: `State`, `Status`, the s
+         +ix actions, `initialState`, and two selectors,                 
+       9 +    `total` and `summaryOf`, so the component and the tests com
+         +pute the total and the summary in one place.                   
+      10 +  - `plan.md`, before the code: three rules the transition tabl
+         +e left open (below), and what "ignored" means.                 
+      11 +  - New `src/part-b/buyBoxReducer.test.ts` (55 tests).         
+      12 +- **Decisions:**                                               
+      13 +  - Choosing the option or frequency that's already selected is
+         + ignored, and the same state object is returned.               
+      14 +    R10 clears the line when the selection *changes*, and a cli
+         +ck on the selected card's padding isn't a change.              
+      15 +  - A commit announces a change of value, not of text, followin
+         +g R8 ("if the value changes"). `"1e1"`, `"05"` and             
+      16 +    `"3.0"` are tidied to `"10"`, `"5"` and `"3"` without a mes
+         +sage. `""` and `"abc"` go back to the last valid               
+      17 +    quantity and are announced. The plan's earlier wording ("if
+         + the field's text changes") would have announced               
+      18 +    "Quantity set to 10" for a shopper who typed 1e1 and alread
+         +y had 10.                                                      
+      19 +  - A correction stays on the line only until a summary has fol
+         +lowed it. The first add after a correction shows               
+      20 +    both (R11). Pressing "Add to cart" again shows the summary 
+         +alone, so an old correction isn't re-announced.                
+      21 +  - A step uses the last valid quantity, not an invalid draft. 
+         +In the browser the blur commits first anyway.                  
+      22 +- **Verified:**                                                
+      23 +  - `buyBoxReducer.test.ts`: 55 passed. They cover every action
+         +, every ignored case (a step at either limit, an               
+      24 +    unknown or unchanged frequency, an unchanged option, a comm
+         +it with nothing to correct, a second commit), the              
+      25 +    line clearing on each kind of change, `seq` on a repeated a
+         +dd, and the correction before the summary on both              
+      26 +    submit paths, which also end on the same line.             
+      27 +  - Four temporary breaks, each caught and then reverted: an un
+         +changed option clearing the line (1 failure),                  
+      28 +    announcing text-only tidies (4), a repeated add keeping the
+         + old correction (1), and typing not clearing the line          
+      29 +    (2).                                                       
+      30 +                                                               
+      31  ## 2026-11-03: 005-b-buy-box / T1: copy additions and buy box r
+          ules
+      32  
+      33  - **Changed:**
+
+● T3. First, a quick look at how Part A structures its component (CSS module
+  import, main, refs) so Part B matches it.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● I'm following the plan's camelCase names for Part B, using querySelector for
+  the card click, and letting the reducer ignore out-of-range steps so the
+  stepper buttons always dispatch. Next I'll write the icons, component, and
+  minimal CSS.
+
+● Write(src/part-b/icons.tsx)
+  ⎿  Wrote 53 lines to src/part-b/icons.tsx
+       1 // 005: the buy box's inline icons. All are decorative (aria-hid
+         den), and colour comes from `currentColor`.
+       2 // T5 tunes their shapes against the reference.
+       3
+       4 const hidden = { "aria-hidden": true, focusable: false } as cons
+         t;
+       5
+       6 export function StarIcon() {
+       7   return (
+       8     <svg {...hidden} viewBox="0 0 14 14" width="14" height="14"
+     … +46 lines (~1 KB) (ctrl+o to expand)
+
+● Write(src/part-b/BuyBox.tsx)
+  ⎿  Added 230 lines, removed 3 lines
+        1 -// Part B: rebuild public/reference/buy-box.png here.         
+        2 -// Fonts (Fraunces, Inter) are already loaded in index.html. T
+          -he product photo is /product.jpg.                             
+        1 +// 005: the buy box. It renders the reducer's state and dispat
+          +ches. The only behaviour of its own is the two DOM            
+        2 +// guards the reducer can't see: the wheel on the quantity fie
+          +ld (R8) and Enter on a radio or the select (R10).             
+        3 +import { type FormEvent, type KeyboardEvent, type MouseEvent, 
+          +useEffect, useId, useReducer, useRef } from "react";          
+        4 +import { formatMoney, MAX_QUANTITY, MIN_QUANTITY, type Purchas
+          +eOption } from "./buyBox";                                    
+        5 +import styles from "./BuyBox.module.css";                     
+        6 +import { buyBoxReducer, initialState, total } from "./buyBoxRe
+          +ducer";                                                       
+        7 +import { copy } from "./copy";                                
+        8 +import { CheckCircleIcon, CheckIcon, ChevronIcon, MinusIcon, P
+          +lusIcon, StarIcon } from "./icons";                           
+        9  
+       10 +/** R4: a click on these is theirs, so the card's own click ha
+          +ndler leaves it alone. */                                     
+       11 +const CONTROLS = "input, select, label, button, a";           
+       12 +                                                              
+       13 +/** R10: Enter here must never submit. Chromium submits a form
+          + on Enter in a radio (spec R10). */                           
+       14 +const isEnterGuarded = (target: EventTarget) =>               
+       15 +  target instanceof HTMLSelectElement || (target instanceof HT
+          +MLInputElement && target.type === "radio");                   
+       16 +                                                              
+       17  export function BuyBox() {
+        5 -  return <p>Start here.</p>;                                  
+       18 +  const [state, dispatch] = useReducer(buyBoxReducer, initialS
+          +tate);                                                        
+       19 +  const id = useId();                                         
+       20 +  const quantityRef = useRef<HTMLInputElement>(null);         
+       21 +                                                              
+       22 +  // R8: React's onWheel is passive and can't cancel the event
+          +, so a native non-passive listener does it.                   
+       23 +  useEffect(() => {                                           
+       24 +    const field = quantityRef.current;                        
+       25 +    if (!field) return;                                       
+       26 +    const guard = (event: WheelEvent) => {                    
+       27 +      if (document.activeElement === field) event.preventDefau
+          +lt();                                                         
+       28 +    };                                                        
+       29 +    field.addEventListener("wheel", guard, { passive: false })
+          +;                                                             
+       30 +    return () => field.removeEventListener("wheel", guard);   
+       31 +  }, []);                                                     
+       32 +                                                              
+       33 +  const subscribed = state.option === "subscribe";            
+       34 +  const totalText = formatMoney(total(state));                
+       35 +  const choose = (option: PurchaseOption) => dispatch({ type: 
+          +"option/chosen", option });                                   
+       36 +                                                              
+       37 +  /** R4: the card's padding selects its option, and focus goe
+          +s to its radio, the keyboard path. */                         
+       38 +  const onCardClick = (option: PurchaseOption) => (event: Mous
+          +eEvent<HTMLDivElement>) => {                                  
+       39 +    if (event.target instanceof Element && event.target.closes
+          +t(CONTROLS)) return;                                          
+       40 +    choose(option);                                           
+       41 +    event.currentTarget.querySelector<HTMLInputElement>('input
+          +[type="radio"]')?.focus();                                    
+       42 +  };                                                          
+       43 +                                                              
+       44 +  const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) =>
+          + {                                                            
+       45 +    if (event.key === "Enter" && isEnterGuarded(event.target))
+          + event.preventDefault();                                      
+       46 +  };                                                          
+       47 +                                                              
+       48 +  // R10, R11: Enter in the field submits without a blur, so `
+          +cart/added` runs the correction itself.                       
+       49 +  const onSubmit = (event: FormEvent<HTMLFormElement>) => {   
+       50 +    event.preventDefault();                                   
+       51 +    dispatch({ type: "cart/added" });                         
+       52 +  };                                                          
+       53 +                                                              
+       54 +  const { correction, summary, seq } = state.status;          
+       55 +                                                              
+       56 +  return (                                                    
+       57 +    <main className={styles.page}>                            
+       58 +      <div className={styles.layout}>                         
+       59 +        <div className={styles.photoCard}>                    
+       60 +          <img className={styles.photo} src="/product.jpg" alt
+          +={copy.photoAlt} width={500} height={500} />                  
+       61 +        </div>                                                
+       62 +                                                              
+       63 +        <div className={styles.box}>                          
+       64 +          <p className={styles.eyebrow} data-contrast-exceptio
+          +n="">                                                         
+       65 +            {copy.eyebrow}                                    
+       66 +          </p>                                                
+       67 +          <p className={styles.rating}>                       
+       68 +            <span className={styles.stars} aria-hidden="true">
+       69 +              {Array.from({ length: 5 }, (_, i) => (          
+       70 +                <StarIcon key={i} />                          
+       71 +              ))}                                             
+       72 +              {copy.rating}                                   
+       73 +            </span>                                           
+       74 +            <span className={styles.visuallyHidden}>{copy.rati
+          +ngLabel(copy.rating)}</span>{" "}                             
+       75 +            <a className={styles.reviews} href="#reviews" data
+          +-contrast-exception="">                                       
+       76 +              {copy.reviewCount}                              
+       77 +            </a>                                              
+       78 +          </p>                                                
+       79 +          <h1 className={styles.title}>{copy.title}</h1>      
+       80 +          <p className={styles.subtitle}>{copy.subtitle}</p>  
+       81 +          <hr className={styles.divider} />                   
+       82 +                                                              
+       83 +          <form className={styles.form} noValidate onSubmit={o
+          +nSubmit} onKeyDown={onKeyDown}>                               
+       84 +            <fieldset className={styles.options}>             
+       85 +              <legend className={styles.visuallyHidden}>{copy.
+          +optionsLegend}</legend>                                       
+       86 +                                                              
+       87 +              {/* eslint-disable-next-line jsx-a11y/click-even
+          +ts-have-key-events, jsx-a11y/no-static-element-interactions --
+          + the radio is the keyboard path; this is only a larger pointer
+          + target (R4) */}                                              
+       88 +              <div className={styles.card} onClick={onCardClic
+          +k("one-time")}>                                               
+       89 +                <label className={styles.header}>             
+       90 +                  <input                                      
+       91 +                    className={styles.radio}                  
+       92 +                    type="radio"                              
+       93 +                    name={`${id}-option`}                     
+       94 +                    value="one-time"                          
+       95 +                    checked={!subscribed}                     
+       96 +                    onChange={() => choose("one-time")}       
+       97 +                  />                                          
+       98 +                  <span className={styles.label}>{copy.oneTime
+          +.label}</span>{" "}                                           
+       99 +                  <span className={styles.price}>{formatMoney(
+          +copy.oneTime.priceCents)}</span>                              
+      100 +                </label>                                      
+      101 +              </div>                                          
+      102 +                                                              
+      103 +              {/* eslint-disable-next-line jsx-a11y/click-even
+          +ts-have-key-events, jsx-a11y/no-static-element-interactions --
+          + the radio is the keyboard path; this is only a larger pointer
+          + target (R4) */}                                              
+      104 +              <div className={styles.card} onClick={onCardClic
+          +k("subscribe")}>                                              
+      105 +                <label className={styles.header}>             
+      106 +                  <input                                      
+      107 +                    className={styles.radio}                  
+      108 +                    type="radio"                              
+      109 +                    name={`${id}-option`}                     
+      110 +                    value="subscribe"                         
+      111 +                    checked={subscribed}                      
+      112 +                    onChange={() => choose("subscribe")}      
+      113 +                  />                                          
+      114 +                  <span className={styles.label}>{copy.subscri
+          +be.label}</span>{" "}                                         
+      115 +                  <span className={styles.badge}>{copy.subscri
+          +be.badge}</span>{" "}                                         
+      116 +                  <span className={styles.prices}>            
+      117 +                    <span className={styles.price}>{formatMone
+          +y(copy.subscribe.priceCents)}</span>{" "}                     
+      118 +                    <s className={styles.compare} data-contras
+          +t-exception="">                                               
+      119 +                      <span className={styles.visuallyHidden}>
+          +{copy.originally} </span>                                     
+      120 +                      {formatMoney(copy.subscribe.comparePrice
+          +Cents)}                                                       
+      121 +                    </s>                                      
+      122 +                  </span>                                     
+      123 +                </label>                                      
+      124 +                                                              
+      125 +                {/* R5: removed, not hidden, so Tab and screen
+          + readers can't reach it. */}                                  
+      126 +                {subscribed && (                              
+      127 +                  <div className={styles.details}>            
+      128 +                    <div className={styles.frequency}>        
+      129 +                      <label htmlFor={`${id}-frequency`}>{copy
+          +.subscribe.frequencyLabel}</label>                            
+      130 +                      <span className={styles.selectWrap}>    
+      131 +                        <select                               
+      132 +                          id={`${id}-frequency`}              
+      133 +                          className={styles.select}           
+      134 +                          value={state.frequency}             
+      135 +                          onChange={(event) => dispatch({ type
+          +: "frequency/chosen", frequency: event.target.value })}       
+      136 +                        >                                     
+      137 +                          {copy.subscribe.frequencyOptions.map
+          +((frequency) => (                                             
+      138 +                            <option key={frequency} value={fre
+          +quency}>                                                      
+      139 +                              {frequency}                     
+      140 +                            </option>                         
+      141 +                          ))}                                 
+      142 +                        </select>                             
+      143 +                        <ChevronIcon />                       
+      144 +                      </span>                                 
+      145 +                    </div>                                    
+      146 +                    <ul className={styles.perks}>             
+      147 +                      {copy.subscribe.perks.map((perk) => (   
+      148 +                        <li key={perk}>                       
+      149 +                          <CheckIcon />                       
+      150 +                          {perk}                              
+      151 +                        </li>                                 
+      152 +                      ))}                                     
+      153 +                    </ul>                                     
+      154 +                  </div>                                      
+      155 +                )}                                            
+      156 +              </div>                                          
+      157 +            </fieldset>                                       
+      158 +                                                              
+      159 +            <div className={styles.purchaseRow}>              
+      160 +              <div className={styles.stepper}>                
+      161 +                {/* R8: a step at a limit is ignored by the re
+          +ducer, and aria-disabled keeps the button focusable. */}      
+      162 +                <button                                       
+      163 +                  type="button"                               
+      164 +                  className={styles.step}                     
+      165 +                  aria-label={copy.quantity.decrease}         
+      166 +                  aria-disabled={state.quantity <= MIN_QUANTIT
+          +Y}                                                            
+      167 +                  onClick={() => dispatch({ type: "quantity/st
+          +epped", by: -1 })}                                            
+      168 +                >                                             
+      169 +                  <MinusIcon />                               
+      170 +                </button>                                     
+      171 +                <label className={styles.visuallyHidden} htmlF
+          +or={`${id}-quantity`}>                                        
+      172 +                  {copy.quantity.label}                       
+      173 +                </label>                                      
+      174 +                <input                                        
+      175 +                  ref={quantityRef}                           
+      176 +                  id={`${id}-quantity`}                       
+      177 +                  className={styles.quantity}                 
+      178 +                  type="number"                               
+      179 +                  inputMode="numeric"                         
+      180 +                  min={MIN_QUANTITY}                          
+      181 +                  max={MAX_QUANTITY}                          
+      182 +                  step={1}                                    
+      183 +                  value={state.draft}                         
+      184 +                  onChange={(event) => dispatch({ type: "quant
+          +ity/typed", draft: event.target.value })}                     
+      185 +                  onBlur={() => dispatch({ type: "quantity/com
+          +mitted" })}                                                   
+      186 +                />                                            
+      187 +                <button                                       
+      188 +                  type="button"                               
+      189 +                  className={styles.step}                     
+      190 +                  aria-label={copy.quantity.increase}         
+      191 +                  aria-disabled={state.quantity >= MAX_QUANTIT
+          +Y}                                                            
+      192 +                  onClick={() => dispatch({ type: "quantity/st
+          +epped", by: 1 })}                                             
+      193 +                >                                             
+      194 +                  <PlusIcon />                                
+      195 +                </button>                                     
+      196 +              </div>                                          
+      197 +              <button type="submit" className={styles.addToCar
+          +t}>                                                           
+      198 +                {copy.addToCart} <span aria-hidden="true">{cop
+          +y.separator}</span> {totalText}                               
+      199 +              </button>                                       
+      200 +            </div>                                            
+      201 +                                                              
+      202 +            {/* R10, R11: always mounted. The keyed span makes
+          + a repeated message a new node, so it's announced. */}        
+      203 +            <p role="status" className={styles.status}>       
+      204 +              {(correction !== null || summary !== null) && ( 
+      205 +                <span key={seq}>                              
+      206 +                  {correction}                                
+      207 +                  {correction !== null && summary !== null && 
+          +" "}                                                          
+      208 +                  {summary}                                   
+      209 +                </span>                                       
+      210 +              )}                                              
+      211 +            </p>                                              
+      212 +          </form>                                             
+      213 +                                                              
+      214 +          <ul className={styles.trust}>                       
+      215 +            {copy.trust.map((point) => (                      
+      216 +              <li key={point}>                                
+      217 +                <CheckCircleIcon />                           
+      218 +                {point}                                       
+      219 +              </li>                                           
+      220 +            ))}                                               
+      221 +          </ul>                                               
+      222 +                                                              
+      223 +          {/* R9: a one-time purchase doesn't renew. */}      
+      224 +          {subscribed && (                                    
+      225 +            <p className={styles.finePrint} data-contrast-exce
+          +ption="">                                                     
+      226 +              {copy.renewalNotice(state.frequency, totalText)}
+      227 +            </p>                                              
+      228 +          )}                                                  
+      229 +        </div>                                                
+      230 +      </div>                                                  
+      231 +    </main>                                                   
+      232 +  );                                                          
+      233  }
+
+● Write(src/part-b/BuyBox.module.css)
+  ⎿  Wrote 39 lines to src/part-b/BuyBox.module.css
+       1 /* 005: only what the behaviour needs (T3). T5 adds the measured
+          layout, tokens and type from plan.md. */
+       2
+       3 .visuallyHidden {
+       4   position: absolute;
+       5   width: 1px;
+       6   height: 1px;
+       7   margin: -1px;
+       8   padding: 0;
+       9   overflow: hidden;
+     … +30 lines (ctrl+o to expand)
+
+● Typecheck and lint come first. The form's onKeyDown is the part most likely to
+  trip a jsx-a11y rule.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'm guarding the two radios and the select with the same Enter handler instead
+  of disabling jsx-a11y's no-noninteractive-element-interactions rule on the
+  form, and I'll update the plan to match.
+
+● Update(SPECS/005-b-buy-box/plan.md)
+  ⎿  Added 4 lines, removed 2 lines
+      226    `option/chosen` and focuses that card's radio. The two jsx-a
+           11y rules (`click-events-have-key-events` and
+      227    `no-static-element-interactions`) are disabled on that one l
+           ine, with a comment: the radio is the keyboard path,
+      228    and the handler is only a larger pointer target.
+      229 -- **Enter guard (R10).** In the form's `onKeyDown`, Enter on a
+          -n `input[type=radio]` or a `select` calls                     
+      230 -  `preventDefault()`. Enter in the quantity field still submit
+          -s. The form has `noValidate`, so Chrome's native              
+      229 +- **Enter guard (R10).** One `onKeyDown` handler, set on both 
+          +radios and the frequency `select`, calls                      
+      230 +  `preventDefault()` on Enter. Enter in the quantity field sti
+          +ll submits. It sits on those three controls, not on           
+      231 +  the form, because jsx-a11y (`no-noninteractive-element-inter
+          +actions`) rejects a key handler on a `form`, and the          
+      232 +  controls are exactly the Enter paths R10 names, so no rule n
+          +eeds disabling. The form has `noValidate`, so Chrome's native 
+      233    `min`/`max` check can't block a submit with 15 before `cart/
+           added` corrects it. Both stepper buttons are
+      234    `type="button"`, so they never submit.
+      235  - **Wheel guard (R8).** React's `onWheel` is passive and can't
+            cancel the event. So an effect adds a native
+
+● Bash(sed -i 's|^        form(noValidate, onSubmit, onKeyDown = Enter guard)|
+           form(noValidate, onSubmit)|; s|label.header > input\[type=radio\] ·
+      span.label ·…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+2 -2)
+      202        form(noValidate, onSubmit, onKeyDown = Enter guard)
+      203          fieldset.options > legend.visuallyHidden
+      204            div.card(onClick = select this option)      one-time
+      205 -            label.header > input[type=radio] · span.label · sp
+          -an.price                                                      
+      205 +            label.header > input[type=radio, onKeyDown = Enter
+          + guard] · span.label · span.price                             
+      206            div.card(onClick)                           subscrip
+           tion
+      207              label.header > input[type=radio] · span.label · sp
+           an.badge · span.prices
+      208                                                            (spa
+           n.price · s.compare > span.visuallyHidden "originally ")
+      209                                                            s.co
+           mpare has data-contrast-exception
+      210              div.details (only while subscribed)
+      211 -              label[for=frequency] · span.selectWrap > select#
+          -frequency · ChevronIcon                                       
+      211 +              label[for=frequency] · span.selectWrap > select#
+          +frequency(onKeyDown = Enter guard) · ChevronIcon              
+      212                ul.perks > li > CheckIcon · text
+      213          div.purchaseRow
+      214            div.stepper
+● Two lines of the plan still need fixing: the form line in the markup sketch,
+  which my sed didn't match, and the line in Risks.
+
+● Bash(python3 - <<'EOF'
+      p="SPECS/005-b-buy-box/plan.md"; s=open(p).read()…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+4 -3)
+      199        h1.title
+      200        p.subtitle
+      201        hr.divider
+      202 -      form(noValidate, onSubmit, onKeyDown = Enter guard)     
+      202 +      form(noValidate, onSubmit)                              
+      203          fieldset.options > legend.visuallyHidden
+      204            div.card(onClick = select this option)      one-time
+      205              label.header > input[type=radio, onKeyDown = Enter
+            guard] · span.label · span.price
+      206            div.card(onClick)                           subscrip
+           tion
+      207 -            label.header > input[type=radio] · span.label · sp
+          -an.badge · span.prices                                        
+      207 +            label.header > input[type=radio, onKeyDown] · span
+          +.label · span.badge · span.prices                             
+      208                                                            (spa
+           n.price · s.compare > span.visuallyHidden "originally ")
+      209                                                            s.co
+           mpare has data-contrast-exception
+      210              div.details (only while subscribed)
+     ...
+      358    test runs a real screen reader (spec, Known limitations).
+      359  - **A long total at 375px** ("Add to cart · $254.60") is tight
+            next to the stepper. The wrapping rules and the
+      360    quantity-10 reflow test cover it.
+      361 -- **Chromium's native Enter submit on radios** means the Enter
+          - guard must be on the form, not the button. The e2e           
+      361 +- **Chromium's native Enter submit on radios** means Enter nee
+          +ds an explicit guard on the radios (and, for the same rule eve
+          +rywhere, the                                                  
+      362 +  `select`). Removing the submit button's focus or type wouldn
+          +'t stop it. The e2e                                           
+      363    test runs it in real Chromium.
+
+● The Risks line reads badly, so I'll tighten it, then update the component.
+
+● Bash(python3 - <<'EOF'
+      p="SPECS/005-b-buy-box/plan.md"; s=open(p).read()…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+10 -11)
+      157  }
+      158  ```
+      159  
+      160 -| Action               | Result                               
+          -                                                              
+          -                                             |                
+      161 -| -------------------- | -------------------------------------
+          ---------------------------------------------------------------
+          --------------------------------------------- |                
+      162 -| `option/chosen`      | sets `option`. The status is cleared.
+          - Choosing the option already selected is ignored              
+          -                                             |                
+      163 -| `frequency/chosen`   | sets `frequency`, if it's one of the 
+          -options and not the current one. The status is cleared. Otherw
+          -ise it's ignored                             |                
+      164 -| `quantity/stepped`   | ±1 if the result is within 1–10, and 
+          -`draft` follows. The status is cleared. At a limit it's ignore
+          -d and returns the same state (R8)            |                
+      165 -| `quantity/typed`     | sets `draft`. If `parseQuantity(draft
+          -)` is a whole number from 1 to 10, `quantity` follows. Otherwi
+          -se it stays (R9). The status is cleared      |                
+      166 -| `quantity/committed` | `correctQuantity(draft, quantity)` (R
+          -8). If the value changes, `correction` is set and `seq` increm
+          -ents (R11). See below                        |                
+      167 -| `cart/added`         | runs `quantity/committed` first, then
+          - sets `summary` and increments `seq`, keeping a `correction` t
+          -hat no summary has followed yet (R10, R11)    |               
+      160 +| Action               | Result                               
+          +                                                              
+          +                                           |                  
+      161 +| -------------------- | -------------------------------------
+          +--------------------------------------------------------------
+          +------------------------------------------ |                  
+      162 +| `option/chosen`      | sets `option`. The status is cleared.
+          + Choosing the option already selected is ignored              
+          +                                           |                  
+      163 +| `frequency/chosen`   | sets `frequency`, if it's one of the 
+          +options and not the current one. The status is cleared. Otherw
+          +ise it's ignored                           |                  
+      164 +| `quantity/stepped`   | ±1 if the result is within 1–10, and 
+          +`draft` follows. The status is cleared. At a limit it's ignore
+          +d and returns the same state (R8)          |                  
+      165 +| `quantity/typed`     | sets `draft`. If `parseQuantity(draft
+          +)` is a whole number from 1 to 10, `quantity` follows. Otherwi
+          +se it stays (R9). The status is cleared    |                  
+      166 +| `quantity/committed` | `correctQuantity(draft, quantity)` (R
+          +8). If the value changes, `correction` is set and `seq` increm
+          +ents (R11). See below                      |                  
+      167 +| `cart/added`         | runs `quantity/committed` first, then
+          + sets `summary` and increments `seq`, keeping a `correction` t
+          +hat no summary has followed yet (R10, R11) |                  
+      168  
+      169  - **"Clears" means** `correction` and `summary` become null. `
+           seq` keeps counting.
+      170  - **"Ignored" means** the reducer returns the same state objec
+           t, so nothing re-renders and the status line stays.
+     ...
+      358    test runs a real screen reader (spec, Known limitations).
+      359  - **A long total at 375px** ("Add to cart · $254.60") is tight
+            next to the stepper. The wrapping rules and the
+      360    quantity-10 reflow test cover it.
+      361 -- **Chromium's native Enter submit on radios** means Enter nee
+          -ds an explicit guard on the radios (and, for the same rule eve
+          -rywhere, the                                                  
+      362 -  `select`). Removing the submit button's focus or type wouldn
+          -'t stop it. The e2e                                           
+      363 -  test runs it in real Chromium.                              
+      361 +- **Chromium's native Enter submit on radios** means the radio
+          +s need an explicit Enter guard, and the `select` gets         
+      362 +  the same one so every browser behaves alike. The e2e test ru
+          +ns it in real Chromium.                                       
+  ⎿  Updated src/part-b/BuyBox.tsx (+8 -8)
+      10  /** R4: a click on these is theirs, so the card's own click han
+          dler leaves it alone. */
+      11  const CONTROLS = "input, select, label, button, a";
+      12  
+      13 -/** R10: Enter here must never submit. Chromium submits a form 
+         -on Enter in a radio (spec R10). */                             
+      14 -const isEnterGuarded = (target: EventTarget) =>                
+      15 -  target instanceof HTMLSelectElement || (target instanceof HTM
+         -LInputElement && target.type === "radio");                     
+      13 +/** R10: set on both radios and the select, where Enter must ne
+         +ver submit. Chromium submits on Enter in a radio. */           
+      14 +const guardEnter = (event: KeyboardEvent) => {                 
+      15 +  if (event.key === "Enter") event.preventDefault();           
+      16 +};                                                             
+      17  
+      18  export function BuyBox() {
+      19    const [state, dispatch] = useReducer(buyBoxReducer, initialSt
+          ate);
+     ...
+      42      event.currentTarget.querySelector<HTMLInputElement>('input[
+          type="radio"]')?.focus();
+      43    };
+      44  
+      44 -  const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => 
+         -{                                                              
+      45 -    if (event.key === "Enter" && isEnterGuarded(event.target)) 
+         -event.preventDefault();                                        
+      46 -  };                                                           
+      47 -                                                               
+      45    // R10, R11: Enter in the field submits without a blur, so `c
+          art/added` runs the correction itself.
+      46    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+      47      event.preventDefault();
+     ...
+      77            <p className={styles.subtitle}>{copy.subtitle}</p>
+      78            <hr className={styles.divider} />
+      79  
+      83 -          <form className={styles.form} noValidate onSubmit={on
+         -Submit} onKeyDown={onKeyDown}>                                 
+      80 +          <form className={styles.form} noValidate onSubmit={on
+         +Submit}>                                                       
+      81              <fieldset className={styles.options}>
+      82                <legend className={styles.visuallyHidden}>{copy.o
+          ptionsLegend}</legend>
+      83  
+     ...
+      91                      value="one-time"
+      92                      checked={!subscribed}
+      93                      onChange={() => choose("one-time")}
+      94 +                    onKeyDown={guardEnter}                     
+      95                    />
+      96                    <span className={styles.label}>{copy.oneTime.
+          label}</span>{" "}
+      97                    <span className={styles.price}>{formatMoney(c
+          opy.oneTime.priceCents)}</span>
+     ...
+      108                      value="subscribe"
+      109                      checked={subscribed}
+     … 12 more lines (ctrl+o to expand)
+
+● Typecheck, lint and format all pass now. Prettier only re-padded the plan's
+  table. Next are the component tests, starting with the no-inline-text test.
+
+● Write(src/part-b/BuyBox.test.tsx)
+  ⎿  Wrote 404 lines to src/part-b/BuyBox.test.tsx
+       1 // 005: BuyBox through the DOM. The rules themselves are unit-te
+         sted in buyBox.test.ts and buyBoxReducer.test.ts.
+       2 // What jsdom can't do (real Enter on a radio in Chromium, the w
+         heel, layout, styles) is covered in e2e (T5–T8).
+       3 import { fireEvent, render, screen, within } from "@testing-libr
+         ary/react";
+       4 import userEvent from "@testing-library/user-event";
+       5 import { describe, expect, it } from "vitest";
+       6 import { formatMoney, totalCents } from "./buyBox";
+       7 import { BuyBox } from "./BuyBox";
+     … +397 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The test found an accessible-name bug: the space inside the hidden "originally
+  " span gets dropped, so it reads "originally$29.95". I'm moving that space
+  outside the hidden span.
+
+● Update(src/part-b/BuyBox.tsx)
+  ⎿  Added 2 lines, removed 1 line
+      115                    <span className={styles.prices}>
+      116                      <span className={styles.price}>{formatMone
+           y(copy.subscribe.priceCents)}</span>{" "}
+      117                      <s className={styles.compare} data-contras
+           t-exception="">
+      118 -                      <span className={styles.visuallyHidden}>
+          -{copy.originally} </span>                                     
+      118 +                      {/* The space is outside the hidden span
+          +: inside it, the name would read "originally$29.95". */}      
+      119 +                      <span className={styles.visuallyHidden}>
+          +{copy.originally}</span>{" "}                                 
+      120                        {formatMoney(copy.subscribe.comparePrice
+           Cents)}
+      121                      </s>
+      122                    </span>
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All 39 pass. Now the failure checks for the component: five temporary breaks,
+  the inline-string one included, with the file restored after each.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All five breaks were caught. Before ticking T3, I'll sanity-check the page in
+  real Chromium: the existing Part B smoke test (axe plus console errors) runs
+  against the new markup.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Both smoke failures come from axe's WCAG target-size and target-offset rules,
+  since the unstyled buttons and field are under 24px and touching. I'm adding a
+  minimum target size now so npm run check stays green until T5 applies the
+  real design.
+
+● Update(src/part-b/BuyBox.module.css)
+  ⎿  Added 8 lines
+      17    cursor: pointer;
+      18  }
+      19  
+      20 +/* R14 (WCAG 2.5.8): unstyled, these targets are under 24px and
+         + adjacent. T5 sets the design's 56px row. */                   
+      21 +.step,                                                         
+      22 +.quantity,                                                     
+      23 +.addToCart {                                                   
+      24 +  min-inline-size: 44px;                                       
+      25 +  min-block-size: 44px;                                        
+      26 +}                                                              
+      27 +                                                               
+      28  /* R8: no spinner arrows, as in the design. The arrow keys stil
+          l step natively. */
+      29  .quantity {
+      30    appearance: textfield;
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The smoke test passes, but jsdom can't reproduce Chromium's native
+  Enter-on-radio submit or the real blur-then-click order. A throwaway spec now
+  checks that T3's markup handles those cases in a real browser, while T8's e2e
+  tests cover them later.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Chromium behaves as specified in all four checks: Enter on the radios or
+  select adds nothing, Enter in the 15 field corrects and then adds, and the
+  wheel leaves the value alone. I've deleted the probe file and am ticking T3 in
+  the log next.
+
+● Bash(sed -i 's/^- \[ \] T3 /- [x] T3 /' SPECS/005-b-buy-box/task.md && grep -c
+      "\[x\] T3" SPECS/005-b-buy-box/task.md && python3 - <<'EOF'
+      p="SPECS/CHANGELOG.md"; s=…)
+  ⎿  Updated SPECS/005-b-buy-box/task.md (+1 -1)
+       6  - [x] T2 (R4–R6, R8–R11): `buyBoxReducer.ts` with the six actio
+          ns, plus unit tests for every transition, every
+       7        ignored case, the status clearing, `seq` on a repeated ad
+          d, and the correction before the summary on both
+       8        submit paths
+       9 -- [ ] T3 (R1, R3–R11, R13): `BuyBox.tsx` markup and behaviour, 
+         -with only enough CSS to work: the form, the fieldset,          
+       9 +- [x] T3 (R1, R3–R11, R13): `BuyBox.tsx` markup and behaviour, 
+         +with only enough CSS to work: the form, the fieldset,          
+      10        a label around the header row only, the card click handle
+          r, the select, the form with `noValidate`, the
+      11        stepper with `type="button"` and `aria-disabled`, `inputM
+          ode`, the wheel guard and the Enter guard, the keyed
+      12        status line, the fine print and `data-contrast-exception`
+          . Component tests, including the no-inline-text test
+  ⎿  Updated SPECS/CHANGELOG.md (+48 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box / T3: buy box markup and behaviour
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-b/BuyBox.tsx`: the plan's markup, replacing the "
+         +Start here." stub. Native radios in a `fieldset` with          
+       9 +    a hidden legend, and a card click handler that ignores cont
+         +rols and labels and focuses the card's radio. The              
+      10 +    details and the fine print are removed while one-time is se
+         +lected. The `form` has `noValidate`. The stepper               
+      11 +    buttons are `type="button"` with `aria-disabled` at the lim
+         +its. The field has `inputMode="numeric"`, plus the             
+      12 +    non-passive wheel guard and the Enter guard. The status lin
+         +e is always mounted, with a `span` keyed by `seq`.             
+      13 +    The four `data-contrast-exception` marks are in place.     
+      14 +  - New `src/part-b/icons.tsx`: star, check, check-circle, chev
+         +ron, minus and plus, all `aria-hidden`. T5 tunes               
+      15 +    their shapes.                                              
+      16 +  - New `src/part-b/BuyBox.module.css`, with only the behaviour
+         +al rules: visually hidden text, the card's pointer             
+      17 +    cursor, the hidden spinners, `not-allowed` at a limit, the 
+         +empty status line's zero margin, and a 44px minimum            
+      18 +    target for the stepper, the field and the button (below).  
+      19 +  - `plan.md`: the Enter guard's location (below), in the marku
+         +p sketch, the bullet and Risks.                                
+      20 +  - New `src/part-b/BuyBox.test.tsx` (39 tests).               
+      21 +- **Decisions:**                                               
+      22 +  - The Enter guard is one handler on both radios and the `sele
+         +ct`, not on the `form`. jsx-a11y's                             
+      23 +    `no-noninteractive-element-interactions` rejects a key hand
+         +ler on a form, and those three controls are exactly            
+      24 +    the Enter paths R10 names, so no rule is disabled. The card
+         +'s click handler is the only line with a disable               
+      25 +    comment, as the plan says.                                 
+      26 +  - The reducer already ignores a step at a limit, so the butto
+         +ns always dispatch and the limit rule lives in one             
+      27 +    place.                                                     
+      28 +  - The visible "4.8" sits inside the stars' `aria-hidden` span
+         +, so a screen reader hears "Rated 4.8 out of 5" once.          
+      29 +  - The selected card's style will come from `:has(:checked)` i
+         +n T5, so there's no second copy of the selection in            
+      30 +    the DOM. jsdom doesn't apply CSS modules, so the style is c
+         +hecked in e2e.                                                 
+      31 +  - A 44px minimum target size, ahead of T5. With no styling, t
+         +he stepper's buttons and field were under 24px and             
+      32 +    adjacent, and the Part B smoke test failed axe's `target-si
+         +ze` and `target-offset` (WCAG 2.5.8). T5 replaces it           
+      33 +    with the design's 56px row.                                
+      34 +- **Found by the tests:** the subscription radio's name read "o
+         +riginally$29.95". The space inside the visually                
+      35 +  hidden span was trimmed from the accessible name, so it now s
+         +its outside the span.                                          
+      36 +- **Verified:**                                                
+      37 +  - `BuyBox.test.tsx`: 39 passed:                              
+      38 +    - names and structure, including the rating, the select out
+         +side every label, and `noValidate`                             
+      39 +    - the four contrast marks                                  
+      40 +    - collapse and restore, the frequency kept, and the card pa
+         +dding click                                                    
+      41 +    - the arrow keys, + twice with the line empty, and `aria-di
+         +sabled` focus at both limits                                   
+     … 14 more lines (ctrl+o to expand)
+
+● Bash(npx prettier --check SPECS src/part-b 2>&1 | grep warn; npx prettier
+      --write SPECS src/part-b >/dev/null && git diff --stat -- SPECS && npx
+      prettier --check SPE…)
+  ⎿  Updated SPECS/CHANGELOG.md (+1 -1)
+      59    - New `src/part-b/buyBoxReducer.test.ts` (55 tests).
+      60  - **Decisions:**
+      61    - Choosing the option or frequency that's already selected is
+           ignored, and the same state object is returned.
+      62 -    R10 clears the line when the selection *changes*, and a cli
+         -ck on the selected card's padding isn't a change.              
+      62 +    R10 clears the line when the selection _changes_, and a cli
+         +ck on the selected card's padding isn't a change.              
+      63    - A commit announces a change of value, not of text, followin
+          g R8 ("if the value changes"). `"1e1"`, `"05"` and
+      64      `"3.0"` are tidied to `"10"`, `"5"` and `"3"` without a mes
+          sage. `""` and `"abc"` go back to the last valid
+      65      quantity and are announced. The plan's earlier wording ("if
+           the field's text changes") would have announced
+  ⎿  Updated src/part-b/BuyBox.test.tsx (+5 -5)
+      68    it("labels the select, keeps it out of every radio's label, a
+          nd lists the options in order", () => {
+      69      setup();
+      70      expect(frequency()).toHaveValue("30 days");
+      71 -    expect(within(frequency()).getAllByRole("option").map((opti
+         -on) => option.textContent)).toEqual([                          
+      72 -      "30 days",                                               
+      73 -      "60 days",                                               
+      74 -      "90 days",                                               
+      75 -    ]);                                                        
+      71 +    expect(                                                    
+      72 +      within(frequency())                                      
+      73 +        .getAllByRole("option")                                
+      74 +        .map((option) => option.textContent),                  
+      75 +    ).toEqual(["30 days", "60 days", "90 days"]);              
+      76      expect(frequency().closest("label")).toBeNull();
+      77    });
+      78  
+
+● T2 and T3 are done. T4 needs Node's file API, but @types/node isn't installed,
+  and adding a dependency needs your confirmation, so I'm asking before I add
+  it.
+
+● User answered Claude's questions:
+  ⎿  · T4's visual test reads two PNG files and the screenshot's bytes in Node,
+     but @types/node isn't installed, so `node:fs` and `Buffer` don't typecheck
+     in e2e/. May I add it? → Add @types/node (Recommended)
+
+● Bash(npm install --save-dev @types/node@^24 2>&1 | tail -3 && grep -n
+      "@types/node" package.json && git diff --stat package.json
+      package-lock.json)
+  ⎿  Updated package.json (+1 -0)
+      26      "@testing-library/jest-dom": "^7.0.1",
+      27      "@testing-library/react": "^16.3.3",
+      28      "@testing-library/user-event": "^14.6.8",
+      29 +    "@types/node": "^24.19.2",                                 
+      30      "@types/react": "^19.1.0",
+      31      "@types/react-dom": "^19.1.0",
+      32      "@vitejs/plugin-react": "^5.0.0",
+  ⎿  Updated package-lock.json (+20 -0)
+      18          "@testing-library/jest-dom": "^7.0.1",
+      19          "@testing-library/react": "^16.3.3",
+      20          "@testing-library/user-event": "^14.6.8",
+      21 +        "@types/node": "^24.19.2",                             
+      22          "@types/react": "^19.1.0",
+      23          "@types/react-dom": "^19.1.0",
+      24          "@vitejs/plugin-react": "^5.0.0",
+     ...
+      1864        "dev": true,
+      1865        "license": "MIT"
+      1866      },
+      1867 +    "node_modules/@types/node": {                            
+      1868 +      "version": "24.19.2",                                  
+      1869 +      "resolved": "https://registry.npmjs.org/@types/node/-/n
+           +ode-24.19.2.tgz",                                            
+      1870 +      "integrity": "sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg
+           +79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==",     
+      1871 +      "dev": true,                                           
+      1872 +      "license": "MIT",                                      
+      1873 +      "peer": true,                                          
+      1874 +      "dependencies": {                                      
+      1875 +        "undici-types": ">=7.24.0 <7.24.7"                   
+      1876 +      }                                                      
+      1877 +    },                                                       
+      1878      "node_modules/@types/react": {
+      1879        "version": "19.3.0",
+      1880        "resolved": "https://registry.npmjs.org/@types/react/-/
+            react-19.3.0.tgz",
+     ...
+      5816          "node": ">=20.18.1"
+      5817        }
+      5818      },
+      5819 +    "node_modules/undici-types": {                           
+      5820 +      "version": "7.24.6",                                   
+      5821 +      "resolved": "https://registry.npmjs.org/undici-types/-/
+           +undici-types-7.24.6.tgz",                                    
+      5822 +      "integrity": "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+
+           +OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==",     
+      5823 +      "dev": true,                                           
+      5824 +      "license": "MIT"                                       
+      5825 +    },                                                       
+      5826      "node_modules/update-browserslist-db": {
+      5827        "version": "1.3.4",
+      5828        "resolved": "https://registry.npmjs.org/update-browsers
+            list-db/-/update-browserslist-db-1.3.4.tgz",
+     ...
+      5946        "integrity": "sha512-MzmNFnrwa8v8lF1bLxw3UJ4EREwVOVb75V
+            qJZmUDRjJ6EluK/x9th7qTbaeDk41WxE1GxWqmTXcdsfobfH5sOA==",
+      5947        "dev": true,
+      5948        "license": "MIT",
+     … 4 more lines (ctrl+o to expand)
+
+● Installed. npm mentioned an audit finding, so I'll check whether it's new or
+  was already there.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The audit flag comes from minimatch via ESLint, predating this change, and the
+  stash round-trip restored package.json. Next I'll check how Playwright 1.64
+  handles the per-project snapshotPathTemplate, testIgnore and toHaveScreenshot
+  scale before writing the visual project.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Line 622 sets the project-level snapshotPathTemplate, so the visual project
+  can get its own. Next I'll check whether testInfo.snapshotPath resolves that
+  template and whether other e2e files import from src/.
+
+  Searched for 1 pattern (ctrl+o to expand)
+● snapshotPath("buy-box.png") points at the same file toHaveScreenshot compares
+  against, so the byte check is valid. I'm writing the config, baseline copy,
+  diff helper and spec next.
+
+● Bash(mkdir -p e2e/__screenshots__ && cp public/reference/buy-box.png
+      e2e/__screenshots__/buy-box.png && cmp public/reference/buy-box.png
+      e2e/__screenshots__/buy-box.…)
+  ⎿  Updated playwright.config.ts (+17 -2)
+       3  
+       4  const port = 5179;
+       5  
+       6 +// 005 R2: the pixel test needs its own 2x project, and nothing
+         + else runs in it.                                              
+       7 +const visualSpec = /b-visual\.spec\.ts$/;                      
+       8 +                                                               
+       9  export default defineConfig<TestOptions>({
+      10    testDir: "e2e",
+      11    fullyParallel: true,
+     ...
+      21    },
+      22    projects: [
+      23      // Most customers are on a 375px phone, so mobile is the pr
+          imary project.
+      21 -    { name: "mobile", use: { ...devices["Desktop Chrome"], view
+         -port: { width: 375, height: 812 }, hasTouch: true } },         
+      22 -    { name: "desktop", use: { ...devices["Desktop Chrome"], vie
+         -wport: { width: 1200, height: 780 } } },                       
+      24 +    {                                                          
+      25 +      name: "mobile",                                          
+      26 +      testIgnore: visualSpec,                                  
+      27 +      use: { ...devices["Desktop Chrome"], viewport: { width: 3
+         +75, height: 812 }, hasTouch: true },                           
+      28 +    },                                                         
+      29 +    { name: "desktop", testIgnore: visualSpec, use: { ...device
+         +s["Desktop Chrome"], viewport: { width: 1200, height: 780 } } }
+         +,                                                              
+      30 +    // 005 R2: the design is a 2x screenshot of a 1200×780 wind
+         +ow. `desktop` is 1x, so it can't match it.                     
+      31 +    // The baseline is e2e/__screenshots__/buy-box.png, a commi
+         +tted copy of public/reference/buy-box.png.                     
+      32 +    {                                                          
+      33 +      name: "visual",                                          
+      34 +      testMatch: visualSpec,                                   
+      35 +      snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ex
+         +t}",                                                           
+      36 +      use: { ...devices["Desktop Chrome"], viewport: { width: 1
+         +200, height: 780 }, deviceScaleFactor: 2 },                    
+      37 +    },                                                         
+      38    ],
+      39    webServer: {
+      40      command: `npm run dev -- --port ${port} --strictPort`,
+  ⎿  … 1 more file changed
+
+● Write(e2e/visual.ts)
+  ⎿  Wrote 93 lines to e2e/visual.ts
+       1 /// <reference types="node" />
+       2 // 005 R2: helpers for the visual test. The diff runs in the bro
+         wser on a canvas, so it needs no image library.
+       3 import type { Page } from "./test";
+       4
+       5 /** Width and height from a PNG's IHDR chunk. */
+       6 export function pngSize(png: Buffer): { width: number; height: n
+         umber } {
+       7   const signature = "89504e470d0a1a0a";
+       8   if (png.subarray(0, 8).toString("hex") !== signature || png.su
+     … +86 lines (~4 KB) (ctrl+o to expand)
+
+● Now the spec itself. The geometry numbers come straight from the plan's layout
+  table.
+
+● Write(e2e/b-visual.spec.ts)
+  ⎿  Wrote 135 lines to e2e/b-visual.spec.ts
+      1 /// <reference types="node" />
+      2 // 005 R2: the buy box against the design. Runs only in the `visu
+        al` project (1200×780, deviceScaleFactor 2).
+      3 import { readFileSync } from "node:fs";
+      4 import { copy } from "../src/part-b/copy";
+      5 import { diffImages, pngSize } from "./visual";
+      6 import { expect, type Page, test } from "./test";
+      7
+      8 const REFERENCE = new URL("../public/reference/buy-box.png", impo
+        rt.meta.url);
+     … +127 lines (ctrl+o to expand)
+
+● Bash(npx tsc --noEmit 2>&1 | head; npx eslint e2e playwright.config.ts
+      --max-warnings=0 2>&1 | head -20; npx prettier --write e2e
+      playwright.config.ts >/dev/null; np…)
+  ⎿  Updated playwright.config.ts (+5 -1)
+      26        testIgnore: visualSpec,
+      27        use: { ...devices["Desktop Chrome"], viewport: { width: 3
+          75, height: 812 }, hasTouch: true },
+      28      },
+      29 -    { name: "desktop", testIgnore: visualSpec, use: { ...device
+         -s["Desktop Chrome"], viewport: { width: 1200, height: 780 } } }
+         -,                                                              
+      29 +    {                                                          
+      30 +      name: "desktop",                                         
+      31 +      testIgnore: visualSpec,                                  
+      32 +      use: { ...devices["Desktop Chrome"], viewport: { width: 1
+         +200, height: 780 } },                                          
+      33 +    },                                                         
+      34      // 005 R2: the design is a 2x screenshot of a 1200×780 wind
+          ow. `desktop` is 1x, so it can't match it.
+      35      // The baseline is e2e/__screenshots__/buy-box.png, a commi
+          tted copy of public/reference/buy-box.png.
+      36      {
+
+● The visual project runs and the unstyled page differs from the design by 7.0%,
+  but before trusting that figure I'll sanity-check the helper with a throwaway
+  probe and look at the diff image.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The helper's output checks out against Playwright's, and it's stricter because
+  it doesn't excuse anti-aliasing. Next I'll confirm the probe left the
+  baseline alone, then look at the diff image.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● The diff image shows red over every differing pixel, and I'm now backing up
+  each PNG, appending one byte to it, and checking that the byte test fails
+  before restoring the file.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both changes now fail with the expected message and both files are restored.
+  Next I'll block the font hosts for one run to confirm the font check fails
+  clearly when Google Fonts doesn't load.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Blocked fonts now fail with a message naming each missing face. I'm adding a
+  document.fonts.load() call before check() and recording the approved
+  @types/node dev dependency in the plan.
+
+● Bash(python3 - <<'EOF'
+      p="SPECS/005-b-buy-box/plan.md"; s=open(p).read()…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+20 -18)
+      101  
+      102  ## Files
+      103  
+      104 -| File                              | Change                  
+          -                                                              
+          -                                               |              
+      105 -| --------------------------------- | ------------------------
+          ---------------------------------------------------------------
+          ----------------------------------------------- |              
+      106 -| `src/part-b/copy.ts`              | new keys and templates o
+          -nly. The existing values stay byte-for-byte                   
+          -                                               |              
+      107 -| `src/part-b/buyBox.ts`            | `MIN_QUANTITY`, `MAX_QUA
+          -NTITY`, `formatMoney`, `unitPriceCents`, `totalCents`, `parseQ
+          -uantity`, `isValidQuantity`, `correctQuantity` |              
+      108 -| `src/part-b/buyBoxReducer.ts`     | state, actions and reduc
+          -er                                                            
+          -                                               |              
+      109 -| `src/part-b/BuyBox.tsx`           | page markup and behaviou
+          -r                                                             
+          -                                               |              
+      110 -| `src/part-b/icons.tsx`            | inline SVGs: star, check
+          -, check-circle, chevron, minus, plus. All `aria-hidden`       
+          -                                               |              
+      111 -| `src/part-b/BuyBox.module.css`    | tokens, layout, the narr
+          -ow layout below 960px                                         
+          -                                               |              
+      112 -| `src/part-b/*.test.ts(x)`         | unit and component tests
+          -                                                              
+          -                                               |              
+      113 -| `e2e/a11y.ts`                     | `expectAccessibleBuyBox`
+          -: R14's two axe runs plus the reflow check                    
+          -                                               |              
+      114 -| `e2e/smoke.spec.ts`               | Part B uses `expectAcces
+          -sibleBuyBox`. Part A is unchanged                             
+          -                                               |              
+      115 -| `e2e/visual.ts`                   | `diffImages`: the in-bro
+          -wser diff for R2's attachment and ratio                       
+          -                                               |              
+      116 -| `e2e/b-visual.spec.ts`            | byte check, geometry, pi
+          -xel test (project `visual` only)                              
+          -                                               |              
+      117 -| `e2e/b-buy-box.spec.ts`           | the flows on `mobile` an
+          -d `desktop`                                                   
+          -                                               |              
+      118 -| `e2e/__screenshots__/buy-box.png` | committed copy of the re
+          -ference, the pixel test's baseline                            
+          -                                               |              
+      119 -| `playwright.config.ts`            | the `visual` project. `m
+          -obile` and `desktop` ignore `b-visual.spec.ts`                
+          -                                               |              
+      104 +| File                              | Change                  
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                  |                           
+      105 +| --------------------------------- | ------------------------
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +--------------------------------- |                           
+      106 +| `src/part-b/copy.ts`              | new keys and templates o
+          +nly. The existing values stay byte-for-byte                   
+          +                                                              
+          +                                                              
+          +                                  |                           
+      107 +| `src/part-b/buyBox.ts`            | `MIN_QUANTITY`, `MAX_QUA
+          +NTITY`, `formatMoney`, `unitPriceCents`, `totalCents`, `parseQ
+          +uantity`, `isValidQuantity`, `correctQuantity`                
+          +                                                              
+          +                                  |                           
+      108 +| `src/part-b/buyBoxReducer.ts`     | state, actions and reduc
+          +er                                                            
+          +                                                              
+          +                                                              
+          +                                  |                           
+      109 +| `src/part-b/BuyBox.tsx`           | page markup and behaviou
+          +r                                                             
+          +                                                              
+          +                                                              
+          +                                  |                           
+      110 +| `src/part-b/icons.tsx`            | inline SVGs: star, check
+          +, check-circle, chevron, minus, plus. All `aria-hidden`       
+          +                                                              
+          +                                                              
+          +                                  |                           
+      111 +| `src/part-b/BuyBox.module.css`    | tokens, layout, the narr
+          +ow layout below 960px                                         
+          +                                                              
+          +                                                              
+          +                                  |                           
+      112 +| `src/part-b/*.test.ts(x)`         | unit and component tests
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                  |                           
+      113 +| `e2e/a11y.ts`                     | `expectAccessibleBuyBox`
+          +: R14's two axe runs plus the reflow check                    
+          +                                                              
+          +                                                              
+          +                                  |                           
+      114 +| `e2e/smoke.spec.ts`               | Part B uses `expectAcces
+          +sibleBuyBox`. Part A is unchanged                             
+          +                                                              
+          +                                                              
+          +                                  |                           
+      115 +| `e2e/visual.ts`                   | `diffImages`: the in-bro
+          +wser diff for R2's attachment and ratio                       
+          +                                                              
+          +                                                              
+          +                                  |                           
+      116 +| `e2e/b-visual.spec.ts`            | byte check, geometry, pi
+          +xel test (project `visual` only)                              
+          +                                                              
+          +                                                              
+          +                                  |                           
+      117 +| `e2e/b-buy-box.spec.ts`           | the flows on `mobile` an
+          +d `desktop`                                                   
+          +                                                              
+          +                                                              
+          +                                  |                           
+      118 +| `e2e/__screenshots__/buy-box.png` | committed copy of the re
+          +ference, the pixel test's baseline                            
+          +                                                              
+          +                                                              
+          +                                  |                           
+      119 +| `playwright.config.ts`            | the `visual` project. `m
+          +obile` and `desktop` ignore `b-visual.spec.ts`                
+          +                                                              
+          +                                                              
+          +                                  |                           
+      120 +| `package.json`                    | `@types/node` (dev only,
+          + approved by the human on 2026-11-03), for `node:fs` and `Buff
+          +er` in the visual test. Only `e2e/visual.ts` and `e2e/b-visual
+          +.spec.ts` reference it, with `/// <reference types="node" />`,
+          + so `src/` can't see Node globals |                           
+      121  
+      122  ## `copy.ts` additions
+      123  
+     ...
+      334       2", so a change in font size, letter-spacing or column wi
+           dth shows up by name, not as a vague pixel diff.
+     … 10 more lines (ctrl+o to expand)
+
+● Before I state "src/ can't see Node globals", I need to test it. In one
+  TypeScript program, a triple-slash reference may make the Node globals visible
+  to every file.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The e2e triple-slash reference lets src/ code typecheck against Node globals
+  like Buffer and process, then fail in the browser, so the plan's claim was
+  wrong. I'm checking what relies on the single tsconfig before splitting it
+  into a separate e2e/tsconfig.json.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● I've set the root tsconfig to cover src and the Vite and Playwright configs,
+  and I'm adding an e2e/tsconfig.json that extends it with Node types so
+  typecheck runs both.
+
+● Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  Updated tsconfig.json (+1 -1)
+      11      "isolatedModules": true,
+      12      "types": ["vite/client"]
+      13    },
+      14 -  "include": ["src", "e2e", "vite.config.ts", "playwright.confi
+         -g.ts"]                                                         
+      14 +  "include": ["src", "vite.config.ts", "playwright.config.ts"] 
+      15  }
+  ⎿  Updated package.json (+1 -1)
+       6    "scripts": {
+       7      "dev": "vite",
+       8      "build": "tsc --noEmit && vite build",
+       9 -    "typecheck": "tsc --noEmit",                               
+       9 +    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",        
+      10      "lint": "eslint . --max-warnings=0",
+      11      "format": "prettier --write .",
+      12      "format:check": "prettier --check .",
+  ⎿  Created e2e/tsconfig.json (+7 -0)
+      1 +{                                                               
+      2 +  // 005: e2e runs in Node, so it gets Node's types. src/ doesn'
+        +t: the root config leaves them out, so browser code             
+      3 +  // that uses Buffer or process fails the typecheck.           
+      4 +  "extends": "../tsconfig.json",                                
+      5 +  "compilerOptions": { "types": ["node"] },                     
+      6 +  "include": ["."]                                              
+      7 +}                                                               
+  ⎿  Updated e2e/visual.ts (+0 -1)
+      1 -/// <reference types="node" />                                  
+      1  // 005 R2: helpers for the visual test. The diff runs in the bro
+         wser on a canvas, so it needs no image library.
+      2  import type { Page } from "./test";
+      3  
+  ⎿  Updated e2e/b-visual.spec.ts (+0 -1)
+      1 -/// <reference types="node" />                                  
+      1  // 005 R2: the buy box against the design. Runs only in the `vis
+         ual` project (1200×780, deviceScaleFactor 2).
+      2  import { readFileSync } from "node:fs";
+      3  import { copy } from "../src/part-b/copy";
+
+● The typecheck and lint pass, but the probe printed nothing, so Node's types
+  still leak into src/. Something in the root program pulls them in. tsc
+  --explainFiles will show what.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Vite's node type definitions pull in Node's types via vite.config.ts, and the
+  vitest imports in src/ may load the same file, so I'm testing that before
+  restructuring.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● That probe broke because type roots resolve from the config's own folder. I'll
+  put the temporary config in the project root.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The leak comes through the Vite config files, since their Node-side types pull
+  in @types/node, which src/ alone never touches. I'm splitting the TypeScript
+  configs into a browser one for src and a Node one for the config files and
+  e2e/, then wiring ESLint to match.
+
+● Bash(python3 - <<'EOF'
+      p="tsconfig.json"; s=open(p).read()…)
+  ⎿  Updated tsconfig.json (+1 -1)
+      11      "isolatedModules": true,
+      12      "types": ["vite/client"]
+      13    },
+      14 -  "include": ["src", "vite.config.ts", "playwright.config.ts"] 
+      14 +  "include": ["src"]                                           
+      15  }
+  ⎿  Created tsconfig.node.json (+7 -0)
+      1 +{                                                               
+      2 +  // Code that runs in Node: the two tool configs and the e2e te
+        +sts. Only these get Node's types, so browser code in            
+      3 +  // src/ that uses Buffer or process fails the typecheck (tscon
+        +fig.json).                                                      
+      4 +  "extends": "./tsconfig.json",                                 
+      5 +  "compilerOptions": { "types": ["node"] },                     
+      6 +  "include": ["vite.config.ts", "playwright.config.ts", "e2e"]  
+      7 +}                                                               
+  ⎿  Updated e2e/tsconfig.json (+2 -4)
+      1  {
+      2 -  // 005: e2e runs in Node, so it gets Node's types. src/ doesn'
+        -t: the root config leaves them out, so browser code             
+      3 -  // that uses Buffer or process fails the typecheck.           
+      4 -  "extends": "../tsconfig.json",                                
+      5 -  "compilerOptions": { "types": ["node"] },                     
+      2 +  // So the editor and ESLint's project service, which look for 
+        +the nearest tsconfig.json, use the Node config here.            
+      3 +  "extends": "../tsconfig.node.json",                           
+      4    "include": ["."]
+      5  }
+  ⎿  Updated package.json (+1 -1)
+       6    "scripts": {
+       7      "dev": "vite",
+       8      "build": "tsc --noEmit && vite build",
+       9 -    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",        
+       9 +    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node
+         +.json",                                                        
+      10      "lint": "eslint . --max-warnings=0",
+      11      "format": "prettier --write .",
+      12      "format:check": "prettier --check .",
+  ⎿  Updated eslint.config.js (+8 -1)
+      14      extends: [js.configs.recommended, ...tseslint.configs.recom
+          mendedTypeChecked],
+      15      languageOptions: {
+      16        globals: globals.browser,
+      17 -      parserOptions: { projectService: true, tsconfigRootDir: i
+         -mport.meta.dirname },                                          
+      17 +      parserOptions: {                                         
+      18 +        // The two root configs are in tsconfig.node.json, whic
+         +h isn't named tsconfig.json, so the service is told.           
+      19 +        projectService: {                                      
+      20 +          allowDefaultProject: ["vite.config.ts", "playwright.c
+         +onfig.ts"],                                                    
+      21 +          defaultProject: "tsconfig.node.json",                
+      22 +        },                                                     
+      23 +        tsconfigRootDir: import.meta.dirname,                  
+      24 +      },                                                       
+      25      },
+      26    },
+      27    {
+
+● The fix is in: src/ again reports "Cannot find name 'Buffer'" because
+  @types/node isn't in the root program, so I'm checking that the Node program
+  still reports errors in e2e/ rather than coming back empty.
+
+● Bash(echo 'export const broken: number = "x";' > e2e/__probe.ts && npm run -s
+      typecheck 2>&1 | grep -c "e2e/__probe.ts"; npx eslint e2e/__probe.ts
+      playwright.config.…)
+  ⎿  Updated SPECS/005-b-buy-box/plan.md (+17 -17)
+      101  
+      102  ## Files
+      103  
+      104 -| File                              | Change                  
+          -                                                              
+          -                                                              
+          -                                                              
+          -                                  |                           
+      105 -| --------------------------------- | ------------------------
+          ---------------------------------------------------------------
+          ---------------------------------------------------------------
+          ---------------------------------------------------------------
+          ---------------------------------- |                           
+      106 -| `src/part-b/copy.ts`              | new keys and templates o
+          -nly. The existing values stay byte-for-byte                   
+          -                                                              
+          -                                                              
+          -                                  |                           
+      107 -| `src/part-b/buyBox.ts`            | `MIN_QUANTITY`, `MAX_QUA
+          -NTITY`, `formatMoney`, `unitPriceCents`, `totalCents`, `parseQ
+          -uantity`, `isValidQuantity`, `correctQuantity`                
+          -                                                              
+          -                                  |                           
+      108 -| `src/part-b/buyBoxReducer.ts`     | state, actions and reduc
+          -er                                                            
+          -                                                              
+          -                                                              
+          -                                  |                           
+      109 -| `src/part-b/BuyBox.tsx`           | page markup and behaviou
+          -r                                                             
+          -                                                              
+          -                                                              
+          -                                  |                           
+      110 -| `src/part-b/icons.tsx`            | inline SVGs: star, check
+          -, check-circle, chevron, minus, plus. All `aria-hidden`       
+          -                                                              
+          -                                                              
+          -                                  |                           
+      111 -| `src/part-b/BuyBox.module.css`    | tokens, layout, the narr
+          -ow layout below 960px                                         
+          -                                                              
+          -                                                              
+          -                                  |                           
+      112 -| `src/part-b/*.test.ts(x)`         | unit and component tests
+          -                                                              
+          -                                                              
+          -                                                              
+          -                                  |                           
+      113 -| `e2e/a11y.ts`                     | `expectAccessibleBuyBox`
+          -: R14's two axe runs plus the reflow check                    
+          -                                                              
+          -                                                              
+          -                                  |                           
+      114 -| `e2e/smoke.spec.ts`               | Part B uses `expectAcces
+          -sibleBuyBox`. Part A is unchanged                             
+          -                                                              
+          -                                                              
+          -                                  |                           
+      115 -| `e2e/visual.ts`                   | `diffImages`: the in-bro
+          -wser diff for R2's attachment and ratio                       
+          -                                                              
+          -                                                              
+          -                                  |                           
+      116 -| `e2e/b-visual.spec.ts`            | byte check, geometry, pi
+          -xel test (project `visual` only)                              
+          -                                                              
+          -                                                              
+          -                                  |                           
+      117 -| `e2e/b-buy-box.spec.ts`           | the flows on `mobile` an
+          -d `desktop`                                                   
+          -                                                              
+          -                                                              
+          -                                  |                           
+      118 -| `e2e/__screenshots__/buy-box.png` | committed copy of the re
+          -ference, the pixel test's baseline                            
+          -                                                              
+          -                                                              
+          -                                  |                           
+      119 -| `playwright.config.ts`            | the `visual` project. `m
+          -obile` and `desktop` ignore `b-visual.spec.ts`                
+          -                                                              
+          -                                                              
+          -                                  |                           
+      120 -| `package.json`                    | `@types/node` (dev only,
+          - approved by the human on 2026-11-03), for `node:fs` and `Buff
+          -er` in the visual test. Only `e2e/visual.ts` and `e2e/b-visual
+          -.spec.ts` reference it, with `/// <reference types="node" />`,
+          - so `src/` can't see Node globals |                           
+      104 +| File                                                 | Chang
+          +e                                                             
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      105 +| ---------------------------------------------------- | -----
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +--------------------------------------------------------------
+          +-------------------------- |                                  
+      106 +| `src/part-b/copy.ts`                                 | new k
+          +eys and templates only. The existing values stay byte-for-byte
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      107 +| `src/part-b/buyBox.ts`                               | `MIN_
+          +QUANTITY`, `MAX_QUANTITY`, `formatMoney`, `unitPriceCents`, `t
+          +otalCents`, `parseQuantity`, `isValidQuantity`, `correctQuanti
+          +ty`                                                           
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      108 +| `src/part-b/buyBoxReducer.ts`                        | state
+          +, actions and reducer                                         
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      109 +| `src/part-b/BuyBox.tsx`                              | page 
+          +markup and behaviour                                          
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      110 +| `src/part-b/icons.tsx`                               | inlin
+          +e SVGs: star, check, check-circle, chevron, minus, plus. All `
+          +aria-hidden`                                                  
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      111 +| `src/part-b/BuyBox.module.css`                       | token
+          +s, layout, the narrow layout below 960px                      
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      112 +| `src/part-b/*.test.ts(x)`                            | unit 
+          +and component tests                                           
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      113 +| `e2e/a11y.ts`                                        | `expe
+          +ctAccessibleBuyBox`: R14's two axe runs plus the reflow check 
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      114 +| `e2e/smoke.spec.ts`                                  | Part 
+          +B uses `expectAccessibleBuyBox`. Part A is unchanged          
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      115 +| `e2e/visual.ts`                                      | `diff
+          +Images`: the in-browser diff for R2's attachment and ratio    
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      116 +| `e2e/b-visual.spec.ts`                               | byte 
+          +check, geometry, pixel test (project `visual` only)           
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      117 +| `e2e/b-buy-box.spec.ts`                              | the f
+          +lows on `mobile` and `desktop`                                
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      118 +| `e2e/__screenshots__/buy-box.png`                    | commi
+          +tted copy of the reference, the pixel test's baseline         
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      119 +| `playwright.config.ts`                               | the `
+          +visual` project. `mobile` and `desktop` ignore `b-visual.spec.
+          +ts`                                                           
+          +                                                              
+          +                                                              
+          +                                                              
+          +                                                              
+          +                           |                                  
+      120 +| `package.json`, `tsconfig*.json`, `eslint.config.js` | `@typ
+          +es/node` (dev only, approved by the human on 2026-11-03), for 
+          +`node:fs` and `Buffer` in the visual test. `tsconfig.json` now
+          + covers `src/` only. The new `tsconfig.node.json` (with `e2e/t
+          +sconfig.json` extending it) covers the two tool configs and `e
+          +2e/`, with Node's types. `typecheck` runs both. Vite's own typ
+          +es reference Node's, so a shared config would let browser code
+          + use `Buffer` or `process` |                                  
+      121  
+      122  ## `copy.ts` additions
+      123  
+● The Node program catches the deliberate type error in e2e/, ESLint lints both
+  config files with type information, and the plan records the split. Now the
+  full npm run check.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● npm run check passes with 611 unit and component tests and 116 e2e passing,
+  and the visual spec didn't run in mobile or desktop. Next I'll tick T4 and log
+  it, including the first diff ratio.
+
+● Bash(sed -i 's/^- \[ \] T4 /- [x] T4 /' SPECS/005-b-buy-box/task.md && grep -c
+      "\[x\] T4" SPECS/005-b-buy-box/task.md && python3 - <<'EOF'
+      p="SPECS/CHANGELOG.md"; s=…)
+  ⎿  Updated SPECS/005-b-buy-box/task.md (+1 -1)
+      10        a label around the header row only, the card click handle
+          r, the select, the form with `noValidate`, the
+      11        stepper with `type="button"` and `aria-disabled`, `inputM
+          ode`, the wheel guard and the Enter guard, the keyed
+      12        status line, the fine print and `data-contrast-exception`
+          . Component tests, including the no-inline-text test
+      13 -- [ ] T4 (R2): the `visual` Playwright project (1200×780, DPR 2
+         -, its own `snapshotPathTemplate`), with `mobile` and           
+      13 +- [x] T4 (R2): the `visual` Playwright project (1200×780, DPR 2
+         +, its own `snapshotPathTemplate`), with `mobile` and           
+      14        `desktop` ignoring it. The committed baseline copy and th
+          e byte-identical test. `e2e/visual.ts` `diffImages`,
+      15        with the diff image and the ratio attached. The font chec
+          k, the hidden nav and the 2400×1560 size check. The
+      16        pixel and geometry assertions are `test.fixme` until T5
+  ⎿  Updated SPECS/CHANGELOG.md (+52 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 005-b-buy-box / T4: visual project, protected ba
+         +seline and diff helper                                         
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `playwright.config.ts`: a `visual` project at 1200×780 with
+         + `deviceScaleFactor: 2` and its own                            
+       9 +    `snapshotPathTemplate` (`{testDir}/__screenshots__/{arg}{ex
+         +t}`). It runs only `b-visual.spec.ts`, and `mobile`            
+      10 +    and `desktop` ignore that file.                            
+      11 +  - New `e2e/__screenshots__/buy-box.png`: the committed baseli
+         +ne, a byte-for-byte copy of                                    
+      12 +    `public/reference/buy-box.png`.                            
+      13 +  - New `e2e/visual.ts`:                                       
+      14 +    - `pngSize`, read from the IHDR chunk                      
+      15 +    - `diffImages`, an in-browser canvas diff in a scratch page
+         +, with pixelmatch's YIQ delta at a threshold of 0.2            
+      16 +      and no anti-aliasing excuse. It returns the ratio and a d
+         +iff PNG, with differences in red over a faded copy of          
+      17 +      the reference.                                           
+      18 +  - New `e2e/b-visual.spec.ts`:                                
+      19 +    - the byte check, which reads the baseline through `testInf
+         +o.snapshotPath(..., { kind: "screenshot" })`, the path         
+      20 +      `toHaveScreenshot` uses                                  
+      21 +    - the capture test: the nav hidden, the font check, the 240
+         +0×1560 size check, and the diff PNG and the ratio JSON         
+      22 +      attached and logged on every run                         
+      23 +    - two `test.fixme` gates for T5: geometry against the layou
+         +t table (with the subtitle's two lines and the                 
+      24 +      zero-height status line), and pixels with `TOLERANCE`, wh
+         +ich is the 3% ceiling until T5 sets it                         
+      25 +  - `package.json`: `@types/node@^24` as a dev dependency, with
+         + the human's approval (asked before installing).               
+      26 +    `typecheck` now runs `tsc` on both configs.                
+      27 +  - New `tsconfig.node.json` and `e2e/tsconfig.json`. `tsconfig
+         +.json` now covers `src/` only. `eslint.config.js`              
+      28 +    gives the project service the two root tool configs through
+         + `allowDefaultProject`.                                        
+      29 +  - `plan.md`: the font check's method and the tsconfig split, 
+         +before the code.                                               
+      30 +- **Decisions:**                                               
+      31 +  - **The tsconfig split.** When I asked about `@types/node`, I
+         + said `src/` still wouldn't see Node's globals. A              
+      32 +    probe showed that was wrong. Vite's own types (`vite/dist/n
+         +ode/index.d.ts`, through `vite.config.ts`) reference           
+      33 +    Node's, so with one shared config, `Buffer.from(...)` in `s
+         +rc/` typechecked. Before this task, that reference             
+      34 +    resolved to nothing. Browser code and Node code now have se
+         +parate programs, as in Vite's own template. Re-probed:         
+      35 +    `Buffer` in `src/` fails the typecheck again, `@types/node`
+         + is absent from the root program, and a type error in          
+      36 +    `e2e/` still fails `npm run typecheck`.                    
+      37 +  - **The font check** calls `document.fonts.load()` before `ch
+         +eck()`. `check()` alone returns true when the                  
+      38 +    stylesheet defined no face at all, and `load()` also fetche
+         +s a face that the CSS doesn't use yet. Fraunces isn't          
+      39 +    used until T5.                                             
+      40 +  - **The diff runs in a separate page** opened from the same c
+         +ontext, so the page under test is never changed.               
+      41 +- **Diff ratio, first recording:** 7.007% (262,359 of 3,744,000
+         + px), with T3's unstyled page. Playwright's own                
+     … 18 more lines (ctrl+o to expand)
+
+● T2, T3 and T4 are done. npm run check passes: 611 unit and component tests,
+  and e2e 116 passed with 16 skipped. The 16 are the 14 skips from before plus
+  the two visual gates that stay off until T5. Nothing is committed.
+
+  T2: the reducer. buyBoxReducer.ts (src/part-b/buyBoxReducer.ts) holds the six
+  actions, plus a total and a summary helper so the component and tests compute
+  them the same way; it has 55 tests. The plan's table left three rules open. I
+  settled each from the spec and wrote it into plan.md
+  (SPECS/005-b-buy-box/plan.md) before coding:
+  - Clicking the option or frequency that's already selected changes nothing, so
+    the status line stays.
+  - A correction is announced only when the number changes. "1e1" quietly
+    becomes "10" with no "Quantity set to 10", but 15, 0, 2.6 and an empty field
+    are announced.
+  - A second "Add to cart" shows only the summary, not the earlier correction
+    again.
+
+  T3: the component. BuyBox.tsx (src/part-b/BuyBox.tsx) follows the plan's
+  markup, plus icons.tsx (src/part-b/icons.tsx) and a minimal BuyBox.module.css
+  (src/part-b/BuyBox.module.css). There are 39 component tests, including the
+  no-inline-text check in five states.
+  - Bug the tests caught: the subscription radio's screen-reader name read
+    "originally$29.95", with no space. Fixed.
+  - Enter guard placement: it's on the two radios and the select instead of the
+    form. The linter rejects a key handler on a form, and those three controls
+    are exactly the ones the spec names. The plan is updated.
+  - Temporary minimum size: the smoke test's accessibility check failed because
+    the unstyled stepper buttons are under 24px. I added a 44px minimum for now;
+    T5's styling replaces it.
+  - Real-browser check: a throwaway Chromium test confirmed Enter on a radio or
+    the select adds nothing, both ways of submitting 15 show the correction then
+    the summary, and the wheel doesn't change the quantity.
+
+  T4: the visual test. It has its own 2x Playwright project, a committed copy of
+  the design that a byte check protects, a pixel-diff helper and a font check.
+  The geometry and pixel gates are written but switched off until T5. The
+  unstyled page differs from the design by 7.0% (logged in the CHANGELOG).
+  - Checks: the helper gives 0 against itself and is stricter than Playwright's
+    own comparison. Changing either image fails the byte check, and blocking
+    Google Fonts makes the font check fail with a message naming each font.
+  - Correction: when I asked about @types/node, I said browser code still
+    wouldn't see Node's types. A probe showed that was wrong: through Vite's
+    config, Buffer in src/ passed the typecheck. I split the TypeScript config
+    into a browser one and a Node one, and npm run typecheck now checks both.
+    Buffer in src/ fails again, and type errors in e2e/ are still caught. If
+    you'd rather not have the extra config files, the alternative is to keep one
+    config and accept the leak.
+
+  Every rule that can be tested this way was checked by breaking the code on
+  purpose; the tests caught every break, and the code was restored each time.
+  The details are in CHANGELOG.md (SPECS/CHANGELOG.md).
+
+  Should I commit T1–T4 to develop, together with the uncommitted 005 spec and
+  plan? I'd leave out docs/13-Coding_agent.txt, since that's your file. T5, the
+  styling, comes next.
+
+❯ yes commit T1-T4 to dev
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I committed T1–T4 and the 005 spec and plan to develop as 0959626. Nothing has
+  been pushed.
+
+  Only docs/13-Coding_agent.txt is left uncommitted, because it's your file.
+
+  T5 is next: the CSS, tuned against the diff. Should I start on it?
