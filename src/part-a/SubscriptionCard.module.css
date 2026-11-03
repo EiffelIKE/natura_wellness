@@ -1,0 +1,550 @@
+/*
+ * Part A card, mobile-first (R10): designed at 375px, widened with min-width queries only.
+ * Everything is scoped to the card root. There is no global reset, so nothing leaks into Part B.
+ */
+
+.card {
+  --color-text: #1f2a24;
+  --color-muted: #56615b;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f5f4;
+  --color-border: #dce2de;
+  --color-accent: #2f6b4f;
+  --color-accent-hover: #24543e;
+  --color-focus: #1d4ed8;
+  --color-skeleton: #e6ebe8;
+  --color-skeleton-shine: #f3f5f4;
+  --color-badge-active-bg: #e1f0e7;
+  --color-badge-active-text: #1e5a3d;
+  --color-badge-paused-bg: #fbefd2;
+  --color-badge-paused-text: #6a4b00;
+  --color-badge-cancelled-bg: #e3e8e5;
+  --color-badge-cancelled-text: #46504b;
+
+  box-sizing: border-box;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.card *,
+.card *::before,
+.card *::after {
+  box-sizing: inherit;
+}
+
+.card p {
+  margin: 0;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+
+/* R5, R6: paused and cancelled sit on a muted surface. The badge text carries the difference too. */
+.panel--muted {
+  background: var(--color-surface-muted);
+}
+
+.message {
+  font-weight: 600;
+}
+
+.lead {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.muted {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 0.125rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.badge--active {
+  background: var(--color-badge-active-bg);
+  color: var(--color-badge-active-text);
+}
+
+.badge--paused {
+  background: var(--color-badge-paused-bg);
+  color: var(--color-badge-paused-text);
+}
+
+.badge--cancelled {
+  background: var(--color-badge-cancelled-bg);
+  color: var(--color-badge-cancelled-text);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.heading {
+  margin: 0 0 0.25rem;
+  color: var(--color-muted);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* R3: the next order date is the largest text on the page, bigger than the h1 at every width. */
+.date {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.amount {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* R8: real images and placeholders share one 4rem box, so the rows line up. */
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.item__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.item__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.thumb {
+  flex: none;
+  width: 4rem;
+  height: 4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  object-fit: cover;
+}
+
+.thumb--placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--color-skeleton);
+  color: var(--color-muted);
+}
+
+.button {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--color-accent);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-accent-hover);
+}
+
+/* 002: same size as the primary button, so both are easy to hit, but the safe action stands out (plan.md). */
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.button--secondary:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-accent-hover);
+}
+
+/* 004 R3: the offers and "Yes, cancel my subscription", full width. Long labels wrap to more lines. */
+.button--block {
+  align-self: stretch;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* 002 R5: "Keep my order" is natively disabled while a request is pending. */
+.button:disabled,
+.button:disabled:hover {
+  background: var(--color-border);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+/* 002 R5: the pending confirm keeps focus, so it keeps its colors and only the cursor says to wait. */
+.button[aria-disabled="true"] {
+  cursor: progress;
+}
+
+.section__action {
+  margin-top: 0.75rem;
+}
+
+.link {
+  color: var(--color-accent);
+  font-weight: 600;
+  text-underline-offset: 0.15em;
+}
+
+/* 003: "Change your plan". Native controls, each row or box at least 44px tall for touch (R8). */
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend,
+.field__label {
+  padding: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.choice input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* A long product name wraps above its select instead of pushing it off screen. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+/* 004 R3: "Tell us more" for "Other". It reuses `.field` and `.field__label`. */
+.textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+/* R3, R4: the pending changes, set apart from the controls that made them. */
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: var(--color-surface-muted);
+}
+
+.pending__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pending__total {
+  font-weight: 600;
+}
+
+.title:focus-visible,
+.heading:focus-visible,
+.choice input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible,
+.dialog__title:focus-visible,
+.button:focus-visible,
+.option:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* 002: the skip dialog. It is a child of the card, so it inherits the tokens and the font even in the top layer. */
+
+.dialog {
+  width: min(100% - 2rem, 28rem);
+  max-width: none;
+  /* R12: on a short screen the content scrolls inside the dialog. Chrome's UA style already says so for a modal
+     dialog; it is set here so it doesn't depend on that. */
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  padding: 1.5rem 1.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1rem 3rem rgb(31 42 36 / 0.25);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* R12: the inert page behind the dialog would still scroll under the wheel or a swipe. */
+:root:has(.dialog[open]) {
+  overflow: hidden;
+}
+
+/* ::backdrop doesn't inherit custom properties in every browser, so its color is a literal (--color-text at 55%). */
+.dialog::backdrop {
+  background: rgb(31 42 36 / 0.55);
+}
+
+.dialog__title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.dialog__body,
+.dialog__alert {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dialog__alert {
+  font-weight: 600;
+}
+
+/* The alert stays mounted while empty (plan.md), so it mustn't add a gap of its own. */
+.dialog__alert:empty {
+  margin-top: -1rem;
+}
+
+.dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dialog__actions .button {
+  align-self: stretch;
+}
+
+/* 004 R2: the reasons, one full-width button each, at least 44px. Long text wraps instead of overflowing. */
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.option:hover {
+  border-color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+/* R1: skeleton in the shape of the active card. */
+
+.skeleton {
+  border-radius: 0.25rem;
+  background: var(--color-skeleton);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-skeleton) 0%,
+      var(--color-skeleton-shine) 50%,
+      var(--color-skeleton) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.skeleton--badge {
+  width: 4.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+}
+
+.skeleton--heading {
+  width: 7rem;
+  height: 1.25rem;
+}
+
+.skeleton--date {
+  width: 60%;
+  height: 2.25rem;
+}
+
+.skeleton--line {
+  width: 80%;
+  height: 1rem;
+}
+
+.skeleton--short {
+  width: 3rem;
+  height: 1rem;
+}
+
+.skeleton--thumb {
+  flex: none;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.5rem;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.skeleton-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 48rem) {
+  .card {
+    padding-top: 2.5rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .panel {
+    padding: 1.75rem;
+  }
+
+  .date {
+    font-size: 2.5rem;
+  }
+
+  .dialog {
+    padding: 1.75rem;
+  }
+
+  .dialog__actions {
+    flex-direction: row;
+  }
+
+  .dialog__actions .button {
+    flex: 1;
+  }
+
+  .select {
+    max-width: 20rem;
+  }
+}

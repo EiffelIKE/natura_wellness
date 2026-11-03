@@ -1,0 +1,229 @@
+
+❯ <ide_opened_file>The user opened the file /home/eiffelike/work/natura_wellnes
+  s/SPECS/001-a-subscription-overview/task.md in the IDE. This may or may not
+  be related to the current task.</ide_opened_file>
+
+❯ Lets start with T1
+
+● I'll start by reading the spec workflow and the T1 task.
+
+  Read 2 files, listed 1 directory (ctrl+o to expand)
+
+● T1 is format.ts (R4, R9). Before writing it, I'll check the existing code
+  style and the test setup.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● I've confirmed frequencies are limited to 30/60/90 days and that date
+  formatting uses local time consistently. Now I'll create constants.ts with
+  just locale and currency, saving SUPPORT_MAILTO for T3.
+
+● Write(src/part-a/constants.ts)
+  ⎿  Wrote 3 lines to src/part-a/constants.ts
+      1 // 001 R9: all formatting is en-US and USD.
+      2 export const LOCALE = "en-US";
+      3 export const CURRENCY = "USD";
+
+● Write(src/part-a/format.ts)
+  ⎿  Wrote 25 lines to src/part-a/format.ts
+       1 // Display formatting only (001 R4, R9): these never compute a d
+         ate or an amount, they just render the server's.
+       2 import { CURRENCY, LOCALE } from "./constants";
+       3
+       4 const monthDay = new Intl.DateTimeFormat(LOCALE, { month: "short
+         ", day: "numeric" });
+       5 const monthDayYear = new Intl.DateTimeFormat(LOCALE, { month: "s
+         hort", day: "numeric", year: "numeric" });
+       6 const money = new Intl.NumberFormat(LOCALE, { style: "currency",
+          currency: CURRENCY });
+     … +19 lines (ctrl+o to expand)
+
+● Write(src/part-a/format.test.ts)
+  ⎿  Wrote 69 lines to src/part-a/format.test.ts
+       1 import { afterEach, describe, expect, it, vi } from "vitest";
+       2 import { fixtures } from "../api/fixtures";
+       3 import { formatDate, formatFrequency, formatMoney } from "./form
+         at";
+       4
+       5 // Local-time constructors keep these tests independent of the m
+         achine's time zone.
+       6 const local = (year: number, monthIndex: number, day: number, ho
+         ur = 12, minute = 0) =>
+       7   new Date(year, monthIndex, day, hour, minute);
+     … +62 lines (ctrl+o to expand)
+
+● I'll now run the unit tests across several machine time zones—including
+  Kiritimati (UTC+14) and Pago Pago (UTC-11)—to verify they don't depend on the
+  local zone.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All 14 pass in every zone. Next I'll make sure the midnight test actually
+  catches the bug it targets. I'll temporarily switch the year check to UTC, run
+  it in New York, then revert.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The planted bug was caught by the intended test, and the file is back to the
+  original (0 UTC references). Now the full gate:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● check is green. Typecheck, lint and format all passed, since the && chain only
+  reaches the tests after they do. Next I'll tick T1 and add the log entry.
+
+● Bash(sed -i 's/^- \[ \] T1 (R4, R9)/- [x] T1 (R4, R9)/'
+      SPECS/001-a-subscription-overview/task.md && head -3
+      SPECS/001-a-subscription-overview/task.md && python3 - <…)
+  ⎿  Updated SPECS/001-a-subscription-overview/task.md (+1 -1)
+      1  # 001: Tasks
+      2  
+      3 -- [ ] T1 (R4, R9): `format.ts` with `formatDate`, `formatMoney`,
+        - `formatFrequency`, plus unit tests                             
+      3 +- [x] T1 (R4, R9): `format.ts` with `formatDate`, `formatMoney`,
+        + `formatFrequency`, plus unit tests                             
+      4  - [ ] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load li
+         fecycle, `requestId`, error mapping and `viewOf`,
+      5        plus unit tests
+      6  - [ ] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleton
+         , load error with "Try again", and the 404 view
+  ⎿  Updated SPECS/CHANGELOG.md (+20 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001-a-subscription-overview / T1: formatters    
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - New `src/part-a/constants.ts` with `LOCALE` (`en-US`) and `
+         +CURRENCY` (`USD`). `SUPPORT_MAILTO` is added in T3,            
+       9 +    where it is first used.                                    
+      10 +  - New `src/part-a/format.ts` with `formatDate(iso, now = new 
+         +Date())`, `formatMoney(cents)` and                             
+      11 +    `formatFrequency(days)`. The `Intl` formatters are built on
+         +ce, at module level.                                           
+      12 +  - New `src/part-a/format.test.ts` with 14 tests.             
+      13 +- **Decisions:**                                               
+      14 +  - `formatDate` checks the year in the browser's time zone, th
+         +e same zone `Intl` displays in, so the year rule and           
+      15 +    the shown day always agree. A UTC check would add the year 
+         +to a Dec 31 evening date in New York, or drop it               
+      16 +    from a Jan 1 date.                                         
+      17 +  - `formatFrequency` is just "Every N days". 003 R1 allows onl
+         +y 30, 60 or 90, so there is no singular case.                  
+      18 +  - Tests build dates with local-time constructors, so they don
+         +'t depend on the machine's time zone.                          
+      19 +- **Verified:**                                                
+      20 +  - The unit tests pass with `TZ` set to UTC, America/New_York,
+         + Pacific/Kiritimati (+14) and Pacific/Pago_Pago (-11).         
+      21 +  - A planted bug that checked the year in UTC failed the midni
+         +ght test under New York ("Jan 1" instead of                    
+      22 +    "Jan 1, 2027"). It was reverted.                           
+      23 +  - `npm run check` is green.                                  
+      24 +                                                               
+      25  ## 2026-11-03: setup: pinned clock and time zone for e2e
+      26  
+      27  - **Changed:**
+  ⎿  (files that changed while this command ran, by the command or by
+     another process; a convenience view, not a review or audit of the
+     command)
+
+● T1 is done and npm run check is green.
+
+  What I added
+  - src/part-a/format.ts has three formatters:
+    - formatDate(iso, now = new Date()) gives "Nov 8", or "Jan 15, 2027" when
+      the year differs from the current one.
+    - formatMoney(cents) gives "$101.87".
+    - formatFrequency(days) gives "Every 30 days".
+
+    They only format server values and never calculate a date or total (R4).
+    They use Intl with en-US and USD (R9).
+  - src/part-a/constants.ts holds LOCALE and CURRENCY. SUPPORT_MAILTO goes in
+    with T3, the first task that uses it.
+  - src/part-a/format.test.ts has 14 unit tests.
+
+  Decisions
+  - Time zone for the year rule: formatDate decides "same year?" in the
+    browser's time zone, the same zone the date is displayed in. If it checked
+    the year in UTC, a Jan 1 date seen from New York could lose its year, or a
+    Dec 31 evening date could wrongly gain one.
+  - No singular frequency: 003 R1 only allows 30, 60 or 90 days, so I didn't add
+    an "Every day" case.
+
+  Checks
+  - The tests pass with the machine time zone set to UTC, New York, UTC+14 and
+    UTC−11.
+  - To confirm the tests can catch a real bug, I briefly changed the year check
+    to UTC. The midnight test failed as it should ("Jan 1" instead of "Jan 1,
+    2027"), and I put the code back.
+  - T1 is ticked in task.md (SPECS/001-a-subscription-overview/task.md), and the
+    work is logged in CHANGELOG.md (SPECS/CHANGELOG.md).
+
+  One open point: later specs put the frequency mid-sentence in lowercase ("Ship
+  every 60 days"), but formatFrequency returns a capitalised "Every". I'll sort
+  that out in 003 rather than guess now.
+
+  Nothing is committed yet. Should I commit T1 to develop, or go straight on to
+  T2 (the reducer)?
+
+❯ Only commit T1 to develop
+
+● The SPECS folder (including task.md and CHANGELOG.md) is entirely untracked,
+  and both files contain earlier, non-T1 work. Committing them would bring that
+  along, so I'll stage only the three T1 source files.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I committed T1 to develop as f47fa7e. It has only the three T1 files:
+  constants.ts (src/part-a/constants.ts), format.ts (src/part-a/format.ts) and
+  format.test.ts (src/part-a/format.test.ts). Nothing else was staged, and the
+  rest of the working tree is exactly as it was.
+
+  Two things the commit leaves out:
+
+  - The T1 tick and changelog entry aren't in it. The whole SPECS/ folder has
+    never been committed, and task.md and CHANGELOG.md also hold the earlier
+    spec and setup work. They're still sitting locally, uncommitted.
+  - The commit can't run its tests on its own. The test file needs the Vitest
+    setup (package.json, vite.config.ts, src/test/setup.ts), which is also
+    uncommitted. Checked out by itself, this commit has no Vitest, so the tests
+    won't run. Committing the setup and specs separately first would fix that,
+    and I can do it whenever you want.
+
+❯ lets commit the entire working tree to start the other tasks with a fresh
+  working tree
+
+● Before committing everything, I'll check what's in the tree, especially the
+  untracked docs/ files and anything that shouldn't be versioned, like test
+  artifacts or secrets.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● docs/ holds transcripts of earlier agent sessions, not project docs, and
+  01-Coding_agent.txt matched the secrets grep. I'll check what matched.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● No secrets or email addresses found, and generated folders are already
+  gitignored—proceeding to commit everything.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I committed the entire working tree to develop as 3f154f9, and the working
+  tree is now clean. The commit has 26 files: the dev tooling, SPECS/ (with T1
+  ticked and its changelog entry), AGENTS.md, CLAUDE.md, mise.toml and docs/.
+
+  What I checked first:
+  - docs/: it holds transcripts of earlier agent sessions, not project docs. I
+    committed them because you asked for the whole tree. The only
+    secrets-pattern hit was the phrase "design tokens", and there are no email
+    addresses.
+  - What's excluded: node_modules and the test output folders are gitignored, so
+    none of that got in.
+
+  The tooling commit landed after the T1 commit. So T1's commit (f47fa7e) still
+  can't run its tests if you check it out alone, but every commit from 3f154f9
+  onward can. I didn't rewrite history to swap their order.
+
+  Ready for T2, the reducer, whenever you are.

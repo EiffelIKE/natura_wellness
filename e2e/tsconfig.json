@@ -1,0 +1,5 @@
+{
+  // So the editor and ESLint's project service, which look for the nearest tsconfig.json, use the Node config here.
+  "extends": "../tsconfig.node.json",
+  "include": ["."]
+}

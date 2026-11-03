@@ -1,0 +1,1215 @@
+
+
+❯ /compact
+  ⎿  Compacted
+  ⎿  Read SPECS/CHANGELOG.md (28 lines)
+  ⎿  Read SPECS/README.md (92 lines)
+
+❯ 1 -Reference date: Agreed. Each render should take it from the servers
+  nextChargeAt so it updates by itsel. 2-Skipping after a frecuency change. I
+  dont think this is a contradiction so it doesnt need to go in the
+  limitations, the new frequency starts after the next order, so the cycle in
+  effect rn is still 30 days and moving the charge by 30 days is ok, the dialog
+  only needs to say the 2 facts plainly. so the dates and wording agree.
+  3-Refresh after a 409: Agreed, but after a 409 we dont retry auto, we tell
+  the user their subscription changed elsewhere, show the fresh data and let
+  them confirm the skip again otherwise cnflict=always would be an endless
+  loop, also the page should follow the servers status about the subscription,
+  frequency and quantity changes stay hidden until subscription is active
+  again. 4-Too much (38%): Agreed, but I think we must avoid one combined
+  button, lets create one for Skip my nov 8 order as the main, and SHip every
+  60 days as second, I think for users whose problem is long term rather than
+  inmedate
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I agree with all four. Here's how I'd write each one into the spec, with one
+  pushback on point 3:
+
+  1. Reference date: the "starting after" date is derived from the server's
+     nextChargeAt on every render and is never stored. After a skip it moves
+     forward by itself.
+  2. Skip after a frequency change: no contradiction, and it stays out of the
+     limitations. The dialog states two facts: "Your Nov 8 order will be
+     skipped. Your next order moves to Dec 8, 30 days later on your current
+     schedule. Every 60 days starts after that order."
+  3. 409: we never retry automatically. We tell the customer the subscription
+     changed elsewhere, show the fresh data, and let them confirm again. Local
+     changes are only hidden while the server's status isn't active, not thrown
+     away. Pushback: the mock never changes status, so the "hidden while not
+     active" rule can only be tested in reducer unit tests, not e2e. I'll say
+     that in the spec.
+  4. Too much product: two separate buttons. "Skip my Nov 8 order" is the main
+     one and "Ship every 60 days" is the second.
+
+  What's still open before I write the specs:
+
+  5. Quantity changes follow the frequency rule. A local quantity change also
+     applies "after your Nov 8 order". The next charge keeps the server's
+     nextChargeTotalCents, and the page never shows a total the server didn't
+     send. The new total per order can be shown as an "after that" line computed
+     from unit price × discount. I recommend this because it's the same rule
+     everywhere.
+  6. "Server dates only" rules out a few things:
+     - Pause as a retention offer: a simulated pause needs a pausedUntil date
+       the server never sent. I'd drop it. Skip already covers "too much
+       product".
+     - "Resume now" on the paused fixture: it would need an invented
+       nextChargeAt.
+     - The date on a local cancel: I'd show "Your subscription is cancelled. You
+       won't be charged again." with no date.
+
+     So the paused and cancelled views are read-only: their status, server date,
+     products, and a contact-support line.
+  7. Status after a simulated cancel: a server status that isn't active always
+     wins, and a local cancel can only change the status from active to
+     cancelled. That keeps "follow the server" true without letting a refetch
+     bring a cancelled subscription back to life.
+  8. Offers for the other reasons (no discounts):
+     - Costs too much (24%): "Ship every 60 days" first. Its benefit is worked
+       out from the server total, e.g. "$X every 60 days instead of every 30".
+       Second, "Lower quantity", shown only if an item has quantity > 1. It
+       shows the real saving per order from unit price × discount.
+     - Trying a different product (15%): swap to a product from catalog. The
+       catalog only lists prices before the discount, so the swap shows those
+       prices with the same discount applied.
+     - Didn't see results (12%) and Other (11%): no offer. Pushing an offer here
+       would feel like trapping. "Other" gets an optional text box.
+     - Tap count: open cancel → choose a reason → offer screen, which has
+       "Cancel subscription" as a plain, always-visible button. That's 3 taps.
+       The offer screen also guards against an accidental cancel, so there's no
+       separate confirmation step.
+  9. Skip from the cancel flow: it closes the cancel flow and opens the same
+     skip confirmation dialog. That keeps one code path for slow responses and
+     409s, and the customer still sees the exact new date before anything
+     happens.
+  10. Repeated 409s: the customer can keep confirming, because each try is their
+      own choice, not a loop. After the second conflict in a row I'd add "Still
+      not working? Contact us" next to the button.
+
+  Spec folders: frequency and quantity editing should be its own feature, so the
+  list becomes 001-a-subscription-overview, 002-a-skip-shipment,
+  003-a-plan-changes (frequency + quantity), 004-a-cancel-retention and
+  005-b-buy-box.
+
+  Once you've confirmed or changed points 5–10 and the numbering, I'll write 001
+  as a draft for you to review.
+
+❯ Im ok with most of it, "Reducer Unit test": just dont test the rule, the mock
+  never changes status so this case cant happend in this app, just say that in
+  the spec. Lets also add an "Undo" after a local cancel, I think it cost
+  nothing and doesnt need server dates only, the servers active data is still
+  stored, so undoing just clears the local cancel and the page shows the real
+  subscription again,  i think this matters because the brief says "every
+  customer who cancels is revenue we lose". And lastly lets cut swap, using it
+  means a catalog picker, 3 products with no image, and the same "after your
+  next order" issue for a group that's only 15%, someone trying a different
+  product needs a break, not another product from us,we already have a server
+  backed break: "Skip my Nov 8 order while you try it." that replaces the pause
+  we dropped, uses the real API, and needs no invented dates
+
+● Agreed on all three. Undo costs nothing because the server data never changed,
+  and "skip while you try it" is a better offer than swap. I'm writing all four
+  Part A specs as Draft now, so the decisions are saved in files and not only
+  in this chat. Plans and tasks wait until you approve each spec.
+
+● Bash(cd /home/eiffelike/work/natura_wellness/SPECS && mkdir -p
+      001-a-subscription-overview 002-a-skip-shipment 003-a-plan-changes
+      004-a-cancel-retention…)
+  ⎿  Created SPECS/001-a-subscription-overview/spec.md (+69 -0)
+       1 +# 001: Subscription overview                                   
+       2 +                                                               
+       3 +Status: Draft                                                  
+       4 +                                                               
+       5 +## Problem                                                     
+       6 +                                                               
+       7 +Customers open "Manage my subscription", mostly on a 375px phon
+         +e, to find out what is coming next or to change it.            
+       8 +They need to see at a glance which products ship, when they wil
+         +l be charged and how much. A paused or cancelled               
+       9 +subscription must never be mistaken for an active one.         
+      10 +                                                               
+      11 +## Requirements                                                
+      12 +                                                               
+      13 +- R1 Load the subscription with `getSubscription()`. While it l
+         +oads (400–2500ms), show a skeleton in the shape of             
+      14 +  the card that is announced as "Loading your subscription".   
+      15 +- R2 A load failure (500) shows "We couldn't load your subscrip
+         +tion" and a "Try again" button that loads it again.            
+      16 +  Loading is read-only, so retrying is safe. A 404 shows "We co
+         +uldn't find a subscription on your account" and a              
+      17 +  contact-support link, with no retry.                         
+      18 +- R3 Active view, in this order:                               
+      19 +  - the status                                                 
+      20 +  - the next order date (`nextChargeAt`)                       
+      21 +  - the amount (`nextChargeTotalCents`), with a "Includes your 
+         +15% subscription discount" line based on                       
+      22 +    `discountPercent`                                          
+      23 +  - the frequency ("Every 30 days", from `intervalDays`)       
+      24 +  - the products with their quantities                         
+      25 +- R4 Dates and amounts come only from the server. The page neve
+         +r calculates its own charge date or charge total for           
+      26 +  display, except where a later spec explicitly allows it (002 
+         +R2, 003 R4). Per-line prices are not shown, so they            
+      27 +  can never disagree with the server's rounded total.          
+      28 +- R5 Paused view: "Paused until {pausedUntil}", the products, a
+         +nd no skip or plan changes. It is visually distinct            
+      29 +  from the active view, with the difference shown in text and n
+         +ot only color.                                                 
+      30 +- R6 Cancelled view: "Cancelled on {cancelledAt}", the products
+         +, and no skip or plan changes. It is visually                  
+      31 +  distinct, as in R5.                                          
+      32 +- R7 The page follows the server's status. Any local state, fro
+         +m 003 and 004, is shown only on top of an active               
+      33 +  server subscription.                                         
+      34 +- R8 Product images use `alt=""`, because the product name is r
+         +ight next to them. Items with a null `imageUrl` get            
+      35 +  a neutral placeholder of the same size, so rows line up.     
+      36 +- R9 Formatting uses `Intl` with `en-US` and `USD`. Dates look 
+         +like "Nov 8", and the year is added only when it               
+      37 +  differs from the current year.                               
+      38 +- R10 The layout is mobile-first: designed at 375px with no hor
+         +izontal scroll, and still good at 1200px. There is             
+      39 +  one `h1`, and the sections have headings.                    
+      40 +                                                               
+     … 29 more lines (ctrl+o to expand)
+  ⎿  Created SPECS/002-a-skip-shipment/spec.md (+69 -0)
+       1 +# 002: Skip next shipment                                      
+       2 +                                                               
+       3 +Status: Draft                                                  
+       4 +                                                               
+       5 +## Problem                                                     
+       6 +                                                               
+       7 +Customers should be able to skip their next shipment without co
+         +ntacting support. Accidental skips create support              
+       8 +tickets, so the customer must know exactly what will happen bef
+         +ore it happens. The API is slow and sometimes                  
+       9 +rejects a skip with a 409, and the customer must always know wh
+         +at happened and what to do next.                               
+      10 +                                                               
+      11 +## Requirements                                                
+      12 +                                                               
+      13 +- R1 "Skip next order" appears only when the server status is a
+         +ctive and there is no local cancel (004). It opens a           
+      14 +  confirmation `<dialog>`.                                     
+      15 +- R2 The dialog names both dates: the order being skipped (`nex
+         +tChargeAt`) and the new next order date, predicted as          
+      16 +  `nextChargeAt + intervalDays` from the server's values. It al
+         +so shows the amount (`nextChargeTotalCents`).                  
+      17 +  Example: "Your Nov 8 order will be skipped. Your next order m
+         +oves to Dec 8, 30 days later on your current                   
+      18 +  schedule."                                                   
+      19 +- R3 If a local frequency change is pending (003), the dialog a
+         +dds one plain sentence: "Every 60 days starts after            
+      20 +  that order." The server's interval still decides the new date
+         +, because the new frequency only starts after the              
+      21 +  next order.                                                  
+      22 +- R4 Initial focus goes to the safe action, "Keep my order". Th
+         +e confirm button says what it does: "Skip Nov 8                
+      23 +  order".                                                      
+      24 +- R5 While the request is pending:                             
+      25 +  - the confirm button is disabled and reads "Skipping…", so th
+         +e request can't be sent twice                                  
+      26 +  - Esc and the close button can't dismiss the dialog, so the c
+         +ustomer never loses track of a request in flight               
+      27 +- R6 On success:                                               
+      28 +  - the server's response replaces the subscription, including 
+         +`updatedAt`                                                    
+      29 +  - the dialog closes and focus returns to the skip button     
+      30 +  - a live region announces "Skipped. Your next order is {serve
+         +r nextChargeAt}." The date always comes from the               
+      31 +    response, never the prediction.                            
+      32 +- R7 Any failure (a 409, a 400, or anything else) is handled th
+         +e same way:                                                    
+      33 +  - there is no automatic retry, because a skip is not idempote
+         +nt                                                             
+      34 +  - the page reloads the subscription and keeps the dialog open
+         +, showing the fresh dates                                      
+      35 +  - the dialog explains what happened. For a 409: "Your subscri
+         +ption was changed somewhere else. We've loaded the             
+      36 +    latest details. Check the dates and confirm again." Other f
+         +ailures say: "Your order wasn't skipped. We've loaded          
+      37 +    the latest details."                                       
+      38 +  - the customer confirms again if they still want to skip     
+      39 +- R8 After the second failure in a row, the dialog adds "Still 
+         +not working? Contact us" (see 001's contact target).           
+      40 +  Confirming stays possible, because each attempt is the custom
+         +er's own choice.                                               
+     … 29 more lines (ctrl+o to expand)
+  ⎿  Created SPECS/003-a-plan-changes/spec.md (+54 -0)
+       1 +# 003: Plan changes (frequency and quantity)                   
+       2 +                                                               
+       3 +Status: Draft                                                  
+       4 +                                                               
+       5 +## Problem                                                     
+       6 +                                                               
+       7 +"I have too much product left" is the top cancellation reason (
+         +38%), and "it costs too much" is second (24%).                 
+       8 +Shipping less often, or fewer units, solves both without losing
+         + the customer. The mock API can't save either change,          
+       9 +so they are simulated in local state, and the page must not inv
+         +ent server data to show them.                                  
+      10 +                                                               
+      11 +## Requirements                                                
+      12 +                                                               
+      13 +- R1 Frequency can be changed to every 30, 60 or 90 days. The c
+         +urrent server value is marked as current.                      
+      14 +- R2 Each item's quantity can be changed from 1 to 10. Removing
+         + an item is not offered.                                       
+      15 +- R3 A change applies after the next order. It never changes `n
+         +extChargeAt` or `nextChargeTotalCents`. The page shows         
+      16 +  it as a pending change: "Every 60 days, starting after your N
+         +ov 8 order", or "2 → 1 Multivitamin, starting after            
+      17 +  your Nov 8 order". The "Nov 8" reference is derived from the 
+         +server's `nextChargeAt` on every render and is never           
+      18 +  stored, so it moves forward by itself after a skip.          
+      19 +- R4 When quantities change, show "After that: {total} per orde
+         +r". The total is the sum of `unitPriceCents ×                  
+      20 +  quantity` with `discountPercent` applied, rounded to whole ce
+         +nts. This is the one total the page calculates                 
+      21 +  itself, and it is labelled as applying to later orders.      
+      22 +- R5 Changing a value back to the server's value clears that pe
+         +nding change. There is also a "Discard changes" action         
+      23 +  for all pending changes.                                     
+      24 +- R6 Each change is announced in a live region, for example "Fr
+         +equency changed to every 60 days, starting after your          
+      25 +  Nov 8 order."                                                
+      26 +- R7 Pending changes are kept in a separate local layer and are
+         + never merged into the server data. A reload after a           
+      27 +  409 (002) keeps them. They are shown only while the server st
+         +atus is active and there is no local cancel. When              
+      28 +  hidden, they are kept, not thrown away.                      
+      29 +- R8 The controls are native form controls with visible labels,
+         + and they work by keyboard and at 375px.                       
+      30 +                                                               
+      31 +## Acceptance criteria                                         
+      32 +                                                               
+      33 +- [ ] R1, R3: When the customer picks 60 days, then the pending
+         + line shows "starting after your {nextChargeAt}                
+      34 +      order" and the next order date and amount stay the same. 
+      35 +- [ ] R2, R4: When Multivitamin goes from 2 to 1, then "After t
+         +hat" shows the recalculated total and the next amount          
+      36 +      is unchanged.                                            
+      37 +- [ ] R3: Given a pending change, when a skip succeeds, then th
+         +e "starting after" date follows the new                        
+      38 +      `nextChargeAt`.                                          
+      39 +- [ ] R5: When the customer sets 30 days again, then the pendin
+         +g frequency change is gone.                                    
+      40 +- [ ] R6: Each change is announced.                            
+     … 14 more lines (ctrl+o to expand)
+  ⎿  Created SPECS/004-a-cancel-retention/spec.md (+68 -0)
+       1 +# 004: Cancel with a matching alternative                      
+       2 +                                                               
+       3 +Status: Draft                                                  
+       4 +                                                               
+       5 +## Problem                                                     
+       6 +                                                               
+       7 +Every customer who cancels is revenue lost, but a customer who 
+         +really wants to cancel must finish in a few taps, and          
+       8 +we don't trap customers. The reasons customers give are:       
+       9 +                                                               
+      10 +- "I have too much product left": 38%                          
+      11 +- "It costs too much": 24%                                     
+      12 +- "I'm trying a different product": 15%                        
+      13 +- "I didn't see results": 12%                                  
+      14 +- Other: 11%                                                   
+      15 +                                                               
+      16 +The right alternative depends on the reason. No discounts are i
+         +nvented.                                                       
+      17 +                                                               
+      18 +## Requirements                                                
+      19 +                                                               
+      20 +- R1 "Cancel subscription" is a plain, visible action in the ac
+         +tive view. It opens a `<dialog>` cancel flow.                  
+      21 +- R2 Step 1 asks "Why are you cancelling?" with the five reason
+         +s as radio buttons, then "Continue". "Other" reveals an        
+      22 +  optional text field.                                         
+      23 +- R3 Step 2 shows the alternative for the chosen reason. "Cance
+         +l subscription" is always there with the same size and         
+      24 +  contrast as the offer buttons. There is also a "Back" button.
+      25 +  - **Too much product:** the main button is "Skip my Nov 8 ord
+         +er", and the second is "Ship every 60 days" (003),             
+      26 +    for customers whose problem is long term.                  
+      27 +  - **Costs too much:** the main button is "Ship every 60 days:
+         + {total} every 60 days instead of every 30". The               
+      28 +    second is "Get 1 Multivitamin instead of 2: save {amount} p
+         +er order", shown for each item with quantity > 1.              
+      29 +    Its saving is `unitPriceCents` with the discount applied.  
+      30 +  - **Trying a different product:** "Skip my Nov 8 order while 
+         +you try it".                                                   
+      31 +  - **Didn't see results, and Other:** no offer, only the cance
+         +l and back buttons.                                            
+      32 +- R4 The frequency offer shows the next slower option than the 
+         +current one (30 → 60 → 90). It is hidden when the              
+      33 +  frequency is already 90.                                     
+      34 +- R5 A skip offer closes the cancel flow and opens the 002 skip
+         + dialog, so there is one code path for latency and 409s,       
+      35 +  and the customer still sees the exact new date before confirm
+         +ing.                                                           
+      36 +- R6 A frequency or quantity offer closes the flow, applies the
+         + 003 change, and announces it. The customer stays              
+      37 +  subscribed.                                                  
+      38 +- R7 "Cancel subscription" in step 2 cancels locally. That make
+         +s 3 taps: open, choose a reason and continue, confirm.         
+      39 +  The page then shows the cancelled view: "Your subscription is
+         + cancelled. You won't be charged again." There is no           
+      40 +  date, because the server never sent one.                     
+     … 28 more lines (ctrl+o to expand)
+
+● Now I'll add the work-log entry and run the format gate.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 24 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001–004 (Part A): draft specs                   
+       6 +                                                               
+       7 +- **Changed:** Added `spec.md` (Draft) for `001-a-subscription-
+         +overview`, `002-a-skip-shipment`,                              
+       8 +  `003-a-plan-changes` and `004-a-cancel-retention`. Part B mov
+         +es to `005-b-buy-box`.                                         
+       9 +- **Decisions (agreed with the human):**                       
+      10 +  - Dates and amounts come only from the server. Frequency and 
+         +quantity changes are pending and apply after the next          
+      11 +    order. The "starting after" date is derived from `nextCharg
+         +eAt` on every render.                                          
+      12 +  - A skip predicts the new date as `nextChargeAt + server inte
+         +rvalDays` and announces the date the server returns.           
+      13 +  - Every skip failure is handled the same way: reload the subs
+         +cription, show the fresh data and let the customer             
+      14 +    confirm again. There is never an automatic retry. "Contact 
+         +us" appears after two failures in a row.                       
+      15 +  - Retention offers:                                          
+      16 +    - too much product: skip first, then a slower frequency    
+      17 +    - costs too much: a slower frequency, or a lower quantity  
+      18 +    - trying a different product: "skip while you try it"      
+      19 +    - no results and other: no offer                           
+      20 +  - Cancelling takes 3 taps, and a local cancel can be undone b
+         +ecause the server data never changed.                          
+      21 +  - Dropped:                                                   
+      22 +    - pause: it would need an invented `pausedUntil`           
+      23 +    - resume and restart: they would need invented dates       
+      24 +    - swap: a catalog picker for a 15% group that needs a break
+      25 +    - discounts: we don't invent them                          
+      26 +  - "Server status wins" rules are written down but not tested,
+         + because the mock never changes status.                        
+      27 +- **Verified:** `npm run format:check`.                        
+      28 +                                                               
+      29  ## 2026-11-02: setup: dev tooling and `npm run check`
+      30  
+      31  - **Changed:**
+
+● Bash(cd /home/eiffelike/work/natura_wellness && npx prettier --write SPECS
+      >/dev/null && npm run format:check 2>&1 | tail -3 && git diff --stat --
+      SPECS; git status…)
+  ⎿  Updated SPECS/003-a-plan-changes/spec.md (+1 -1)
+      17    your Nov 8 order". The "Nov 8" reference is derived from the 
+          server's `nextChargeAt` on every render and is never
+      18    stored, so it moves forward by itself after a skip.
+      19  - R4 When quantities change, show "After that: {total} per orde
+          r". The total is the sum of `unitPriceCents ×
+      20 -  quantity` with `discountPercent` applied, rounded to whole ce
+         -nts. This is the one total the page calculates                 
+      20 +quantity` with `discountPercent` applied, rounded to whole cent
+         +s. This is the one total the page calculates                   
+      21    itself, and it is labelled as applying to later orders.
+      22  - R5 Changing a value back to the server's value clears that pe
+          nding change. There is also a "Discard changes" action
+      23    for all pending changes.
+
+● Catching an error of my own: 004 R7 claimed 3 taps, but radios plus "Continue"
+  actually total 4. I'll fix this by turning each reason into a button that
+  jumps directly to step 2, moving the optional "Other" field there too.
+
+● Bash(cd /home/eiffelike/work/natura_wellness/SPECS/004-a-cancel-retention &&
+      python3 - <<'EOF'
+      import re,pathlib…)
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+6 -4)
+      18  ## Requirements
+      19  
+      20  - R1 "Cancel subscription" is a plain, visible action in the ac
+          tive view. It opens a `<dialog>` cancel flow.
+      21 -- R2 Step 1 asks "Why are you cancelling?" with the five reason
+         -s as radio buttons, then "Continue". "Other" reveals an        
+      22 -  optional text field.                                         
+      21 +- R2 Step 1 asks "Why are you cancelling?" and shows the five r
+         +easons as a list of buttons. Each button goes                  
+      22 +  straight to step 2, with no separate "Continue". This keeps t
+         +he flow at 3 taps; auto-advancing radios would be an           
+      23 +  accessibility anti-pattern.                                  
+      24  - R3 Step 2 shows the alternative for the chosen reason. "Cance
+          l subscription" is always there with the same size and
+      25    contrast as the offer buttons. There is also a "Back" button.
+      26    - **Too much product:** the main button is "Skip my Nov 8 ord
+          er", and the second is "Ship every 60 days" (003),
+     ...
+      29      second is "Get 1 Multivitamin instead of 2: save {amount} p
+          er order", shown for each item with quantity > 1.
+      30      Its saving is `unitPriceCents` with the discount applied.
+      31    - **Trying a different product:** "Skip my Nov 8 order while 
+          you try it".
+      31 -  - **Didn't see results, and Other:** no offer, only the cance
+         -l and back buttons.                                            
+      32 +  - **Didn't see results, and Other:** no offer, only the cance
+         +l and back buttons. "Other" also shows an optional             
+      33 +    "Tell us more" text field.                                 
+      34  - R4 The frequency offer shows the next slower option than the 
+          current one (30 → 60 → 90). It is hidden when the
+      35    frequency is already 90.
+      36  - R5 A skip offer closes the cancel flow and opens the 002 skip
+           dialog, so there is one code path for latency and 409s,
+      37    and the customer still sees the exact new date before confirm
+          ing.
+      38  - R6 A frequency or quantity offer closes the flow, applies the
+           003 change, and announces it. The customer stays
+      39    subscribed.
+      38 -- R7 "Cancel subscription" in step 2 cancels locally. That make
+         -s 3 taps: open, choose a reason and continue, confirm.         
+      40 +- R7 "Cancel subscription" in step 2 cancels locally. That make
+         +s 3 taps: open, choose a reason, confirm.                      
+      41    The page then shows the cancelled view: "Your subscription is
+           cancelled. You won't be charged again." There is no
+      42    date, because the server never sent one.
+      43  - R8 After a local cancel, "Undo cancellation" clears it. The s
+          erver's active data is still stored, so the page shows
+
+● I've written the four Part A specs as drafts for your review. Nothing is
+  planned or built yet. Part B moves to 005-b-buy-box, and the decisions are
+  logged in CHANGELOG.md (SPECS/CHANGELOG.md). The spec files pass the format
+  check; I didn't run the full check because no code changed.
+
+  - 001 Subscription overview (SPECS/001-a-subscription-overview/spec.md)
+  - 002 Skip shipment (SPECS/002-a-skip-shipment/spec.md)
+  - 003 Plan changes (SPECS/003-a-plan-changes/spec.md)
+  - 004 Cancel with an alternative (SPECS/004-a-cancel-retention/spec.md)
+
+  Your three changes are in:
+  - Undo after a local cancel: 004 R8.
+  - Swap is cut: "Skip my Nov 8 order while you try it" replaces it, in 004 R3,
+    and the reasoning is in 003's out-of-scope section.
+  - "Server status wins" isn't tested: the specs say the mock never changes
+    status (001 R7, 002 R10, 003 R7, 004 R9).
+
+  Things I added that we didn't discuss, so please check them:
+  1. 002 R7: any skip failure (400, 500 or network) is handled like a 409:
+     reload, show fresh data, confirm again. After an unknown error the skip may
+     or may not have happened, so a blind retry is just as risky.
+  2. 002 R9: if the reload after a failure also fails, the dialog only offers
+     "Check again". A skip is never sent based on data we know is stale.
+  3. 002 R5: the dialog can't be dismissed while a request is in flight, and
+     focus starts on "Keep my order".
+  4. 001 R4: no per-line prices, only the server's total. Prices we calculate
+     could be off by a cent after rounding.
+  5. 003 R2: quantity goes from 1 to 10, with no item removal and a "Discard
+     changes" action.
+  6. 004 R3: the offer buttons have the same visual weight as "Cancel
+     subscription". The quantity offer lowers an item by one, and the frequency
+     offer is the next slower option (hidden at 90 days).
+  7. 004 R2: reasons are a list of buttons, not radios plus "Continue". My first
+     draft said "3 taps", but radios plus "Continue" made it 4. Buttons make 3
+     taps true.
+
+  Open question: there's no real support channel to link to. I suggest a
+  placeholder email on a reserved test domain that can never reach anyone
+  (support@naturawellness.example). Is that okay?
+
+  Approve, or edit, each spec. Once 001 is approved I'll write its plan.md and
+  task.md.
+
+❯ Yes, that .example can never reach anyone, use it as mailto: link, also add
+  the contact line to the paused view in 001 R5. About 02 R5, 3 thing here:
+  Keep my order has to be disabled while the request is in flight and use
+  aria-disabled and ignore clicks in the confirm button to avoid moving the
+  focus away. We need to discuss 001 R4, the list of exceptions doesnt include
+  004 R3 save amout, also that saving is computed as unitPriceCents with the
+  discount applied, that can differ from the actual change  in the total wich
+  is the exact rounding problem of R4, compute it as totalAfterDiscount(before)
+  - totalAfterDiscount(after) I think the fixtures already exports that
+  function. Everything else is approved
+
+● Both fixes are right. Taking the saving as the difference of two
+  totalAfterDiscount results matches the server's rounding exactly, and native
+  disabled on the focused confirm button would drop focus to <body> in the
+  middle of the request. I'll apply your changes, mark the four specs Approved,
+  and then write the 001 plan.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import pathlib…)
+  ⎿  Updated SPECS/001-a-subscription-overview/spec.md (+15 -7)
+      1  # 001: Subscription overview
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  ## Problem
+      6  
+     ...
+      23    - the frequency ("Every 30 days", from `intervalDays`)
+      24    - the products with their quantities
+      25  - R4 Dates and amounts come only from the server. The page neve
+          r calculates its own charge date or charge total for
+      26 -  display, except where a later spec explicitly allows it (002 
+         -R2, 003 R4). Per-line prices are not shown, so they            
+      27 -  can never disagree with the server's rounded total.          
+      28 -- R5 Paused view: "Paused until {pausedUntil}", the products, a
+         -nd no skip or plan changes. It is visually distinct            
+      26 +  display, except where a later spec explicitly allows it:     
+      27 +  - 002 R2: the predicted skip date, `nextChargeAt + intervalDa
+         +ys`                                                            
+      28 +  - 003 R4: the "After that" total per order                   
+      29 +  - 004 R3: the "save {amount} per order" offer                
+      30 +                                                               
+      31 +  Money exceptions use only `totalAfterDiscount()` from `src/ap
+         +i/fixtures.ts`, the same function the mock uses to             
+      32 +  compute `nextChargeTotalCents`, so the rounding matches the s
+         +erver. A saving is the difference of two totals, never         
+      33 +  a discounted unit price. Per-line prices are not shown, so th
+         +ey can never disagree with the server's rounded total.         
+      34 +                                                               
+      35 +- R5 Paused view: "Paused until {pausedUntil}", the products, n
+         +o skip or plan changes, and the contact line (R11). It is visua
+         +lly distinct                                                   
+      36    from the active view, with the difference shown in text and n
+          ot only color.
+      37  - R6 Cancelled view: "Cancelled on {cancelledAt}", the products
+          , and no skip or plan changes. It is visually
+      38    distinct, as in R5.
+     ...
+      44    differs from the current year.
+      45  - R10 The layout is mobile-first: designed at 375px with no hor
+          izontal scroll, and still good at 1200px. There is
+      46    one `h1`, and the sections have headings.
+      47 +- R11 Contact support is a `mailto:support@naturawellness.examp
+         +le` link. The `.example` domain is reserved and can            
+      48 +  never reach anyone, which fits a fictional brand. It is used 
+         +by R2 (404), R5 (paused) and 002 R8.                           
+      49  
+      50  ## Acceptance criteria
+      51  
+     ...
+      55        the API again.
+      56  - [ ] R3, R4: Given `?fixture=active`, then the date, total, di
+          scount line, frequency and both products with
+      57        their quantities show, matching the server data.
+      49 -- [ ] R5: Given `?fixture=paused`, then "Paused until …" shows 
+         -and there is no skip button.                                   
+      58 +- [ ] R5, R11: Given `?fixture=paused`, then "Paused until …" a
+         +nd the contact link show and there is no skip button.          
+      59  - [ ] R6: Given `?fixture=cancelled`, then "Cancelled on …" sho
+          ws and there is no skip button.
+     … 8 more lines (ctrl+o to expand)
+  ⎿  Updated SPECS/002-a-skip-shipment/spec.md (+9 -4)
+      1  # 002: Skip next shipment
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  ## Problem
+      6  
+     ...
+      22  - R4 Initial focus goes to the safe action, "Keep my order". Th
+          e confirm button says what it does: "Skip Nov 8
+      23    order".
+      24  - R5 While the request is pending:
+      25 -  - the confirm button is disabled and reads "Skipping…", so th
+         -e request can't be sent twice                                  
+      26 -  - Esc and the close button can't dismiss the dialog, so the c
+         -ustomer never loses track of a request in flight               
+      25 +  - "Keep my order" is natively `disabled`, so the customer can
+         +'t back out halfway through a request whose result             
+      26 +    they would never see.                                      
+      27 +  - The confirm button reads "Skipping…" and uses `aria-disable
+         +d="true"`, not `disabled`, and its click handler               
+      28 +    ignores clicks. Native `disabled` on the focused button wou
+         +ld drop focus to `<body>`. With `aria-disabled` focus          
+      29 +    stays on the button, and the request can't be sent twice.  
+      30 +  - Esc does nothing: the dialog's `cancel` event is prevented.
+      31  - R6 On success:
+      32    - the server's response replaces the subscription, including 
+          `updatedAt`
+      33    - the dialog closes and focus returns to the skip button
+     ...
+      54  - [ ] R2: Given active with `nextChargeAt` N and an interval of
+           30, then the dialog shows N and N + 30 days.
+      55  - [ ] R3: Given a pending "every 60 days", then the dialog stil
+          l shows N + 30 and adds the sentence.
+      56  - [ ] R4: When the dialog opens, "Keep my order" has focus. Esc
+           closes the dialog without calling the API.
+      53 -- [ ] R5: Given a slow API, when confirm is pressed twice, then
+         - only one request is sent.                                     
+      57 +- [ ] R5: Given a slow API, when confirm is pressed twice, then
+         + only one request is sent, focus stays on the                  
+      58 +      confirm button, "Keep my order" is disabled and Esc doesn
+         +'t close the dialog.                                           
+      59  - [ ] R6: Given `?conflict=never`, when the customer confirms, 
+          then the announced date equals the date the server
+      60        returned.
+      61  - [ ] R7, R8: Given `?conflict=always`, when the customer confi
+          rms, then the conflict message and fresh data show
+  ⎿  Updated SPECS/003-a-plan-changes/spec.md (+4 -4)
+      1  # 003: Plan changes (frequency and quantity)
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  ## Problem
+      6  
+     ...
+      16    it as a pending change: "Every 60 days, starting after your N
+          ov 8 order", or "2 → 1 Multivitamin, starting after
+      17    your Nov 8 order". The "Nov 8" reference is derived from the 
+          server's `nextChargeAt` on every render and is never
+      18    stored, so it moves forward by itself after a skip.
+      19 -- R4 When quantities change, show "After that: {total} per orde
+         -r". The total is the sum of `unitPriceCents ×                  
+      20 -quantity` with `discountPercent` applied, rounded to whole cent
+         -s. This is the one total the page calculates                   
+      21 -  itself, and it is labelled as applying to later orders.      
+      19 +- R4 When quantities change, show "After that: {total} per orde
+         +r". The total is                                               
+      20 +  `totalAfterDiscount(items with pending quantities, discountPe
+         +rcent)` (001 R4), and it is labelled as applying to            
+      21 +  later orders.                                                
+      22  - R5 Changing a value back to the server's value clears that pe
+          nding change. There is also a "Discard changes" action
+      23    for all pending changes.
+      24  - R6 Each change is announced in a live region, for example "Fr
+          equency changed to every 60 days, starting after your
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+4 -2)
+      1  # 004: Cancel with a matching alternative
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  ## Problem
+      6  
+     ...
+      27      for customers whose problem is long term.
+      28    - **Costs too much:** the main button is "Ship every 60 days:
+           {total} every 60 days instead of every 30". The
+      29      second is "Get 1 Multivitamin instead of 2: save {amount} p
+          er order", shown for each item with quantity > 1.
+      30 -    Its saving is `unitPriceCents` with the discount applied.  
+      30 +    Its saving is `totalAfterDiscount(current) - totalAfterDisc
+         +ount(with that item lowered by one)` (001 R4). Here            
+      31 +    "current" means the quantities including pending changes. A
+         + discounted unit price is not used, because its                
+      32 +    rounding can differ from the actual change in the total.   
+      33    - **Trying a different product:** "Skip my Nov 8 order while 
+          you try it".
+      34    - **Didn't see results, and Other:** no offer, only the cance
+          l and back buttons. "Other" also shows an optional
+      35      "Tell us more" text field.
+
+● Prettier doesn't re-wrap prose, so I'll fix one line that ran over by hand.
+
+● Bash(python3 - <<'EOF'
+      import pathlib…)
+  ⎿  Updated SPECS/001-a-subscription-overview/spec.md (+2 -2)
+      32    compute `nextChargeTotalCents`, so the rounding matches the s
+          erver. A saving is the difference of two totals, never
+      33    a discounted unit price. Per-line prices are not shown, so th
+          ey can never disagree with the server's rounded total.
+      34  
+      35 -- R5 Paused view: "Paused until {pausedUntil}", the products, n
+         -o skip or plan changes, and the contact line (R11). It is visua
+         -lly distinct                                                   
+      36 -  from the active view, with the difference shown in text and n
+         -ot only color.                                                 
+      35 +- R5 Paused view: "Paused until {pausedUntil}", the products, n
+         +o skip or plan changes, and the contact line (R11).            
+      36 +  It is visually distinct from the active view, with the differ
+         +ence shown in text and not only color.                         
+      37  - R6 Cancelled view: "Cancelled on {cancelledAt}", the products
+          , and no skip or plan changes. It is visually
+      38    distinct, as in R5.
+      39  - R7 The page follows the server's status. Any local state, fro
+          m 003 and 004, is shown only on top of an active
+
+● The specs are updated and all four are Approved. Before writing the 001 plan,
+  I'll check a couple of facts it depends on.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Bash(cd /home/eiffelike/work/natura_wellness/SPECS/001-a-subscription-overview
+      && cat > plan.md <<'EOF'
+      # 001: Plan…)
+  ⎿  Created SPECS/001-a-subscription-overview/plan.md (+92 -0)
+       1 +# 001: Plan                                                    
+       2 +                                                               
+       3 +Spec: [spec.md](spec.md) (Approved)                            
+       4 +                                                               
+       5 +## Approach                                                    
+       6 +                                                               
+       7 +A single `SubscriptionCard` container owns a `useReducer` state
+         + machine. Presentational components render each                
+       8 +state. 001 builds only the loading, error and server-status vie
+         +ws. The state is shaped so that 002–004 can add their          
+       9 +layers without reshaping it.                                   
+      10 +                                                               
+      11 +## State shape                                                 
+      12 +                                                               
+      13 +```ts                                                          
+      14 +type Load =                                                    
+      15 +  | { kind: "loading"; requestId: number }                     
+      16 +  | { kind: "failed"; requestId: number } // 500 or unknown → R
+         +2 "Try again"                                                  
+      17 +  | { kind: "not-found" } // 404 → R2 contact link             
+      18 +  | { kind: "ready"; server: Subscription };                   
+      19 +                                                               
+      20 +interface State {                                              
+      21 +  load: Load;                                                  
+      22 +  // Added later, never merged into `server` (001 R7, 003 R7): 
+      23 +  // local: { frequencyDays?: number; quantities: Record<string
+         +, number>; cancelled: boolean }  (003, 004)                    
+      24 +  // skip: discriminated union for the dialog                  
+         +                               (002)                           
+      25 +}                                                              
+      26 +                                                               
+      27 +type Action =                                                  
+      28 +  | { type: "load/started"; requestId: number }                
+      29 +  | { type: "load/succeeded"; requestId: number; subscription: 
+         +Subscription }                                                 
+      30 +  | { type: "load/failed"; requestId: number; error: unknown };
+      31 +```                                                            
+      32 +                                                               
+      33 +- **`requestId`:** the reducer ignores responses whose id isn't
+         + the latest. This covers the double effect in React            
+      34 +  StrictMode (main.tsx), and later the reloads after a skip fai
+         +lure (002 R7). The mock takes no `AbortSignal`, so             
+      35 +  dropping stale results is the only option.                   
+      36 +- **Errors:** `ApiError` 404 maps to `not-found`, and anything 
+         +else maps to `failed`. This mapping lives in the               
+      37 +  reducer, as a pure function that is unit-tested.             
+      38 +- **Effective status:** there is a selector, `viewOf(state)`, t
+         +hat returns `active | paused | cancelled`. In 001 it is        
+      39 +  just `server.status`. 004 adds the local cancel to it, applyi
+         +ng 001 R7: a server status that isn't active wins.             
+      40 +                                                               
+     … 52 more lines (ctrl+o to expand)
+  ⎿  Created SPECS/001-a-subscription-overview/task.md (+12 -0)
+       1 +# 001: Tasks                                                   
+       2 +                                                               
+       3 +- [ ] T1 (R4, R9): `format.ts` with `formatDate`, `formatMoney`
+         +, `formatFrequency`, plus unit tests                           
+       4 +- [ ] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load l
+         +ifecycle, `requestId`, error mapping and `viewOf`,             
+       5 +      plus unit tests                                          
+       6 +- [ ] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleto
+         +n, load error with "Try again", and the 404 view               
+       7 +      with the contact link, plus component tests              
+       8 +- [ ] T4 (R3, R4, R8, R10): active view, `ItemList` and the CSS
+         + module (mobile-first), plus component tests                   
+       9 +- [ ] T5 (R5, R6, R11): paused and cancelled views, plus compon
+         +ent tests                                                      
+      10 +- [ ] T6 (R1–R11): `e2e/a-overview.spec.ts`, covering every fix
+         +ture and the 404 on both viewports, axe, and no                
+      11 +      horizontal scroll                                        
+      12 +- [ ] T7: ask the human which edge cases and e2e flows to cover
+         +, and add them as tasks                                        
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 20 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001–004 (Part A): review fixes, specs approved, 
+         +001 plan                                                       
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - 001: R4 now lists every computed value (002 R2, 003 R4, 004
+         + R3). New R11: the contact link is                             
+       9 +    `mailto:support@naturawellness.example`. R5: the paused vie
+         +w gets the contact line.                                       
+      10 +  - 002: R5 is reworked.                                       
+      11 +  - 003: R4 and 004: R3 now use `totalAfterDiscount()`.        
+      12 +  - All four specs are marked Approved. Added `001-a-subscripti
+         +on-overview/plan.md` and `task.md`.                            
+      13 +- **Decisions (from the human's review):**                     
+      14 +  - A saving is `totalAfterDiscount(before) - totalAfterDiscoun
+         +t(after)`, using the mock's own function so the                
+      15 +    rounding matches the server. A discounted unit price can be
+         + a cent off.                                                   
+      16 +  - While a skip is in flight:                                 
+      17 +    - "Keep my order" is natively `disabled`                   
+      18 +    - the confirm button uses `aria-disabled` and ignores click
+         +s, so focus doesn't fall to `<body>`                           
+      19 +    - Esc is blocked                                           
+      20 +  - Plan: responses carry a `requestId`, so stale ones are drop
+         +ped (StrictMode double effect, and the 002 reloads).           
+      21 +  - Plan: Part A styles stay scoped to the card, and the shared
+         + `App.tsx`, `main.tsx` and `index.html` aren't                 
+      22 +    touched, to protect the Part B pixel match.                
+      23 +- **Verified:** `npm run format:check`.                        
+      24 +                                                               
+      25  ## 2026-11-03: 001–004 (Part A): draft specs
+      26  
+      27  - **Changed:** Added `spec.md` (Draft) for `001-a-subscription-
+          overview`, `002-a-skip-shipment`,
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All four Part A specs are now Approved with your changes, and the 001 plan and
+  task list are written for your review. The format check passes. Nothing is
+  committed, and no code is written yet.
+
+  Your changes:
+  - Contact link: it's mailto:support@naturawellness.example, as a new
+    requirement, 001 R11. The paused view (R5) shows the contact line too.
+  - Skip in flight (002 R5):
+    - "Keep my order" is natively disabled.
+    - The confirm button reads "Skipping…", uses aria-disabled="true" and
+      ignores clicks, so focus stays on it.
+    - Esc is blocked.
+    - The test for this checks that focus stays on the confirm button.
+  - Computed values (001 R4): it now lists every value the page computes: the
+    predicted skip date (002 R2), the "After that" total (003 R4) and the "save
+    {amount}" offer (004 R3).
+    - Money values use only totalAfterDiscount() from src/api/fixtures.ts, which
+      is the same function the mock uses for nextChargeTotalCents.
+    - The saving is the total before minus the total after, never a discounted
+      unit price.
+    - 003 R4 uses the same function.
+
+  The 001 plan (plan.md (SPECS/001-a-subscription-overview/plan.md), task.md
+  (SPECS/001-a-subscription-overview/task.md)):
+  - One useReducer. For now it only holds the loading state and the server data.
+    The local changes from 003/004 and the skip dialog state (002) will be
+    added next to the server data later, never merged into it.
+  - Stale responses are dropped. Each request gets an id, and the reducer
+    ignores any response that isn't the latest. React StrictMode's double effect
+    sends two loads at startup, and the 002 reload after a failure needs the
+    same protection. The mock doesn't accept an AbortSignal, so dropping stale
+    results is the only option.
+  - Part A styles stay inside the card. I won't touch App.tsx, main.tsx or
+    index.html, because Part B shares them and a global CSS reset could throw
+    off its pixel match.
+  - Tests:
+    - Unit tests for the formatters and the reducer.
+    - Component tests with the mock API replaced, using the fixtures as data.
+    - E2e tests for every fixture plus an unknown one that gives a 404, at both
+      widths, with axe and a horizontal-scroll check.
+  - Six build tasks, then T7: ask you about edge cases and e2e flows.
+
+  One risk: fixture dates are relative to the current time and display in the
+  browser's time zone. So the tests take the expected text from the same fixture
+  and formatter, not hard-coded dates.
+
+  If the plan looks right, I'll start on T1.
+
+❯ I think the date time is only important to the e2e tests, les document the
+  problem in the readme.md file , and for e2e lets just freeze the date en the
+  playwright.config.ts, lets use America new york as a timezone, so lets freeze
+  date but keep the timer real
+
+● Before wiring this up, I'll check one thing. Fully frozen time changes how the
+  mock behaves: conflict=always sets updatedAt = new Date() before comparing,
+  so if Date.now() never moves, the second attempt could match and stop
+  returning a 409. I'll test it empirically.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'll use setSystemTime instead of setFixedTime, since fully frozen time would
+  break the conflict=always 409 retry flow needed for the 002 R8 test. I'll set
+  the date as a test option in playwright.config.ts and apply it via a small
+  shared test file.
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(cat > e2e/test.ts <<'EOF'
+      import { test as base } from "@playwright/test";…)
+  ⎿  Created e2e/test.ts (+20 -0)
+       1 +import { test as base } from "@playwright/test";               
+       2 +                                                               
+       3 +export interface TestOptions {                                 
+       4 +  /** Pinned start time for the page clock, set in playwright.c
+         +onfig.ts. */                                                   
+       5 +  startTime: string;                                           
+       6 +}                                                              
+       7 +                                                               
+       8 +// Every e2e test imports `test` from here, not from @playwrigh
+         +t/test (enforced by ESLint).                                   
+       9 +// The page clock starts at `startTime`, so the mock fixtures' 
+         +relative dates are the same on every run.                      
+      10 +// Time keeps flowing and timers stay real: `setFixedTime` woul
+         +d freeze Date.now(), which stops                               
+      11 +// `conflict=always` from returning a 409 on the second attempt
+         + (the mock compares updatedAt values).                         
+      12 +export const test = base.extend<TestOptions>({                 
+      13 +  startTime: ["2026-12-10T12:00:00-05:00", { option: true }],  
+      14 +  page: async ({ page, startTime }, use) => {                  
+      15 +    await page.clock.setSystemTime(new Date(startTime));       
+      16 +    await use(page);                                           
+      17 +  },                                                           
+      18 +});                                                            
+      19 +                                                               
+      20 +export { expect } from "@playwright/test";                     
+  ⎿  Updated playwright.config.ts (+11 -2)
+       1  import { defineConfig, devices } from "@playwright/test";
+       2 +import type { TestOptions } from "./e2e/test";                 
+       3  
+       4  const port = 5179;
+       5  
+       5 -export default defineConfig({                                  
+       6 +export default defineConfig<TestOptions>({                     
+       7    testDir: "e2e",
+       8    fullyParallel: true,
+       9    reporter: "list",
+       9 -  use: { baseURL: `http://localhost:${port}`, trace: "retain-on
+         --failure" },                                                   
+      10 +  use: {                                                       
+      11 +    baseURL: `http://localhost:${port}`,                       
+      12 +    trace: "retain-on-failure",                                
+      13 +    // Fixture dates are relative to "now" and shown in the bro
+         +wser's time zone, so both are pinned                           
+      14 +    // to keep e2e text stable. Noon avoids midnight edges, and
+         + the next order (Dec 16) skips into                            
+      15 +    // 2027, which exercises the "show the year" rule. Timers s
+         +tay real (see e2e/test.ts).                                    
+      16 +    timezoneId: "America/New_York",                            
+      17 +    startTime: "2026-12-10T12:00:00-05:00",                    
+      18 +  },                                                           
+      19    projects: [
+      20      // Most customers are on a 375px phone, so mobile is the pr
+          imary project.
+      21      { name: "mobile", use: { ...devices["Desktop Chrome"], view
+          port: { width: 375, height: 812 }, hasTouch: true } },
+  ⎿  Updated e2e/smoke.spec.ts (+1 -1)
+      1  import AxeBuilder from "@axe-core/playwright";
+      2 -import { expect, test } from "@playwright/test";                
+      2 +import { expect, test } from "./test";                          
+      3  
+      4  const pages = [
+      5    { name: "Part A", path: "/?part=a&fixture=active" },
+  ⎿  Updated eslint.config.js (+11 -0)
+      25        jsxA11y.flatConfigs.recommended,
+      26      ],
+      27    },
+      28 +  {                                                            
+      29 +    // e2e tests need the pinned clock and time zone from e2e/t
+         +est.ts.                                                        
+      30 +    files: ["e2e/**/*.ts"],                                    
+      31 +    ignores: ["e2e/test.ts"],                                  
+      32 +    rules: {                                                   
+      33 +      "no-restricted-imports": [                               
+      34 +        "error",                                               
+      35 +        { paths: [{ name: "@playwright/test", message: "Import 
+         +test and expect from ./test instead." }] },                    
+      36 +      ],                                                       
+      37 +    },                                                         
+      38 +  },                                                           
+      39    { files: ["**/*.js"], extends: [js.configs.recommended], lang
+          uageOptions: { globals: globals.node } },
+      40    prettier,
+      41  );
+
+● I'll make the config the only place that sets the date. Right now e2e/test.ts
+  has its own copy as a default.
+
+● Bash(python3 - <<'EOF'
+      import pathlib…)
+  ⎿  Updated e2e/test.ts (+3 -1)
+      10  // Time keeps flowing and timers stay real: `setFixedTime` woul
+          d freeze Date.now(), which stops
+      11  // `conflict=always` from returning a 409 on the second attempt
+           (the mock compares updatedAt values).
+      12  export const test = base.extend<TestOptions>({
+      13 -  startTime: ["2026-12-10T12:00:00-05:00", { option: true }],  
+      13 +  // No default: playwright.config.ts is the one place the date
+         + is set.                                                       
+      14 +  startTime: ["", { option: true }],                           
+      15    page: async ({ page, startTime }, use) => {
+      16 +    if (!startTime) throw new Error("Set `startTime` in playwri
+         +ght.config.ts");                                               
+      17      await page.clock.setSystemTime(new Date(startTime));
+      18      await use(page);
+      19    },
+
+● Both proofs pass: the pinned clock starts correctly and keeps running, and
+  ESLint catches a direct test import from @playwright/test. Next I'll document
+  the problem in the README and update the plan.
+
+● Bash(cat >> README.md <<'EOF'…)
+  ⎿  Updated README.md (+28 -0)
+      11  - **Part B:** `src/part-b/BuyBox.tsx`. Open `/?part=b`. Match `
+          public/reference/buy-box.png`, which is a 2x screenshot of a 12
+          00px-wide browser window. Copy is in `src/part-b/copy.ts`; Frau
+          nces and Inter are loaded in `index.html`.
+      12  
+      13  You can add any libraries you like.
+      14 +                                                               
+      15 +## Testing                                                     
+      16 +                                                               
+      17 +```                                                            
+      18 +npm run check   # typecheck, lint, format check, unit tests (Vi
+         +test), e2e tests (Playwright + axe)                            
+      19 +```                                                            
+      20 +                                                               
+      21 +### Dates and time zones in e2e tests                          
+      22 +                                                               
+      23 +The mock fixtures build their dates relative to "now". For exam
+         +ple, the active subscription's next charge is                  
+      24 +"now + 6 days". The page then shows those dates in the browser'
+         +s time zone. Without pinning, the text an e2e test             
+      25 +sees would change with the day it runs and the machine's time z
+         +one. A timestamp near midnight can even land on a              
+      26 +different calendar day.                                        
+      27 +                                                               
+      28 +So e2e tests pin both, in `playwright.config.ts`:              
+      29 +                                                               
+      30 +- `timezoneId: "America/New_York"`                             
+      31 +- `startTime: "2026-12-10T12:00:00-05:00"`. This is noon, so th
+         +ere are no midnight edges. The next order is Dec 16,           
+      32 +  and a skip moves it to Jan 15, 2027, which exercises the "sho
+         +w the year" rule.                                              
+      33 +                                                               
+      34 +`e2e/test.ts` applies the start time with `page.clock.setSystem
+         +Time()`. The clock starts at that moment and keeps             
+      35 +running, and timers stay real, so the mock's 400–2500ms latency
+         + is still exercised. The date is deliberately not              
+      36 +fully frozen (`setFixedTime`). The mock detects a conflict by c
+         +omparing `updatedAt` timestamps, and with a frozen             
+      37 +`Date.now()` the second attempt under `conflict=always` would m
+         +atch and wrongly succeed.                                      
+      38 +                                                               
+      39 +E2e tests must import `test` and `expect` from `./test`, not `@
+         +playwright/test`. ESLint enforces this.                        
+      40 +                                                               
+      41 +Unit tests don't use the browser clock. Date formatting is test
+         +ed with an injected `now`.                                     
+  ⎿  Updated SPECS/001-a-subscription-overview/plan.md (+6 -6)
+      81    - axe WCAG 2.2 A/AA
+      82    - no horizontal scroll (`scrollWidth <= clientWidth`)
+      83  
+      84 -  The real mock's latency is kept, and expectations wait up to 
+         -the default 5s.                                                
+      84 +  The real mock's latency is kept, and expectations wait up to 
+         +the default 5s. Dates are asserted as literals                 
+      85 +  because the clock is pinned (see Risks).                     
+      86  
+      87  ## Risks
+      88  
+      88 -- **The fixture dates are relative to now.** Tests take the exp
+         -ected strings from the same fixture and `formatDate`           
+      89 -  rather than hard-coding them.                                
+      90 -- **Time zones:** dates format in the browser's time zone. A fi
+         -xture timestamp near midnight could show a different           
+      91 -  day than in UTC. The unit tests pin `now`, and the e2e tests 
+         -compare with the same formatter running in the page's          
+      92 -  time zone.                                                   
+      89 +- **Relative dates and time zones:** fixture dates are relative
+         + to now and shown in the browser's time zone. In e2e           
+      90 +  tests both are pinned in `playwright.config.ts`: the clock st
+         +arts at a fixed time and keeps running, in                     
+      91 +  `America/New_York` (see the README, "Dates and time zones in 
+         +e2e tests"). E2e tests can therefore assert literal            
+      92 +  dates: next order Dec 16, and after a skip Jan 15, 2027. Unit
+         + tests inject `now` into `formatDate`.                         
+  ⎿  Updated SPECS/001-a-subscription-overview/spec.md (+2 -2)
+      67  
+      68  ## Known limitations
+      69  
+      70 -- The fixture's dates are relative to the current time, so the 
+         -exact dates change between runs. Tests check that              
+      71 -  dates are formatted correctly, not that they equal fixed valu
+         -es.                                                            
+      70 +- The fixture's dates are relative to the current time. In the 
+         +running app they change between visits. E2e tests              
+      71 +  pin the start time and the time zone (README, "Dates and time
+         + zones in e2e tests").                                         
+      72  - R7's rule that the server's status wins is in place for corre
+          ctness, but it is not tested. The mock never
+      73    changes a subscription's status, so a status change cannot ha
+          ppen in this app.
+      74  
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 23 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: setup: pinned clock and time zone for e2e       
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `playwright.config.ts` sets `timezoneId: "America/New_York"
+         +` and a `startTime` test option.                               
+       9 +  - New `e2e/test.ts` extends `test` so each page clock starts 
+         +at `startTime`. It has no default, so the config is            
+      10 +    the only source.                                           
+      11 +  - ESLint `no-restricted-imports` makes e2e specs import from 
+         +`./test`. `e2e/smoke.spec.ts` was moved over.                  
+      12 +  - Added a README section, "Dates and time zones in e2e tests"
+         +. 001's plan (Risks) and spec (Known limitations)              
+      13 +    now point to it.                                           
+      14 +- **Decisions:**                                               
+      15 +  - The human asked to freeze the date with real timers. We use
+         +d `page.clock.setSystemTime()`, which pins the start           
+      16 +    and keeps the clock running, instead of `setFixedTime()`. W
+         +ith a frozen `Date.now()`, the mock's                          
+      17 +    `conflict=always` stores an `updatedAt` equal to the one th
+         +e client sends back, so the second attempt would               
+      18 +    wrongly succeed. That would make 002 R8 untestable.        
+      19 +  - The start time is Dec 10 2026, 12:00 EST. Noon avoids midni
+         +ght edges, the next order is Dec 16, and a skip lands          
+      20 +    on Jan 15, 2027, which exercises the 001 R9 year rule.     
+      21 +- **Verified:**                                                
+      22 +  - A throwaway spec compared the two modes. `setFixedTime` mov
+         +ed `Date.now()` 0ms over a 300ms timer, and                    
+      23 +    `setSystemTime` moved it about 300ms.                      
+      24 +  - A second throwaway spec showed both projects at "Thu Dec 10
+         + 2026 12:00:00 GMT-0500", in `America/New_York`.               
+      25 +  - A planted `@playwright/test` import failed lint.           
+      26 +  - The throwaway files were deleted, and `npm run check` is gr
+         +een.                                                           
+      27 +                                                               
+      28  ## 2026-11-03: 001–004 (Part A): review fixes, specs approved, 
+          001 plan
+      29  
+      30  - **Changed:**
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● E2e tests now run with the time zone and start date pinned, and npm run check
+  passes. One change from what you asked: the date isn't fully frozen. The clock
+  starts at a fixed moment and keeps running.
+
+  Why not fully frozen: I tested both clock modes in Playwright first.
+  - setFixedTime stops Date.now() completely. The mock's conflict=always sets
+    updatedAt to "now" before comparing, so after the first 409 the client would
+    send back exactly that frozen timestamp. The second attempt would then
+    wrongly succeed, and the 002 R8 "Contact us" test couldn't be written.
+  - setSystemTime pins the starting date and lets the clock run. Timers stay
+    real either way.
+
+  So I used setSystemTime. The dates are still the same on every run.
+
+  What changed:
+  - playwright.config.ts sets timezoneId: "America/New_York" and the start time,
+    Dec 10 2026 at noon EST. It's the only place the date is set.
+    - The test run starts there, so the next order is Dec 16, and a skip moves
+      it to Jan 15, 2027, which also tests the "show the year" rule.
+    - Noon keeps dates clear of midnight edge cases.
+    - Before this, the browser was using my machine's time zone (Brasília).
+  - e2e/test.ts applies the start time to each test's page.
+    - Playwright's config can't set the clock itself, so the config holds the
+      date and this file uses it.
+    - It has no default of its own and throws an error if the config doesn't set
+      one.
+  - An ESLint rule makes every e2e test import test from ./test, so no test can
+    skip the pinned clock. A test file that imported straight from
+    @playwright/test failed lint.
+  - README.md has a new section, "Dates and time zones in e2e tests", explaining
+    the problem and the choice. The 001 plan and spec point to it, and the e2e
+    tests can now check exact dates.
+
+  A throwaway test confirmed both widths start at "Thu Dec 10 2026 12:00:00
+  GMT-0500" in New York, with the clock moving about 210ms over a 200ms timer.
+  Both throwaway test files are deleted, and the change is logged in the
+  CHANGELOG.
+
+  Nothing is committed yet. If the 001 plan looks good, I'll start on T1.

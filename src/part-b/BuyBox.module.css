@@ -1,0 +1,529 @@
+/*
+ * 005: the buy box, to the measurements and tokens in SPECS/005-b-buy-box/plan.md.
+ * Layout values are CSS px at 1200×780. The type values are tuned against the diff (plan.md, "Type").
+ */
+
+/* The design has no body margin and a warm page colour. Scoped with :has() so Part A is untouched. */
+:global(body):has(.page) {
+  margin: 0;
+  background: #fbf8f3;
+}
+
+.page {
+  --page: #fbf8f3;
+  --surface: #fff;
+  --tint: #f3f6f2;
+  --ink: #1c2420;
+  --ink-muted: #4a5550;
+  --ink-subtle: #6b7a70;
+  --ink-faint: #8a948e;
+  --brand: #17402f;
+  --line: #e7e1d6;
+  --line-option: #e1dbcf;
+  --line-control: #cfd6d0;
+  --radio-off: #9aa59e;
+  --star: #d8a23a;
+  --badge-bg: #f6e7c4;
+  --badge-ink: #7a5a12;
+
+  /* No min-height: the body colour above fills the viewport, and 100vh plus the app's nav would scroll. */
+  box-sizing: border-box;
+  padding: 56px clamp(32px, 5.333vw, 64px);
+  background: var(--page);
+  color: var(--ink);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* R13: one visible focus style for every control. */
+.page :focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/*
+ * R12: 64 / 540 / 64 / 468 / 64 at 1200. The photo column absorbs the shrink first.
+ * Wider than 1200, the 1072px grid (540 + 64 + 468) is centred; at 1200 the content box is already 1072.
+ */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 540px) minmax(420px, 468px);
+  justify-content: start;
+  column-gap: clamp(32px, 5.333vw, 64px);
+  align-items: start;
+  max-inline-size: 1072px;
+  margin-inline: auto;
+}
+
+@media (max-width: 959px) {
+  .page {
+    padding: 24px 16px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-inline-size: 560px;
+    margin-inline: auto;
+    row-gap: 24px;
+  }
+}
+
+/* Photo card: 540×540, the 500×500 photo centred in it. */
+.photoCard {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.photo {
+  display: block;
+  inline-size: calc(100% - 38px);
+  block-size: auto;
+  aspect-ratio: 1;
+}
+
+.box {
+  min-inline-size: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--ink-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+  letter-spacing: 0.135em;
+  text-transform: uppercase;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 11px 0 0;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.stars svg {
+  color: var(--star);
+}
+
+.stars svg:last-of-type {
+  margin-inline-end: 5.5px;
+}
+
+.reviews {
+  color: var(--ink-subtle);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.title {
+  margin: 9px 0 0;
+  color: var(--brand);
+  font-family: Fraunces, Georgia, serif;
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 48px;
+  letter-spacing: -0.008em;
+}
+
+.subtitle {
+  /* 450px, not the column's 468: "day," is a hair too long to fit the first line, and a wider box would let it. */
+  max-inline-size: 450px;
+  margin: 12.5px 0 0;
+  color: var(--ink-muted);
+  font-size: 16px;
+  line-height: 25.5px;
+}
+
+.divider {
+  margin: 27px 0 24px;
+  border: 0;
+  border-block-start: 1px solid var(--line);
+}
+
+.form {
+  margin: 0;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+/* R4: the card's padding is a pointer target. The radio stays the keyboard path. */
+.card {
+  padding: 19px 20px;
+  border: 1px solid var(--line-option);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+/* The subscription card's header is taller, so its top padding is tuned to put the badge at y 376.5. */
+.card:has(.prices) {
+  padding-block: 18px 16px;
+}
+
+/* R4: both cards have a 1px border, and the selected one adds a 1px inset ring, so nothing shifts. */
+.card:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--tint);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-block-size: 20px;
+  cursor: pointer;
+}
+
+.radio {
+  appearance: none;
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  margin: 0;
+  border: 2px solid var(--radio-off);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.radio:checked {
+  border: 2px solid var(--brand);
+  background: var(--brand);
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+.label {
+  /* Optical: the design sets its text about 2px above the centre of the row. */
+  translate: 0 -1px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.price {
+  /* Optical: the design's prices sit about a pixel below the row's centre. */
+  translate: 0 0.5px;
+  margin-inline-start: auto;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.badge {
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--badge-bg);
+  color: var(--badge-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 21px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.prices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  translate: 0 0.5px;
+  margin-inline-start: auto;
+}
+
+.prices .price {
+  margin: 0;
+  line-height: 22px;
+}
+
+.compare {
+  margin-block-start: 1px;
+  color: var(--ink-faint);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+/* R5: shown only while subscribed. Indented to the label's x (radio 20 + gap 12). */
+.details {
+  margin-block-start: 15px;
+  padding-inline-start: 32px;
+  cursor: default;
+}
+
+.frequency {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.frequency label {
+  translate: 0 -0.5px;
+}
+
+.selectWrap {
+  position: relative;
+  display: inline-flex;
+  color: var(--ink-muted);
+}
+
+.select {
+  appearance: none;
+  block-size: 33px;
+  min-inline-size: 115.5px;
+  margin: 0;
+  padding: 0 34px 0 11.5px;
+  border: 1px solid var(--line-control);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.selectWrap svg {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 12px;
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+.perks {
+  display: grid;
+  gap: 5px;
+  margin: 12.5px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.perks li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.perks svg {
+  flex: none;
+  margin-inline-start: 2px;
+  color: var(--brand);
+}
+
+.purchaseRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block-start: 24px;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: stretch;
+  flex: 0 0 128px;
+  block-size: 56px;
+  border: 1px solid var(--line-control);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+/* R14 (WCAG 2.5.8): the targets are at least 44px. */
+.step,
+.quantity,
+.addToCart {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
+.step {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+/* R8: at a limit the button keeps its colour. The cursor is the only visual change. */
+.step svg {
+  translate: 0 1.5px;
+}
+
+.step[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.quantity {
+  inline-size: 100%;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  /* R8: no spinner arrows, as in the design. The arrow keys still step natively. */
+  appearance: textfield;
+}
+
+.quantity::-webkit-inner-spin-button,
+.quantity::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.addToCart {
+  flex: 1 1 180px;
+  block-size: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The separator dot is lighter and has more room around it than a plain space. */
+.addToCart span {
+  margin-inline: 6px;
+  opacity: 0.6;
+}
+
+/* R10, R11: visible, and the empty line takes no height or margin, so the default screenshot is unaffected. */
+.status {
+  margin: 12px 0 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.status:empty {
+  margin: 0;
+}
+
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 25px;
+  margin: 17.5px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.trust li {
+  display: flex;
+  align-items: center;
+  gap: 7.5px;
+}
+
+.finePrint {
+  margin: 13.5px 0 0;
+  color: var(--ink-subtle);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* R12: let the indented delivery controls and long button totals reflow without clipping. */
+@media (max-width: 1199px) {
+  .frequency {
+    flex-wrap: wrap;
+  }
+
+  .addToCart {
+    block-size: auto;
+    min-block-size: 56px;
+    padding-block: 12px;
+  }
+}
+
+/* Keep each radio beside its wrapping label, the badge below it and prices at the top-right. */
+@media (max-width: 479px) {
+  .header {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) max-content;
+    align-items: start;
+  }
+
+  .radio {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .label {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .badge {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .header > .price,
+  .prices {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    margin-inline-start: 0;
+  }
+}

@@ -1,0 +1,1918 @@
+
+❯ /clear
+
+❯ continue on T5
+
+  Searched for 1 pattern, read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+● I'll pick up 004 T5—since reducer cases for cancel/confirmed and cancel/undone
+  already exist from T2, this is mainly UI work (cancelled view message, "Undo
+  cancellation" button, and focus). Reading the rest of the test file and
+  fixtures before making edits.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● The 001 cancelled-fixture test asserts zero buttons, so Undo must stay hidden
+  for that fixture. StatusView will pass onUndo only when the server itself is
+  active (R8). Editing the view now.
+
+● Update(src/part-a/views.tsx)
+  ⎿  Added 24 lines, removed 5 lines
+      182    );
+      183  }
+      184  
+      185 +interface CancelledViewProps {                                
+      186 +  subscription: Subscription;                                 
+      187 +  /**                                                         
+      188 +   * 004 R7, R8: only set for a local cancel of an active serv
+          +er, so the cancelled fixture never offers Undo.               
+      189 +   * The local cancel has no date, because the server never se
+          +nt one, so it gets a message instead.                         
+      190 +   */                                                         
+      191 +  onUndo?: () => void;                                        
+      192 +}                                                             
+      193 +                                                              
+      194  /** R6: no skip or plan changes. */
+      186 -export function CancelledView({ subscription }: { subscription
+          -: Subscription }) {                                           
+      195 +export function CancelledView({ subscription, onUndo }: Cancel
+          +ledViewProps) {                                               
+      196    const { cancelledAt, items } = subscription;
+      197    return (
+      198      <div className={`${styles.panel} ${styles["panel--muted"]}
+           `}>
+      199        <StatusBadge status="cancelled" />
+      191 -      {cancelledAt !== null && (                              
+      192 -        <p className={styles.lead}>                           
+      193 -          Cancelled on <ServerDate iso={cancelledAt} />       
+      194 -        </p>                                                  
+      200 +      {onUndo ? (                                             
+      201 +        <>                                                    
+      202 +          <p className={styles.lead}>Your subscription is canc
+          +elled. You won't be charged again.</p>                        
+      203 +          {/* 004 R8: the only action here. Focus goes to the 
+          +h1 after a cancel, so it is never pressed by mistake. */}     
+      204 +          <button type="button" className={`${styles.button} $
+          +{styles["section__action"]}`} onClick={onUndo}>               
+      205 +            Undo cancellation                                 
+      206 +          </button>                                           
+      207 +        </>                                                   
+      208 +      ) : (                                                   
+      209 +        cancelledAt !== null && (                             
+      210 +          <p className={styles.lead}>                         
+      211 +            Cancelled on <ServerDate iso={cancelledAt} />     
+      212 +          </p>                                                
+      213 +        )                                                     
+      214        )}
+      215        <Products items={items} />
+      216      </div>
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 2 lines
+      21    plan: Omit<PlanChangesProps, "subscription">;
+      22    onCancel: () => void;
+      23    cancelButtonRef: Ref<HTMLButtonElement>;
+      24 +  /** 004 R8: undoes the local cancel. */                      
+      25 +  onUndo: () => void;                                          
+      26  }
+      27  
+      28  /** R7: the view follows the server's status, through `viewOf`.
+           003 R7: plan changes are shown only when active. */
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 1 line
+      34    plan,
+      35    onCancel,
+      36    cancelButtonRef,
+      37 +  onUndo,                                                      
+      38  }: StatusViewProps) {
+      39    switch (viewOf(subscription, cancelled)) {
+      40      case "active":
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 2 lines, removed 1 line
+      51      case "paused":
+      52        return <PausedView subscription={subscription} />;
+      53      case "cancelled":
+      54 -      return <CancelledView subscription={subscription} />;    
+      54 +      // 004 R8: Undo only for the local cancel. A server that 
+         +is already cancelled has nothing to undo.                      
+      55 +      return <CancelledView subscription={subscription} onUndo=
+         +{subscription.status === "active" ? onUndo : undefined} />;    
+      56    }
+      57  }
+      58  
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 1 line
+      189    const takeOffer = (offer: Offer) => dispatch({ type: "cancel
+           /offerTaken", offer });
+      190    const confirmCancel = () => dispatch({ type: "cancel/confirm
+           ed" });
+      191    const backToReasons = () => dispatch({ type: "cancel/back" }
+           );
+      192 +  const undoCancel = () => dispatch({ type: "cancel/undone" })
+          +;                                                             
+      193  
+      194    // 003: no request is sent for a plan change (Known limitati
+           ons), so these only dispatch.
+      195    const plan = {
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 1 line
+      222              plan={plan}
+      223              onCancel={openCancel}
+      224              cancelButtonRef={cancelButtonRef}
+      225 +            onUndo={undoCancel}                               
+      226            />
+      227            {/* Outside the view, so it stays mounted when R10 s
+           waps the view behind it. */}
+      228            <SkipDialog
+
+● Now the component tests. Checking the existing helpers (atStep2) and how the
+  003 tests check pending lines and beforeunload, so the new tests reuse them.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(cat >> src/part-a/CancelDialog.test.tsx <<'EOF'…)
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+130 -0)
+      444      expect(planHeading()).toHaveFocus();
+      445    });
+      446  });
+      447 +                                                              
+      448 +const CANCELLED_TEXT = "Your subscription is cancelled. You wo
+          +n't be charged again.";                                       
+      449 +const h1 = () => screen.getByRole("heading", { level: 1, name:
+          + "Manage my subscription" });                                 
+      450 +const undo = () => screen.getByRole("button", { name: "Undo ca
+          +ncellation" });                                               
+      451 +                                                              
+      452 +/** The browser's leave check, as in PlanChanges.test.tsx (003
+          + R9). */                                                      
+      453 +const leaveIsBlocked = () => {                                
+      454 +  const event = new Event("beforeunload", { cancelable: true }
+          +);                                                            
+      455 +  window.dispatchEvent(event);                                
+      456 +  return event.defaultPrevented;                              
+      457 +};                                                            
+      458 +                                                              
+      459 +/** Opens the flow, chooses `reason` and confirms: the 3 click
+          +s of R7. */                                                   
+      460 +async function cancelFor(reason = "I didn't see results", subs
+          +cription = active()) {                                        
+      461 +  const user = await atStep2(reason, subscription);           
+      462 +  await user.click(inDialog().getByRole("button", { name: "Yes
+          +, cancel my subscription" }));                                
+      463 +  return user;                                                
+      464 +}                                                             
+      465 +                                                              
+      466 +describe("the local cancel (R7)", () => {                     
+      467 +  it.each(REASON_LABELS)("finishes in 3 clicks for %s", async 
+          +(reason) => {                                                 
+      468 +    await cancelFor(reason);                                  
+      469 +                                                              
+      470 +    expect(document.querySelectorAll("dialog[open]")).toHaveLe
+          +ngth(0);                                                      
+      471 +    expect(screen.getByText("Cancelled")).toHaveTextContent("S
+          +tatus: Cancelled");                                           
+      472 +    expect(screen.getByText(CANCELLED_TEXT)).toBeInTheDocument
+          +();                                                           
+      473 +  });                                                         
+      474 +                                                              
+      475 +  it("announces the cancel and focuses the h1, not Undo", asyn
+          +c () => {                                                     
+      476 +    await cancelFor();                                        
+      477 +                                                              
+      478 +    expect(status()).toHaveTextContent(CANCELLED_TEXT);       
+      479 +    expect(h1()).toHaveFocus();                               
+      480 +    expect(undo()).not.toHaveFocus();                         
+      481 +  });                                                         
+      482 +                                                              
+      483 +  it("shows no date, because the server sent none", async () =
+          +> {                                                           
+     … 93 more lines (ctrl+o to expand)
+  ⎿  Updated src/part-a/SubscriptionCard.tsx (+3 -1)
+      52        return <PausedView subscription={subscription} />;
+      53      case "cancelled":
+      54        // 004 R8: Undo only for the local cancel. A server that 
+          is already cancelled has nothing to undo.
+      55 -      return <CancelledView subscription={subscription} onUndo=
+         -{subscription.status === "active" ? onUndo : undefined} />;    
+      55 +      return (                                                 
+      56 +        <CancelledView subscription={subscription} onUndo={subs
+         +cription.status === "active" ? onUndo : undefined} />          
+      57 +      );                                                       
+      58    }
+      59  }
+      60  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I've identified two issues: a test-only false positive from getByText matching
+  duplicate status text (fixable by scoping the query), and a real bug where
+  focus doesn't return to the h1 after Undo since state.focus stays unchanged,
+  so the focus effect never fires. I'll check how next and the focus field are
+  handled in the reducer next.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I found a latent bug: when consecutive transitions request the same focus
+  target, React's effect skips re-running since the dependency didn't
+  change—this affects any repeated target, not just T5. Now I'll check whether
+  any reducer case spreads ...state outside of next, since that determines if I
+  can key the effect on the state object itself.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'll key the focus effect on state instead of state.focus, since every
+  accepted transition produces a new state object while ignored actions
+  don't—this fixes the Undo case and same-target case without altering the
+  reducer's contract.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 3 lines
+      107    }, [skipOpen, cancelOpen]);
+      108  
+      109    // 002–004: the reducer decides where focus goes (002 R4, R6
+           , R7, R9, R10, 003 R5, 004 R10). This only applies it.
+      110 +  // Keyed on the whole state, not `state.focus`: two transiti
+          +ons in a row can ask for the same target (004: cancel,        
+      111 +  // then Undo, both focus the h1), and the second must still 
+          +move focus. Every accepted action starts from                 
+      112 +  // `focus: null` and an ignored one returns the same object,
+          + so this runs once per transition that asks for focus.        
+      113    useEffect(() => {
+      114      const targets: Record<Focus, RefObject<HTMLElement | null>
+           > = {
+      115        keep: keepRef,
+
+● Update(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 1 line, removed 1 line
+      126      // R10: a removed focused element leaves focus on <body>. 
+           Focus anywhere else was the customer's choice.
+      127      if (state.focus === "heading-if-lost" && document.activeEl
+           ement !== document.body) return;
+      128      targets[state.focus].current?.focus();
+      129 -  }, [state.focus]);                                          
+      129 +  }, [state]);                                                
+      130  
+      131    // 003 R9: the changes only live here, so leaving while they
+            are shown asks first. Derived from the state, so
+      132    // Discard, setting every value back, a fresh server value o
+           r a view that isn't active ends it by itself.
+
+● Now scoping the message query to the view (the status region holds the same
+  text on purpose), and running the file:
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/CancelDialog.test.tsx'…)
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+6 -4)
+      448  const CANCELLED_TEXT = "Your subscription is cancelled. You wo
+           n't be charged again.";
+      449  const h1 = () => screen.getByRole("heading", { level: 1, name:
+            "Manage my subscription" });
+      450  const undo = () => screen.getByRole("button", { name: "Undo ca
+           ncellation" });
+      451 +/** The view's message. The status region repeats the same tex
+          +t, so it is left out. */                                      
+      452 +const VIEW_TEXT = { selector: "p:not([role=status])" };       
+      453  
+      454  /** The browser's leave check, as in PlanChanges.test.tsx (003
+            R9). */
+      455  const leaveIsBlocked = () => {
+     ...
+      471  
+      472      expect(document.querySelectorAll("dialog[open]")).toHaveLe
+           ngth(0);
+      473      expect(screen.getByText("Cancelled")).toHaveTextContent("S
+           tatus: Cancelled");
+      472 -    expect(screen.getByText(CANCELLED_TEXT)).toBeInTheDocument
+          -();                                                           
+      474 +    expect(screen.getByText(CANCELLED_TEXT, VIEW_TEXT)).toBeIn
+          +TheDocument();                                                
+      475    });
+      476  
+      477    it("announces the cancel and focuses the h1, not Undo", asyn
+           c () => {
+     ...
+      529  
+      530      expect(screen.getByText("Active")).toHaveTextContent("Stat
+           us: Active");
+      531      expect(screen.getByText("$101.87")).toBeInTheDocument();
+      530 -    expect(screen.queryByText(CANCELLED_TEXT)).not.toBeInTheDo
+          -cument();                                                     
+      532 +    expect(screen.queryByText(CANCELLED_TEXT, VIEW_TEXT)).not.
+          +toBeInTheDocument();                                          
+      533      expect(screen.queryByRole("button", { name: "Undo cancella
+           tion" })).not.toBeInTheDocument();
+      534      expect(status()).toHaveTextContent("Cancellation undone. Y
+           our subscription is active.");
+      535      expect(h1()).toHaveFocus();
+     ...
+      565  
+      566      await user.click(inDialog().getByRole("button", { name: "O
+           ther" }));
+      567      await user.click(inDialog().getByRole("button", { name: "Y
+           es, cancel my subscription" }));
+      566 -    expect(screen.getByText(CANCELLED_TEXT)).toBeInTheDocument
+          -();                                                           
+      568 +    expect(screen.getByText(CANCELLED_TEXT, VIEW_TEXT)).toBeIn
+          +TheDocument();                                                
+      569    });
+      570  
+      571    it("is never offered for the cancelled fixture", async () =>
+            {
+      572      await renderLoaded({ ...fixtures.cancelled(), cancelledAt:
+            iso(2026, 10, 30) });
+      573  
+      574      expect(screen.getByText(/^Cancelled on/)).toHaveTextConten
+           t("Cancelled on Nov 30");
+      573 -    expect(screen.queryByText(CANCELLED_TEXT)).not.toBeInTheDo
+          -cument();                                                     
+      575 +    expect(screen.queryByText(CANCELLED_TEXT, VIEW_TEXT)).not.
+          +toBeInTheDocument();                                          
+      576      expect(screen.queryByRole("button", { name: "Undo cancella
+           tion" })).not.toBeInTheDocument();
+      577    });
+      578  });
+
+● All 434 Part A tests pass. I'll remove a redundant assertion, then
+  deliberately break the code to confirm the new tests catch each fix.
+● Bash(sed -i '/expect(screen.queryByRole("time")).not.toBeInTheDocument();/d'
+      src/part-a/CancelDialog.test.tsx
+      cp src/part-a/SubscriptionCard.tsx /tmp/claude-1000/-ho…)
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+0 -1)
+      486      await cancelFor();
+      487  
+      488      expect(screen.queryByText(/^Cancelled on/)).not.toBeInTheD
+           ocument();
+      489 -    expect(screen.queryByRole("time")).not.toBeInTheDocument()
+          -;                                                             
+      489      expect(document.querySelector("time")).toBeNull();
+      490    });
+      491  
+
+● Both breaks were caught, and the file is restored. Running the full npm run
+  check:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All checks pass: typecheck, lint, format, 434 unit/component tests, and e2e
+  (70 passed, 10 expected skips). Marking T5 complete and logging it.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/task.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+       9        dialogs, and focus on open and on close, plus the CSS and
+           component tests (names, Esc and native close)
+      10  - [x] T4 (R3–R6): step 2 with the offers, "Yes, cancel my subsc
+          ription", "Back" and the "Other" textarea, and taking
+      11        an offer (the skip dialog for R5, a 003 change for R6), p
+          lus component tests
+      12 -- [ ] T5 (R7–R9): the local cancel and Undo, the cancelled-view
+         - message, the announcements and the focus, plus                
+      12 +- [x] T5 (R7–R9): the local cancel and Undo, the cancelled-view
+         + message, the announcements and the focus, plus                
+      13        component tests (pending changes kept, no Undo on the can
+          celled fixture)
+      14  - [ ] T6 (R1–R10): `e2e/a-cancel.spec.ts` with 3 taps for each 
+          reason, a keyboard-only run, the skip offer, a pending
+      15        90, the 60-day offer, Undo with pending changes, Esc at b
+          oth steps, axe and reflow at 375px, 320px and 1200px
+  ⎿  Updated SPECS/CHANGELOG.md (+37 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T5: local cancel and Un
+         +do                                                             
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-a/views.tsx`: `CancelledView` takes an optional `
+         +onUndo`. When it is set, the view shows "Your                  
+       9 +    subscription is cancelled. You won't be charged again." and
+         + an "Undo cancellation" button instead of "Cancelled           
+      10 +    on …", then the server's products.                         
+      11 +  - `src/part-a/SubscriptionCard.tsx`: `StatusView` passes `onU
+         +ndo` only when the server is active, so the cancelled          
+      12 +    fixture never offers Undo (R8). It dispatches `cancel/undon
+         +e`.                                                            
+      13 +  - `src/part-a/SubscriptionCard.tsx`: the focus effect runs on
+         + every new `state`, not only when `state.focus`                
+      14 +    changes (fix, see Decisions).                              
+      15 +  - `src/part-a/CancelDialog.test.tsx`: 14 more tests (58 in al
+         +l). They cover:                                                
+      16 +    - 3 clicks to the cancelled view for each of the five reaso
+         +ns (R7)                                                        
+      17 +    - the announcement, and focus on the h1 rather than on Undo
+      18 +    - no date, the server's products, and Undo as the only butt
+         +on                                                             
+      19 +    - no request sent                                          
+      20 +    - the leave warning off while cancelled                    
+      21 +    - Undo: the active view, its announcement and h1 focus (R8)
+      22 +    - Undo brings back a pending frequency and quantity, with t
+         +heir lines, the new total and the leave warning                
+      23 +    - cancelling again after Undo starts at step 1             
+      24 +    - no Undo for the cancelled fixture                        
+      25 +- **Decisions:**                                               
+      26 +  - Fixed while testing: after cancel, Undo left focus on `<bod
+         +y>`. Both transitions ask for `heading`, so a focus            
+      27 +    effect keyed on `state.focus` didn't run the second time, a
+         +nd the Undo button had already unmounted. The effect           
+      28 +    is now keyed on the whole state. That is safe because every
+         + accepted action starts from `focus: null` and an              
+      29 +    ignored one returns the same object, so it runs once per tr
+         +ansition that asks for focus. This also covers any             
+      30 +    later pair of transitions with the same target. The reducer
+         + and the plan are unchanged.                                   
+      31 +  - "Undo cancellation" uses the primary button style, because 
+         +it is the only action in that view. Focus goes to              
+      32 +    the h1, not to the button, as the plan says, so it can't be
+         + pressed by mistake right after confirming.                    
+      33 +  - The message tests ignore the status region, which repeats t
+         +he same text by design (R7).                                   
+      34 +- **Verified:**                                                
+      35 +  - Two temporary breaks, each caught and then reverted:       
+      36 +    - the focus effect keyed on `state.focus` again: the Undo f
+         +ocus test fails                                                
+      37 +    - Undo offered for every cancelled view: 4 tests fail (the 
+         +new one, two 001 cancelled tests and one 002 R10               
+      38 +      test)                                                    
+      39 +  - `npm run check` passed: 434 unit and component tests, and e
+         +2e 70 passed, 10 skipped (the same                             
+      40 +    viewport-specific skips). The real-browser checks (axe, ref
+         +low and keyboard for the cancelled view) are T6.               
+      41 +                                                               
+     … 3 more lines (ctrl+o to expand)
+
+● T5 is done and npm run check is green. I haven't committed, because your rule
+  is to commit only when you ask.
+
+  What changed
+  - Cancelled view: after a cancel on this page, it shows "Your subscription is
+    cancelled. You won't be charged again.", an "Undo cancellation" button and
+    the products. It no longer shows "Cancelled on …", because the server never
+    sent a date (views.tsx (src/part-a/views.tsx)).
+  - Undo only for a cancel on this page: the button is offered only when the
+    server still says active. A subscription the server already reports as
+    cancelled never shows it (R8) (SubscriptionCard.tsx
+    (src/part-a/SubscriptionCard.tsx)).
+  - Focus: after cancelling and after Undo, focus goes to the page heading, as
+    the plan says. Undo uses the primary button style because it's the only
+    action left on that view.
+
+  A bug found while testing. After cancelling, pressing Undo left focus on
+  <body>. Cancelling and undoing both send focus to the page heading. The code
+  that moves focus only ran when the requested target changed, so the second
+  request was skipped, and the Undo button had already disappeared. It now runs
+  on every accepted state change. That is safe because each accepted change
+  starts with no focus request, and an ignored action leaves the state as it
+  was. This also fixes the same problem for any future pair of changes that
+  focus the same place. The spec and plan didn't need to change.
+
+  Tests: 14 new component tests in CancelDialog.test.tsx
+  (src/part-a/CancelDialog.test.tsx). They cover:
+  - cancelling in 3 clicks for each of the five reasons
+  - the announcement and the focus
+  - no date shown, and no request sent
+  - the leave warning turning off while cancelled
+  - Undo bringing back pending plan changes and their leave warning
+  - cancelling again after Undo
+  - no Undo for a subscription that is already cancelled
+
+  To check the tests can fail, I broke the code twice on purpose and put it back
+  each time:
+  - Old focus behaviour: 1 test failed.
+  - Undo offered on every cancelled view: 4 tests failed.
+
+  Results: 434 unit and component tests passed, and e2e had 70 passed and 10
+  skipped (the same screen-size skips as before). I didn't check the new view in
+  a real browser. That's T6's job: the end-to-end cancel tests, plus
+  accessibility and narrow-screen checks.
+
+  I ticked T5 in task.md and added a CHANGELOG.md entry. Should I commit and go
+  on to T6?
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/004-a-cancel-retention/task.md in
+  the IDE. This may or may not be related to the current
+  task.</ide_opened_file>
+
+❯ Yes, commit all the working tree and start on T6
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Committed as 2278e16, which also picked up the untracked
+  docs/11-COnding_agent.txt (note the typo in the filename). Now starting T6 by
+  reviewing the existing e2e helpers and specs to match their patterns in the
+  new file.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● I've identified the key patterns to reuse (shared timeout, status helper,
+  accessibility checks, mobile-only viewport tests) and decided to use real
+  tap() on mobile and click() on desktop for the "3 taps" test. Now writing
+  e2e/a-cancel.spec.ts.
+
+● Write(e2e/a-cancel.spec.ts)
+  ⎿  Wrote 270 lines to e2e/a-cancel.spec.ts
+       1 import { expectAccessibleLayout } from "./a11y";
+       2 import { expect, test, type Page } from "./test";
+       3
+       4 // 004: the cancel flow against the real in-browser mock, on bot
+         h projects (375px with touch, and 1200px). The clock
+       5 // and time zone are pinned in playwright.config.ts: now is Dec
+         10, 2026, the next order is Dec 16 ($101.87), every
+       6 // 30 days, and one skip moves it to Jan 15, 2027. Nothing in th
+         e cancel flow waits on the network.
+       7
+     … +263 lines (ctrl+o to expand)
+
+● Bash(npx prettier --write e2e/a-cancel.spec.ts >/dev/null && npx playwright
+      test e2e/a-cancel.spec.ts 2>&1 | grep -vE "^\s+✓" | tail -40)
+  ⎿  Updated e2e/a-cancel.spec.ts (+5 -1)
+       94  
+       95    // Tab from the top of the page. The starter's nav links and
+            the controls above come first, so this doesn't
+       96    // count exact stops.
+       97 -  for (let stop = 0; stop < 15 && !(await trigger(page).evalua
+          -te((button) => button === document.activeElement)); stop++) { 
+       97 +  for (                                                       
+       98 +    let stop = 0;                                             
+       99 +    stop < 15 && !(await trigger(page).evaluate((button) => bu
+          +tton === document.activeElement));                            
+      100 +    stop++                                                    
+      101 +  ) {                                                         
+      102      await page.keyboard.press("Tab");
+      103    }
+      104    await expect(trigger(page)).toBeFocused();
+  ⎿  (timeout 5m)
+
+● Many failures that share a pattern, likely one helper. Looking at the first
+  error messages:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● That was a locator issue on my end — getByText(/^Status: /) matched the hidden
+  inner span instead of the badge paragraph. I'll check how a-overview.spec.ts
+  locates the badge so I can reuse that approach.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(sed -i 's|^const badge = (page: Page) => page.getByText(/^Status:
+      /);|const badge = (page: Page) => page.locator("main p", { hasText:
+      /^Status: / });|' e2e/a-ca…)
+  ⎿  Updated e2e/a-cancel.spec.ts (+1 -1)
+      19  
+      20  const status = (page: Page) => page.getByRole("status");
+      21  const h1 = (page: Page) => page.getByRole("heading", { level: 1
+          , name: "Manage my subscription" });
+      22 -const badge = (page: Page) => page.getByText(/^Status: /);     
+      22 +const badge = (page: Page) => page.locator("main p", { hasText:
+         + /^Status: / });                                               
+      23  const trigger = (page: Page) => page.getByRole("button", { name
+          : "Cancel subscription" });
+      24  const undo = (page: Page) => page.getByRole("button", { name: "
+          Undo cancellation" });
+      25  // A closed <dialog> isn't in the accessibility tree, so these 
+          only match the step that is showing.
+  ⎿  (timeout 5m)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All 40 tests pass, with the 4 skips being 320px tests already covered by the
+  mobile project. Next, I'll deliberately break the app in three ways to confirm
+  the e2e tests catch failures: focus loss on Undo, a cancel wiping pending
+  plan changes, and offer buttons not wrapping at 320px.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Breaks 1 and 2 were caught by the tests, but break 3 slipped through — the
+  dialog's internal overflow isn't detected since the reflow check only looks at
+  the page's scrollWidth. I'll extend the check to cover the open dialog and
+  each button's content width against its client width.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(e2e/a-cancel.spec.ts)
+  ⎿  Added 13 lines, removed 3 lines
+      238    ],
+      239  ];
+      240  
+      241 -/** No WCAG 2.2 A/AA violations, no horizontal scroll, an open
+          - dialog inside the screen, and 44px buttons. */               
+      241 +/** Content wider than the box: a horizontal scroll, or text c
+          +ut off. */                                                    
+      242 +const overflowsX = (element: Element) => element.scrollWidth >
+          + element.clientWidth;                                         
+      243 +                                                              
+      244 +/**                                                           
+      245 + * No WCAG 2.2 A/AA violations, and no horizontal scroll in th
+          +e page. A modal sits in the top layer with its own            
+      246 + * overflow, so the page check can't see inside it: the open d
+          +ialog must also fit the screen with no horizontal             
+      247 + * scroll of its own, and every button must fit its text (the 
+          +long offer labels wrap, plan Risks) and be 44px tall.         
+      248 + */                                                           
+      249  async function expectAccessibleState(page: Page) {
+      250    await expectAccessibleLayout(page);
+      251    const width = page.viewportSize()?.width ?? 0;
+      252    const open = openDialogs(page);
+      246 -  if ((await open.count()) === 1) {                           
+      253 +  const dialogOpen = (await open.count()) === 1;              
+      254 +  if (dialogOpen) {                                           
+      255      const box = await open.boundingBox();
+      256      expect(box?.x).toBeGreaterThanOrEqual(0);
+      257      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEq
+           ual(width);
+      258 +    expect(await open.evaluate(overflowsX)).toBe(false);      
+      259    }
+      251 -  const scope = (await open.count()) === 1 ? open : page.getBy
+          -Role("main");                                                 
+      260 +  const scope = dialogOpen ? open : page.getByRole("main");   
+      261    for (const button of await scope.getByRole("button").all()) 
+           {
+      262      expect((await button.boundingBox())?.height).toBeGreaterTh
+           anOrEqual(44);
+      263 +    expect(await button.evaluate(overflowsX), await button.tex
+          +tContent()).toBe(false);                                      
+      264    }
+      265  }
+      266  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Break 3 is now caught at all three widths, and the clean run still passes.
+  Running the full npm run check:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(sed -i 's|expect(await button.evaluate(overflowsX), await
+      button.textContent()).toBe(false);|expect(await
+      button.evaluate(overflowsX), (await button.textContent…)
+  ⎿  Updated e2e/a-cancel.spec.ts (+1 -1)
+      260    const scope = dialogOpen ? open : page.getByRole("main");
+      261    for (const button of await scope.getByRole("button").all()) 
+           {
+      262      expect((await button.boundingBox())?.height).toBeGreaterTh
+           anOrEqual(44);
+      263 -    expect(await button.evaluate(overflowsX), await button.tex
+          -tContent()).toBe(false);                                      
+      263 +    expect(await button.evaluate(overflowsX), (await button.te
+          +xtContent()) ?? "").toBe(false);                              
+      264    }
+      265  }
+      266  
+  ⎿  (timeout 10m)
+
+● The full e2e run is green: 110 passed, 14 skipped. My filter matched "error"
+  inside test names, so I'm confirming the steps before e2e separately:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All checks pass—typecheck, lint, format, 434 unit/component tests, and e2e
+  (110 passed, 14 skipped). Before logging T6, I'll check how earlier specs
+  formatted their acceptance criteria checkboxes to stay consistent.
+
+  Ran 1 shell command (ctrl+o to expand)
+● All 004 acceptance criteria are now fully proven by tests, so I'll check them
+  off and keep status as Approved pending T7 edge-case review with you, while
+  also updating the plan's Testing section to reflect the stricter in-dialog
+  overflow check.
+
+● Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+7 -7)
+      53  
+      54  ## Acceptance criteria
+      55  
+      56 -- [ ] R1, R2, R3, R7: From the active view, a customer can fini
+         -sh cancelling in 3 taps for any reason.                        
+      57 -- [ ] R3: Each reason shows the right offers, and "Yes, cancel 
+         -my subscription" is always visible.                            
+      58 -- [ ] R3, R5: "Too much product" → "Skip my Nov 8 order" opens 
+         -the skip dialog with both dates.                               
+      59 -- [ ] R4: Given a pending 90 days, the "costs too much" offers 
+         -show no frequency button.                                      
+      60 -- [ ] R6: "Ship every 60 days" applies the pending change and t
+         -he subscription stays active.                                  
+      61 -- [ ] R7, R8: After cancelling, the cancelled view shows. "Undo
+         - cancellation" brings back the active view with any            
+      56 +- [x] R1, R2, R3, R7: From the active view, a customer can fini
+         +sh cancelling in 3 taps for any reason.                        
+      57 +- [x] R3: Each reason shows the right offers, and "Yes, cancel 
+         +my subscription" is always visible.                            
+      58 +- [x] R3, R5: "Too much product" → "Skip my Nov 8 order" opens 
+         +the skip dialog with both dates.                               
+      59 +- [x] R4: Given a pending 90 days, the "costs too much" offers 
+         +show no frequency button.                                      
+      60 +- [x] R6: "Ship every 60 days" applies the pending change and t
+         +he subscription stays active.                                  
+      61 +- [x] R7, R8: After cancelling, the cancelled view shows. "Undo
+         + cancellation" brings back the active view with any            
+      62        pending changes.
+      63 -- [ ] R10: Esc or "Keep my subscription" at any step closes the
+         - flow without cancelling.                                      
+      63 +- [x] R10: Esc or "Keep my subscription" at any step closes the
+         + flow without cancelling.                                      
+      64  
+      65  ## Out of scope
+      66  
+  ⎿  Updated SPECS/004-a-cancel-retention/plan.md (+3 -1)
+      224    - cancel with changes pending → Undo → the active view with 
+           the same pending lines
+      225    - Esc and "Keep my subscription" at step 1 and at step 2: fo
+           cus on "Cancel subscription", still active
+      226    - axe WCAG 2.2 A/AA and no horizontal scroll at 375px, 320px
+            and 1200px on step 1, step 2 ("Other", with the
+      227 -    textarea, and "It costs too much", with the longest labels
+          -) and the cancelled view                                      
+      227 +    textarea, and "It costs too much", with the longest labels
+          +) and the cancelled view. A modal sits in the top             
+      228 +    layer with its own overflow, so the page's scroll width ca
+          +n't see inside it. The open dialog and every button           
+      229 +    are also checked for horizontal overflow, and every button
+          + for a height of at least 44px.                               
+      230  
+      231  ## Risks
+      232  
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+      11        an offer (the skip dialog for R5, a 003 change for R6), p
+          lus component tests
+      12  - [x] T5 (R7–R9): the local cancel and Undo, the cancelled-view
+           message, the announcements and the focus, plus
+      13        component tests (pending changes kept, no Undo on the can
+          celled fixture)
+      14 -- [ ] T6 (R1–R10): `e2e/a-cancel.spec.ts` with 3 taps for each 
+         -reason, a keyboard-only run, the skip offer, a pending         
+      14 +- [x] T6 (R1–R10): `e2e/a-cancel.spec.ts` with 3 taps for each 
+         +reason, a keyboard-only run, the skip offer, a pending         
+      15        90, the 60-day offer, Undo with pending changes, Esc at b
+          oth steps, axe and reflow at 375px, 320px and 1200px
+      16  - [ ] T7: ask the human which further edge cases and e2e flows 
+          to cover, and add them as tasks
+  ⎿  Updated SPECS/CHANGELOG.md (+37 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T6: cancel e2e         
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - New `e2e/a-cancel.spec.ts` (22 tests on each project, 40 ru
+         +n, the 320px ones on mobile only):                             
+       9 +    - for each of the five reasons: 3 activations to the cancel
+         +led view, then Undo. The mobile project uses real              
+      10 +      taps (`hasTouch`), the desktop one clicks.               
+      11 +    - keyboard only: Tab to the trigger, Enter, Tab to "I didn'
+         +t see results", Enter, Tab to "Yes, cancel my                  
+      12 +      subscription", Enter. Then focus is on the h1 and the sta
+         +tus region has the announcement. Then Tab to Undo              
+      13 +      and Enter.                                               
+      14 +    - "Too much product" → "Skip my Dec 16 order": the skip dia
+         +log with Dec 16 and Jan 15, 2027, only one modal               
+      15 +      open, and focus on "Keep my order"                       
+      16 +    - a pending 90 days: "It costs too much" offers only the qu
+         +antity                                                         
+      17 +    - "Ship every 60 days": the dialog is gone, Active, the pen
+         +ding line, the announcement, focus on "Change your             
+      18 +      plan"                                                    
+      19 +    - cancel with a frequency and a quantity pending, then Undo
+         +: the same lines and the same $63.67                           
+      20 +    - Esc and "Keep my subscription" at step 1 and at step 2   
+      21 +    - axe and reflow at 375px, 1200px and 320px for step 1, ste
+         +p 2 ("Other" and "It costs too much") and the                  
+      22 +      cancelled view                                           
+      23 +  - `spec.md`: every acceptance criterion is ticked, because ea
+         +ch one now has an e2e test. The status stays                   
+      24 +    Approved until T7.                                         
+      25 +  - `plan.md` (Testing): the reflow check also looks inside the
+         + open dialog and inside each button.                           
+      26 +- **Decisions:**                                               
+      27 +  - Found while testing: `white-space: nowrap` on the offer but
+         +tons passed the first version of the reflow tests.             
+      28 +    The page's scroll width can't see overflow inside a modal, 
+         +because the modal sits in the top layer with its own           
+      29 +    overflow. The check now also fails when the open dialog or 
+         +any button is wider inside than its box. 002's skip            
+      30 +    e2e has the same blind spot, but its labels are short. I le
+         +ft it unchanged, because it is outside this task.              
+      31 +  - A locator fix: `getByText(/^Status: /)` matched the badge's
+         + visually hidden span. The badge locator is now                
+      32 +    `a-overview.spec.ts`'s.                                    
+      33 +- **Verified:**                                                
+      34 +  - Three temporary breaks, each caught and then reverted:     
+      35 +    - the focus effect keyed on `state.focus` again: 12 tests f
+         +ail (every Undo focus, both projects)                          
+      36 +    - a cancel that wipes `local`: 2 tests fail (Undo with pend
+         +ing changes)                                                   
+      37 +    - `white-space: nowrap` on the offer buttons: 3 tests fail 
+         +("It costs too much" at 1200px, 375px and 320px).              
+      38 +      This break was missed before the overflow check was added
+         +.                                                              
+      39 +  - `npm run check` passed: 434 unit and component tests, and e
+         +2e 110 passed, 14 skipped (the 320px and 640×320               
+      40 +    tests on the desktop project).                             
+      41 +                                                               
+     … 3 more lines (ctrl+o to expand)
+
+● T6 is complete. For T7, I'll check in with you on which additional edge cases
+  and e2e flows to prioritize—I've spotted a real risk where a second fast tap
+  after a dialog closes could hit the control underneath it, plus other untested
+  candidates to consider.
+
+● User answered Claude's questions:
+  ⎿  · 004 T7: which cancel-flow e2e flows should become new tasks? (T1–T6
+     already cover: 3 taps per reason, keyboard-only, the skip handover opening
+     the dialog, a pending 90, the 60-day offer, Undo with pending changes, Esc
+     and Keep at both steps, axe and reflow at 320, 375 and 1200px.) → Skip
+     offer to the end
+     · 004 T7: which robustness edge cases should become new tasks? → I already
+     prepared a table with some edge cases worth to test
+     ┌─────┬────────────────────────┬───────────────────────────────────────────
+     ────────────┐
+     │  #  │          Case          │                       Expected
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │ Active subscription    │ Skip offers are hidden. Too much product
+     falls back   │
+     │ 10  │ with no nextChargeAt   │ to the frequency offer. Trying a different
+     product    │
+     │     │ (001 T9)               │ ends up with no offer.
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │ Frequency 90 and every │ No offers, only cancel and back. That's
+     fine, but     │
+     │ 11  │  quantity at 1, with   │ test it.
+                │
+     │     │ costs too much         │
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │ A quantity of 1        │ No quantity offer, because "current"
+     includes pending │
+     │ 12  │ pending on the only    │  changes.
+                │
+     │     │ item above 1           │
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │ 13  │ Several items above    │ One button each. Cap the number, or the
+     375px dialog  │
+     │     │ quantity 1             │ gets long.
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │ The skip offer is      │ The 002 flow handles it unchanged, with
+     nothing new   │
+     │ 14  │ chosen and the skip    │ in 004. Test it once with conflict=always.
+                │
+     │     │ then hits a 409        │
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │ Undo after a cancel    │ The changes come back and the beforeunload
+     warning    │
+     │ 15  │ with 003 changes       │ returns. That's derived state, so it
+     should just      │
+     │     │ pending                │ work. Assert it.
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │ "Other" text, then     │ Decide whether the text is kept or
+     cleared. I'd clear │
+     │ 16  │ Back, then another     │  it, since it's never sent anyway.
+                │
+     │     │ reason                 │
+                │
+     ├─────┼────────────────────────┼───────────────────────────────────────────
+     ────────────┤
+     │     │                        │ Unit-test it the way 003 did:
+                │
+     │ 17  │ R9 "not tested"        │ viewOf({...fixtures.active(), status:
+     "paused"},      │
+     │     │                        │ localCancel) returns paused. Then drop
+     that known     │
+     │     │                        │ limitation.
+                │
+     └─────┴────────────────────────┴───────────────────────────────────────────
+     ────────────┘
+     · T6 (e2e/a-cancel.spec.ts, spec criteria ticked, plan note, changelog) is
+     uncommitted. Commit it to develop now? → Commit now (Recommended)
+
+● Committing T6 first, then checking your table row by row against the tests
+  that already exist, so new tasks only cover real gaps:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I've committed T6 (20e2500) and mapped each item in your table against
+  existing test coverage, flagging gaps and needed spec updates. Row 13 requires
+  a spec change to R3, so I need your decision on that before proceeding.
+
+● User answered Claude's questions:
+  ⎿  · Edge case 13 (several items above quantity 1 under "It costs too much"):
+     R3 currently lists one "Get 1 X instead of N: save $Y per order" button per
+     item, uncapped. How should the cap work? (The "Ship every 60 days" offer
+     stays first either way.) → Max 2, biggest saving (Recommended)
+
+● I'll first update spec.md (R3, criteria, limitations) and plan.md's offersFor
+  notes to reflect the cap-of-2 approach, then convert the agreed cases into
+  tasks before building T8 onward. Let me check the current offersFor code and
+  exact spec lines to edit.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/spec.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+9 -3)
+      27    - **Too much product:** the main button is "Skip my Nov 8 ord
+          er", and the second is "Ship every 60 days" (003),
+      28      for customers whose problem is long term.
+      29    - **Costs too much:** the main button is "Ship every 60 days:
+           {total} every 60 days instead of every 30". The
+      30 -    second is "Get 1 Multivitamin instead of 2: save {amount} p
+         -er order", shown for each item with quantity > 1.              
+      30 +    second is "Get 1 Multivitamin instead of 2: save {amount} p
+         +er order", shown for each item with quantity > 1,              
+      31 +    at most 2 of them: the two largest savings, largest first, 
+         +with ties in the server's order. This keeps the                
+      32 +    375px dialog short.                                        
+      33      Its saving is `totalAfterDiscount(current) - totalAfterDisc
+          ount(with that item lowered by one)` (001 R4). Here
+      34      "current" means the quantities including pending changes. A
+           discounted unit price is not used, because its
+      35      rounding can differ from the actual change in the total.
+      36    - **Trying a different product:** "Skip my Nov 8 order while 
+          you try it".
+      37    - **Didn't see results, and Other:** no offer, only the cance
+          l and back buttons. "Other" also shows an optional
+      36 -    "Tell us more" text field.                                 
+      38 +    "Tell us more" text field. Its text is cleared on "Back" or
+         + on closing, because it is never sent.                         
+      39  - R4 The frequency offer shows the next slower option than the 
+          current one (30 → 60 → 90). It is hidden when the
+      40    frequency is already 90.
+      41  - R5 A skip offer closes the cancel flow and opens the 002 skip
+           dialog, so there is one code path for latency and 409s,
+     ...
+      59  - [x] R3: Each reason shows the right offers, and "Yes, cancel 
+          my subscription" is always visible.
+      60  - [x] R3, R5: "Too much product" → "Skip my Nov 8 order" opens 
+          the skip dialog with both dates.
+      61  - [x] R4: Given a pending 90 days, the "costs too much" offers 
+          show no frequency button.
+      62 +- [ ] R3: Given three items above quantity 1, "It costs too muc
+         +h" shows two quantity offers, the largest saving               
+      63 +      first.                                                   
+      64 +- [ ] R3, R4: Given 90 days and every quantity at 1, from the s
+         +erver or pending, "It costs too much" shows no offer,          
+      65 +      only the cancel, "Back" and "Keep my subscription".      
+      66  - [x] R6: "Ship every 60 days" applies the pending change and t
+          he subscription stays active.
+      67  - [x] R7, R8: After cancelling, the cancelled view shows. "Undo
+           cancellation" brings back the active view with any
+      68        pending changes.
+     ...
+      78  - Cancellation is simulated in local state, because the mock AP
+          I has no cancel endpoint. A reload brings the active
+      79    subscription back.
+      80  - The reason and the "Other" text are not saved or sent.
+      75 -- R9 is not tested, because the mock never changes status.     
+      81 +- R9 is unit-tested only (`viewOf` and the reducer guards), bec
+         +ause the mock never changes status.                            
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/plan.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/plan.md (+6 -1)
+       96    never uses `nextChargeTotalCents`, so it works when the serv
+           er sends none.
+       97  - **Saving (R3):** `totalAfterDiscount(current) - totalAfterDi
+           scount(with that item lowered by one)`, imported
+       98    from `src/api/fixtures.ts`, as 003 does.
+       99 -- **A quantity offer** is listed for each item whose current q
+          -uantity is above 1, in server order. It is left out           
+       99 +- **A quantity offer** is listed for each item whose current q
+          +uantity is above 1. It is left out                            
+      100    when the lowered quantity isn't in `quantityOptions(item)`, 
+           for example a server quantity of 12, where 11 isn't a
+      101    choice. `plan/quantity` would ignore it.
+      102 +- **At most 2 quantity offers (R3):** after that filter, the o
+          +ffers are sorted by saving, largest first, with a             
+      103 +  stable sort so ties keep the server's order. Then the first 
+          +two are kept. The reducer's offer check uses                  
+      104 +  `offersFor`, so an offer that was dropped by the cap is reje
+          +cted too.                                                     
+      105  - **The skip offers** need `canSkip(server)`. Without a next o
+           rder date, there is nothing to skip. "Too much
+      106    product" then shows only the frequency offer, and "Trying a 
+           different product" shows none.
+      107  - **Same frequency as the server:** server 60, pending 30, off
+           er 60. Taking it goes through `plan/frequency`, which
+     ...
+      198      - A pending Multivitamin 1 drops its quantity offer and lo
+           wers the frequency offer's total to $63.67.
+      199      - A server quantity of 12 has no quantity offer.
+      200      - No next order date means no skip offer.
+      201 +    - Three items above 1 give two quantity offers, largest sa
+          +ving first. A tie keeps the server's order.                   
+      202 +    - A server at 90 days with every quantity at 1 gives no "c
+          +osts" offer.                                                  
+      203    - Reducer: every row of the table, including each ignored ca
+           se:
+      204      - opening while not ready, paused, locally cancelled or wi
+           th the skip dialog open
+      205      - a stale or made-up offer
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+8 -1)
+      13        component tests (pending changes kept, no Undo on the can
+          celled fixture)
+      14  - [x] T6 (R1–R10): `e2e/a-cancel.spec.ts` with 3 taps for each 
+          reason, a keyboard-only run, the skip offer, a pending
+      15        90, the 60-day offer, Undo with pending changes, Esc at b
+          oth steps, axe and reflow at 375px, 320px and 1200px
+      16 -- [ ] T7: ask the human which further edge cases and e2e flows 
+         -to cover, and add them as tasks                                
+      16 +- [x] T7: ask the human which further edge cases and e2e flows 
+         +to cover, and add them as tasks                                
+      17 +- [ ] T8 (R3): at most 2 quantity offers, the largest saving fi
+         +rst (ties in server order), plus unit tests and a              
+      18 +      component test with three items above 1                  
+      19 +- [ ] T9 (R3, R4): the fallbacks, as component tests, plus a un
+         +it test for a server at 90 days with every quantity            
+      20 +      at 1: - no next order date: "too much" shows only the fre
+         +quency offer, "different product" has no "Instead, you can:" - 
+         +90 days and every quantity at 1, pending: "costs" shows no offe
+         +r - a pending quantity of 1 drops that item's offer            
+      21 +- [ ] T10 (R5, R8, 002 R6–R8): e2e for the skip offer to the en
+         +d. `conflict=never`: confirm, then "Skipped. Your next         
+      22 +      order is Jan 15, 2027." `conflict=always`: the 409 alert,
+         + then Keep. The Undo e2e also checks the                       
+      23 +      `beforeunload` prompt.                                   
+
+● Prettier merged T9's nested list into one line, so I'm rewriting T9 as plain
+  sentences:
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/task.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+4 -2)
+      16  - [x] T7: ask the human which further edge cases and e2e flows 
+          to cover, and add them as tasks
+      17  - [ ] T8 (R3): at most 2 quantity offers, the largest saving fi
+          rst (ties in server order), plus unit tests and a
+      18        component test with three items above 1
+      19 -- [ ] T9 (R3, R4): the fallbacks, as component tests, plus a un
+         -it test for a server at 90 days with every quantity            
+      20 -      at 1: - no next order date: "too much" shows only the fre
+         -quency offer, "different product" has no "Instead, you can:" - 
+         -90 days and every quantity at 1, pending: "costs" shows no offe
+         -r - a pending quantity of 1 drops that item's offer            
+      19 +- [ ] T9 (R3, R4): the fallbacks, as component tests: with no n
+         +ext order date, "too much" shows only the frequency            
+      20 +      offer and "different product" has no "Instead, you can:";
+         + with 90 days and every quantity at 1 pending,                 
+      21 +      "costs" shows no offer; a pending quantity of 1 drops tha
+         +t item's offer. Plus a unit test for a server at 90            
+      22 +      days with every quantity at 1                            
+      23  - [ ] T10 (R5, R8, 002 R6–R8): e2e for the skip offer to the en
+          d. `conflict=never`: confirm, then "Skipped. Your next
+      24        order is Jan 15, 2027." `conflict=always`: the 409 alert,
+           then Keep. The Undo e2e also checks the
+      25        `beforeunload` prompt.
+
+● The spec, plan and tasks now record your decisions. I'm logging T7, then
+  building T8 (the cap) in quantityOffers:
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/CHANGELOG.md'…)
+  ⎿  Updated SPECS/CHANGELOG.md (+24 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T7: edge cases and e2e 
+         +flows chosen                                                   
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `spec.md`:                                                 
+       9 +    - R3: at most 2 quantity offers, the largest saving first, 
+         +with ties in the server's order                                
+      10 +    - R3: the "Other" text is cleared on Back or on closing    
+      11 +    - two new acceptance criteria (the cap, and no offers at 90
+         + days with every quantity at 1)                                
+      12 +    - Known limitations: R9 is unit-tested only. The old line s
+         +aid "not tested", which has been wrong since T2.               
+      13 +      The status stays Approved, because the human made these d
+         +ecisions.                                                      
+      14 +  - `plan.md`: the cap in `offersFor`, and its unit cases.     
+      15 +  - `task.md`: T7 ticked, and new tasks T8 (the cap), T9 (the f
+         +allbacks) and T10 (the skip offer to the end, a 409,           
+      16 +    and the `beforeunload` prompt after Undo).                 
+      17 +- **Decisions:**                                               
+      18 +  - The human chose the "skip offer to the end" e2e flow and ga
+         +ve a table of edge cases, 10 to 17.                            
+      19 +  - Already covered, so no new task:                           
+      20 +    - 16 ("Other" text cleared): the component test for Back al
+         +ready covers it, and the spec now says so                      
+      21 +    - 17 (R9): unit-tested since T2                            
+      22 +    - 15 (Undo brings back the leave warning): asserted in a T5
+         + component test, and T10 adds the real browser                 
+      23 +      prompt                                                   
+      24 +  - 12 (a pending quantity of 1) is unit-tested. T9 adds a comp
+         +onent test.                                                    
+      25 +  - 13 (several items): a cap of 2, the largest saving first, c
+         +hosen by the human over 2 in server order and over             
+      26 +    1. The frequency offer stays first.                        
+      27 +- **Verified:** docs only. `prettier --check` is clean.        
+      28 +                                                               
+      29  ## 2026-11-03: 004-a-cancel-retention / T6: cancel e2e
+      30  
+      31  - **Changed:**
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Adding the T8 unit tests first and running them against the current code. They
+  should fail: there's no cap yet, and the offers are in server order.
+
+● Bash(cat >> src/part-a/cancel.test.ts <<'EOF'…)
+  ⎿  Updated src/part-a/cancel.test.ts (+40 -0)
+      155      });
+      156    });
+      157  });
+      158 +                                                              
+      159 +describe("at most 2 quantity offers (R3)", () => {            
+      160 +  // Round prices, so every total is exact at 15% off and a ti
+          +e really is a tie.                                            
+      161 +  const item = (sku: string, unitPriceCents: number, quantity 
+          += 2) => ({                                                    
+      162 +    sku,                                                      
+      163 +    name: sku,                                                
+      164 +    quantity,                                                 
+      165 +    unitPriceCents,                                           
+      166 +    imageUrl: null,                                           
+      167 +  });                                                         
+      168 +  const quantitySkus = (subscription: typeof server, local = n
+          +one) =>                                                       
+      169 +    offersFor("costs", subscription, local).flatMap((offer) =>
+          + (offer.kind === "quantity" ? [offer.sku] : []));             
+      170 +                                                              
+      171 +  it("keeps the two largest savings, largest first, after the 
+          +frequency offer", () => {                                     
+      172 +    // Savings at 15% off: B 1700, C 3400, A 850. A is dropped
+          +.                                                             
+      173 +    const three = { ...server, items: [item("A", 1000), item("
+          +B", 2000), item("C", 4000)] };                                
+      174 +    const offers = offersFor("costs", three, none);           
+      175 +                                                              
+      176 +    expect(offers.map((offer) => offer.kind)).toEqual(["freque
+          +ncy", "quantity", "quantity"]);                               
+      177 +    expect(quantitySkus(three)).toEqual(["C", "B"]);          
+      178 +    expect(offers[1].label).toBe("Get 1 C instead of 2: save $
+          +34.00 per order");                                            
+      179 +  });                                                         
+      180 +                                                              
+      181 +  it("keeps the server's order on a tie", () => {             
+      182 +    const tied = { ...server, items: [item("A", 2000), item("B
+          +", 4000), item("C", 2000)] };                                 
+      183 +    expect(quantitySkus(tied)).toEqual(["B", "A"]);           
+      184 +  });                                                         
+      185 +                                                              
+      186 +  it("applies the cap after leaving out the items that can't g
+          +o lower", () => {                                             
+      187 +    // C is the largest saving, but at 1 it has no offer, so A
+          + and B both show.                                             
+      188 +    const three = { ...server, items: [item("A", 1000), item("
+          +B", 2000), item("C", 4000, 1)] };                             
+      189 +    expect(quantitySkus(three)).toEqual(["B", "A"]);          
+      190 +  });                                                         
+      191 +                                                              
+      192 +  it("ranks with the pending quantities", () => {             
+      193 +    // Pending C at 1 drops its offer, so the cap lets A back 
+          +in.                                                           
+      194 +    const three = { ...server, items: [item("A", 1000), item("
+          +B", 2000), item("C", 4000)] };                                
+     … 3 more lines (ctrl+o to expand)
+
+● All 4 fail as expected. Implementing the cap. Array.prototype.sort is stable
+  since ES2019, so ties keep the server's order:
+
+● Update(src/part-a/cancel.ts)
+  ⎿  Added 12 lines, removed 4 lines
+      34    return [{ kind: "skip", label: `Skip my ${formatDate(server.n
+          extChargeAt)} order${suffix}` }];
+      35  }
+      36  
+      37 +/** R3: more than this many quantity offers would make the 375p
+         +x dialog long. */                                              
+      38 +const MAX_QUANTITY_OFFERS = 2;                                 
+      39 +                                                               
+      40  /**
+      38 - * R3: one unit less of each item above 1. The saving is the di
+         -fference between the two totals, never a discounted            
+      39 - * unit price, whose rounding can differ from the real change (
+         -001 R4).                                                       
+      41 + * R3: one unit less of an item above 1, for the items with the
+         + largest savings. The saving is the difference                 
+      42 + * between the two totals, never a discounted unit price, whose
+         + rounding can differ from the real change (001 R4).            
+      43   */
+      44  function quantityOffers(server: Subscription, current: Subscrip
+          tionItem[]): Offer[] {
+      45    const total = totalAfterDiscount(current, server.discountPerc
+          ent);
+      43 -  return server.items.flatMap((item, index) => {               
+      46 +  const candidates = server.items.flatMap((item, index) => {   
+      47      const { quantity } = current[index];
+      48      const lower = quantity - 1;
+      49      // `plan/quantity` would ignore a quantity that isn't a cho
+          ice, such as 11 when the server sends 12.
+     ...
+      53      );
+      54      const saving = total - totalAfterDiscount(lowered, server.d
+          iscountPercent);
+      55      const label = `Get ${lower} ${item.name} instead of ${quant
+          ity}: save ${formatMoney(saving)} per order`;
+      53 -    return [{ kind: "quantity", sku: item.sku, quantity: lower,
+         - label }];                                                     
+      56 +    return [{ saving, offer: { kind: "quantity", sku: item.sku,
+         + quantity: lower, label } as const }];                         
+      57    });
+      58 +  // The sort is stable, so a tie keeps the server's order.    
+      59 +  return candidates                                            
+      60 +    .sort((a, b) => b.saving - a.saving)                       
+      61 +    .slice(0, MAX_QUANTITY_OFFERS)                             
+      62 +    .map(({ offer }) => offer);                                
+      63  }
+      64  
+      65  /** R3, R4: the offers for a reason, in display order. "Current
+          " is the server's data with pending 003 changes. */
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● The failing T1 test reflects outdated behavior—Multivitamin's savings now
+  exceed Vitamin D's, so it should list first per the new spec. I'll update the
+  test's expectation and rename it accordingly.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/cancel.test.ts'…)
+  ⎿  Updated src/part-a/cancel.test.ts (+3 -2)
+      101        ]);
+      102      });
+      103  
+      104 -    it("saves the difference in totals for each item above 1, 
+          -in server order", () => {                                     
+      104 +    it("saves the difference in totals for each item above 1, 
+          +the largest saving first", () => {                            
+      105        // Vitamin D 3: (3 × 2995 + 2 × 4495) × 0.85 = 15278.75 
+           → 15279.
+      106        // Vitamin D 2: 14980 × 0.85 = 12733, so $25.46. Multivi
+           tamin 1: 13480 × 0.85 = 11458, so $38.21 this time.
+      107 +      // The server lists Vitamin D first, but the Multivitami
+          +n saves more (R3).                                            
+      108        expect(labels("costs", server, { ...none, quantities: { 
+           "NW-VITD-60": 3 } }).slice(1)).toEqual([
+      108 -        "Get 2 Vitamin D, 60 softgels instead of 3: save $25.4
+          -6 per order",                                                 
+      109          "Get 1 Multivitamin, 30 tablets instead of 2: save $38
+           .21 per order",
+      110 +        "Get 2 Vitamin D, 60 softgels instead of 3: save $25.4
+          +6 per order",                                                 
+      111        ]);
+      112      });
+      113  
+
+● Unit tests are passing. I still need to add a component test with three items
+  and a reducer test confirming a capped-out offer gets rejected if dispatched
+  anyway, so I'm checking the reducer test helpers now.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Adding a reducer test (an offer dropped by the cap is ignored) and a component
+  test (three items: two buttons, largest saving first, and taking the second
+  one works):
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/cancelReducer.test.ts'…)
+  ⎿  Updated src/part-a/cancelReducer.test.ts (+18 -0)
+      231      expect(subscriptionReducer(state, taken(MULTI_1))).toBe(st
+           ate);
+      232    });
+      233  
+      234 +  it("ignores a quantity offer the cap left out (R3)", () => {
+      235 +    // Three items at 2. The cheapest one's saving is the smal
+          +lest, so it isn't among the two offered.                      
+      236 +    const cheap = { sku: "NW-CHEAP", name: "Cheap", quantity: 
+          +2, unitPriceCents: 1000, imageUrl: null };                    
+      237 +    const three = server({ items: [...fixtures.active().items.
+          +map((item) => ({ ...item, quantity: 2 })), cheap] });         
+      238 +    const state = atOffer("costs", loaded(three));            
+      239 +    if (state.load.kind !== "ready") throw new Error("not load
+          +ed");                                                         
+      240 +    const skus = offersFor("costs", state.load.server, state.l
+          +ocal).map((offer) => "sku" in offer && offer.sku);            
+      241 +    expect(skus).not.toContain("NW-CHEAP");                   
+      242 +                                                              
+      243 +    const leftOut: Offer = {                                  
+      244 +      kind: "quantity",                                       
+      245 +      sku: "NW-CHEAP",                                        
+      246 +      quantity: 1,                                            
+      247 +      label: "Get 1 Cheap instead of 2: save $8.50 per order",
+      248 +    };                                                        
+      249 +    expect(subscriptionReducer(state, taken(leftOut))).toBe(st
+          +ate);                                                         
+      250 +  });                                                         
+      251 +                                                              
+      252    it("ignores a skip offer without a next order date", () => {
+      253      const state = atOffer("too-much", loaded(server({ nextChar
+           geAt: null })));
+      254      expect(subscriptionReducer(state, taken(SKIP))).toBe(state
+           );
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+28 -0)
+      331    });
+      332  });
+      333  
+      334 +describe("at most 2 quantity offers (R3)", () => {            
+      335 +  // Vitamin D and Multivitamin at 2, plus a cheaper third ite
+          +m at 2. Savings: Multivitamin $38.21, Vitamin D               
+      336 +  // $25.46, Fish oil $16.15, so Fish oil is left out.        
+      337 +  const fishOil = { sku: "NW-FISH-90", name: "Fish oil", quant
+          +ity: 2, unitPriceCents: 1900, imageUrl: null };               
+      338 +  const three = () =>                                         
+      339 +    active({ items: [...fixtures.active().items.map((item) => 
+          +({ ...item, quantity: 2 })), fishOil] });                     
+      340 +                                                              
+      341 +  it("shows two, the largest saving first, after the frequency
+          + offer", async () => {                                        
+      342 +    await atStep2("It costs too much", three());              
+      343 +                                                              
+      344 +    const offers = within(inDialog().getByRole("list")).getAll
+          +ByRole("button");                                             
+      345 +    expect(offers.map((button) => button.textContent)).toEqual
+          +([                                                            
+      346 +      expect.stringMatching(/^Ship every 60 days: /),         
+      347 +      "Get 1 Multivitamin, 30 tablets instead of 2: save $38.2
+          +1 per order",                                                 
+      348 +      "Get 1 Vitamin D, 60 softgels instead of 2: save $25.46 
+          +per order",                                                   
+      349 +    ]);                                                       
+      350 +    expect(inDialog().queryByRole("button", { name: /Fish oil/
+          + })).not.toBeInTheDocument();                                 
+      351 +  });                                                         
+      352 +                                                              
+      353 +  it("applies the second one too", async () => {              
+      354 +    const user = await atStep2("It costs too much", three()); 
+      355 +    await user.click(inDialog().getByRole("button", { name: /^
+          +Get 1 Vitamin D/ }));                                         
+      356 +                                                              
+      357 +    expect(document.querySelectorAll("dialog[open]")).toHaveLe
+          +ngth(0);                                                      
+      358 +    expect(screen.getByRole("combobox", { name: "Vitamin D, 60
+          + softgels quantity" })).toHaveValue("1");                     
+      359 +  });                                                         
+      360 +});                                                           
+      361 +                                                              
+      362  describe("Back (R3)", () => {
+      363    it.each(REASON_LABELS)("returns to step 1 with focus on %s",
+            async (reason) => {
+      364      const user = await atStep2(reason);
+
+● 441 pass. A quick break to prove the cap tests can fail: raise the cap to 3,
+  then restore it.
+  Ran 1 shell command (ctrl+o to expand)
+
+● The break was caught by 4 tests, and the cap is restored. Running npm run
+  check for T8:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/task.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+      14  - [x] T6 (R1–R10): `e2e/a-cancel.spec.ts` with 3 taps for each 
+          reason, a keyboard-only run, the skip offer, a pending
+      15        90, the 60-day offer, Undo with pending changes, Esc at b
+          oth steps, axe and reflow at 375px, 320px and 1200px
+      16  - [x] T7: ask the human which further edge cases and e2e flows 
+          to cover, and add them as tasks
+      17 -- [ ] T8 (R3): at most 2 quantity offers, the largest saving fi
+         -rst (ties in server order), plus unit tests and a              
+      17 +- [x] T8 (R3): at most 2 quantity offers, the largest saving fi
+         +rst (ties in server order), plus unit tests and a              
+      18        component test with three items above 1
+      19  - [ ] T9 (R3, R4): the fallbacks, as component tests: with no n
+          ext order date, "too much" shows only the frequency
+      20        offer and "different product" has no "Instead, you can:";
+           with 90 days and every quantity at 1 pending,
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+1 -1)
+      59  - [x] R3: Each reason shows the right offers, and "Yes, cancel 
+          my subscription" is always visible.
+      60  - [x] R3, R5: "Too much product" → "Skip my Nov 8 order" opens 
+          the skip dialog with both dates.
+      61  - [x] R4: Given a pending 90 days, the "costs too much" offers 
+          show no frequency button.
+      62 -- [ ] R3: Given three items above quantity 1, "It costs too muc
+         -h" shows two quantity offers, the largest saving               
+      62 +- [x] R3: Given three items above quantity 1, "It costs too muc
+         +h" shows two quantity offers, the largest saving               
+      63        first.
+      64  - [ ] R3, R4: Given 90 days and every quantity at 1, from the s
+          erver or pending, "It costs too much" shows no offer,
+      65        only the cancel, "Back" and "Keep my subscription".
+  ⎿  Updated SPECS/CHANGELOG.md (+26 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T8: at most 2 quantity 
+         +offers                                                         
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-a/cancel.ts`: `quantityOffers` builds every candi
+         +date with its saving, sorts by saving (largest                 
+       9 +    first), and keeps `MAX_QUANTITY_OFFERS` (2).               
+      10 +  - `src/part-a/cancel.test.ts`: 4 new tests:                  
+      11 +    - the two largest savings, in order                        
+      12 +    - a tie keeps the server's order                           
+      13 +    - the cap is applied after the `quantityOptions` filter    
+      14 +    - ranking uses the pending quantities                      
+      15 +  - The T1 test "in server order" now expects the largest savin
+         +g first, as R3 now says. With Vitamin D at 3                   
+      16 +    pending, the Multivitamin's $38.21 comes before Vitamin D's
+         + $25.46.                                                       
+      17 +  - `src/part-a/cancelReducer.test.ts`: an offer the cap left o
+         +ut is ignored.                                                 
+      18 +  - `src/part-a/CancelDialog.test.tsx`: three items at 2 show t
+         +he Multivitamin ($38.21), then Vitamin D ($25.46),             
+      19 +    and no fish oil ($16.15). Taking the second offer applies i
+         +t.                                                             
+      20 +  - `spec.md`: the cap criterion is ticked.                    
+      21 +- **Decisions:**                                               
+      22 +  - The sort is `Array.prototype.sort`, which is stable since E
+         +S2019, so ties keep the server's order without a               
+      23 +    tie-breaker.                                               
+      24 +  - No reducer change was needed. `cancel/offerTaken` compares 
+         +against `offersFor`, so it rejects a capped-out offer          
+      25 +    by itself.                                                 
+      26 +- **Verified:**                                                
+      27 +  - The 4 new unit tests failed before the change.             
+      28 +  - A temporary break (a cap of 3) failed 4 tests, and was reve
+         +rted.                                                          
+      29 +  - `npm run check` passed: 441 unit and component tests, and e
+         +2e 110 passed, 14 skipped.                                     
+      30 +                                                               
+      31  ## 2026-11-03: 004-a-cancel-retention / T7: edge cases and e2e 
+          flows chosen
+      32  
+      33  - **Changed:**
+
+● T8 is done. Now T9, the fallbacks. These pin behaviour that already exists, so
+  I expect them to pass straight away. I'll break the code afterwards to prove
+  they can fail.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/cancel.test.ts'…)
+  ⎿  Updated src/part-a/cancel.test.ts (+7 -0)
+      146      });
+      147    });
+      148  
+      149 +  describe("with nothing cheaper to offer", () => {           
+      150 +    it("has no costs offer for a server at 90 days with every 
+          +quantity at 1", () => {                                       
+      151 +      const lowest = { ...server, intervalDays: 90, items: ser
+          +ver.items.map((item) => ({ ...item, quantity: 1 })) };        
+      152 +      expect(offersFor("costs", lowest, none)).toEqual([]);   
+      153 +    });                                                       
+      154 +  });                                                         
+      155 +                                                              
+      156    describe("without a next order date", () => {
+      157      const undated = { ...server, nextChargeAt: null, nextCharg
+           eTotalCents: null };
+      158  
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+44 -0)
+      359    });
+      360  });
+      361  
+      362 +describe("the fallbacks (R3, R4)", () => {                    
+      363 +  const offerTexts = () =>                                    
+      364 +    inDialog()                                                
+      365 +      .queryAllByRole("listitem")                             
+      366 +      .map((item) => item.textContent);                       
+      367 +  const lead = () => inDialog().queryByText("Instead, you can:
+          +");                                                           
+      368 +                                                              
+      369 +  it('falls back to the frequency offer for "too much" without
+          + a next order date', async () => {                            
+      370 +    await atStep2("I have too much product left", active({ nex
+          +tChargeAt: null }));                                          
+      371 +                                                              
+      372 +    expect(lead()).toBeInTheDocument();                       
+      373 +    expect(offerTexts()).toEqual(["Ship every 60 days"]);     
+      374 +  });                                                         
+      375 +                                                              
+      376 +  it('has no offer and no lead for "different product" without
+          + a next order date', async () => {                            
+      377 +    await atStep2("I'm trying a different product", active({ n
+          +extChargeAt: null }));                                        
+      378 +                                                              
+      379 +    expect(lead()).not.toBeInTheDocument();                   
+      380 +    expect(inDialog().queryByRole("list")).not.toBeInTheDocume
+          +nt();                                                         
+      381 +    expect(buttonTexts()).toEqual(STEP_2_ACTIONS);            
+      382 +  });                                                         
+      383 +                                                              
+      384 +  it("drops the offer for a quantity already lowered to 1, and
+          + uses the lower total", async () => {                         
+      385 +    const user = await renderLoaded();                        
+      386 +    await user.selectOptions(screen.getByRole("combobox", { na
+          +me: "Multivitamin, 30 tablets quantity" }), "1");             
+      387 +    await user.click(trigger());                              
+      388 +    await user.click(inDialog().getByRole("button", { name: "I
+          +t costs too much" }));                                        
+      389 +                                                              
+      390 +    expect(offerTexts()).toEqual(["Ship every 60 days: $63.67 
+          +every 60 days instead of every 30"]);                         
+      391 +  });                                                         
+      392 +                                                              
+      393 +  it('has no offer and no lead for "costs" with 90 days and ev
+          +ery quantity at 1 pending', async () => {                     
+      394 +    const user = await renderLoaded();                        
+      395 +    await user.click(screen.getByRole("radio", { name: "Every 
+          +90 days" }));                                                 
+      396 +    await user.selectOptions(screen.getByRole("combobox", { na
+          +me: "Multivitamin, 30 tablets quantity" }), "1");             
+      397 +    await user.click(trigger());                              
+      398 +    await user.click(inDialog().getByRole("button", { name: "I
+          +t costs too much" }));                                        
+     … 10 more lines (ctrl+o to expand)
+
+● All 5 tests pass since they pin existing behavior. Now I'll verify they
+  actually catch regressions by testing two intentional breaks: showing
+  "Instead, you can:" with no offers, and building quantity offers from server
+  quantities instead of pending ones.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both breaks were caught (4 and 8 tests) and both files are restored. Running
+  npm run check for T9:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/task.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+      16  - [x] T7: ask the human which further edge cases and e2e flows 
+          to cover, and add them as tasks
+      17  - [x] T8 (R3): at most 2 quantity offers, the largest saving fi
+          rst (ties in server order), plus unit tests and a
+      18        component test with three items above 1
+      19 -- [ ] T9 (R3, R4): the fallbacks, as component tests: with no n
+         -ext order date, "too much" shows only the frequency            
+      19 +- [x] T9 (R3, R4): the fallbacks, as component tests: with no n
+         +ext order date, "too much" shows only the frequency            
+      20        offer and "different product" has no "Instead, you can:";
+           with 90 days and every quantity at 1 pending,
+      21        "costs" shows no offer; a pending quantity of 1 drops tha
+          t item's offer. Plus a unit test for a server at 90
+      22        days with every quantity at 1
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+1 -1)
+      61  - [x] R4: Given a pending 90 days, the "costs too much" offers 
+          show no frequency button.
+      62  - [x] R3: Given three items above quantity 1, "It costs too muc
+          h" shows two quantity offers, the largest saving
+      63        first.
+      64 -- [ ] R3, R4: Given 90 days and every quantity at 1, from the s
+         -erver or pending, "It costs too much" shows no offer,          
+      64 +- [x] R3, R4: Given 90 days and every quantity at 1, from the s
+         +erver or pending, "It costs too much" shows no offer,          
+      65        only the cancel, "Back" and "Keep my subscription".
+      66  - [x] R6: "Ship every 60 days" applies the pending change and t
+          he subscription stays active.
+      67  - [x] R7, R8: After cancelling, the cancelled view shows. "Undo
+           cancellation" brings back the active view with any
+  ⎿  Updated SPECS/CHANGELOG.md (+18 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T9: the fallbacks      
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-a/CancelDialog.test.tsx`: 4 new tests in "the fal
+         +lbacks (R3, R4)":                                              
+       9 +    - with no next order date, "too much" shows only "Ship ever
+         +y 60 days"                                                     
+      10 +    - with no next order date, "different product" has no "Inst
+         +ead, you can:" and no list                                     
+      11 +    - a pending Multivitamin 1 leaves only the frequency offer,
+         + at $63.67                                                     
+      12 +    - with 90 days and Multivitamin 1 pending, "costs" shows no
+         + offer and no lead, only the cancel, Back and Keep             
+      13 +  - `src/part-a/cancel.test.ts`: a server at 90 days with every
+         + quantity at 1 has no "costs" offer.                           
+      14 +  - `spec.md`: the no-offer criterion is ticked.               
+      15 +- **Decisions:** no code change was needed. These tests pin beh
+         +aviour that came from T1 and T4.                               
+      16 +- **Verified:**                                                
+      17 +  - The new tests passed straight away, because they pin existi
+         +ng behaviour. Two temporary breaks show they can               
+      18 +    fail, and both were reverted:                              
+      19 +    - the lead shown with no offers: 4 tests fail, 2 of them ne
+         +w                                                              
+      20 +    - quantity offers built from the server's quantities instea
+         +d of the pending ones: 8 tests fail, 2 of them new             
+      21 +  - `npm run check` passed: 446 unit and component tests, and e
+         +2e 110 passed, 14 skipped.                                     
+      22 +                                                               
+      23  ## 2026-11-03: 004-a-cancel-retention / T8: at most 2 quantity 
+          offers
+      24  
+      25  - **Changed:**
+
+● T9 is complete. Moving to T10, I'll add three e2e tests: skipping "too much
+  product" against the real mock with the Jan 15, 2027 announcement, skipping
+  "different product" with conflict=always through the 409 alert and Keep flow,
+  and verifying the browser's beforeunload prompt after Undo.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p='e2e/a-cancel.spec.ts'…)
+  ⎿  Updated e2e/a-cancel.spec.ts (+60 -3)
+       3  
+       4  // 004: the cancel flow against the real in-browser mock, on bo
+          th projects (375px with touch, and 1200px). The clock
+       5  // and time zone are pinned in playwright.config.ts: now is Dec
+           10, 2026, the next order is Dec 16 ($101.87), every
+       6 -// 30 days, and one skip moves it to Jan 15, 2027. Nothing in t
+         -he cancel flow waits on the network.                           
+       6 +// 30 days, and one skip moves it to Jan 15, 2027. The cancel f
+         +low itself never waits on the network. A skip taken            
+       7 +// from it, and the skip's reload, can each take up to 2.5s, so
+         + the expectations that wait for them get 10s.                  
+       8  
+       9 +const SLOW = { timeout: 10_000 };                              
+      10 +const CONFLICT_MESSAGE =                                       
+      11 +  "Your subscription was changed somewhere else. We've loaded t
+         +he latest details. Check the dates and confirm again.";        
+      12 +                                                               
+      13  const REASONS = [
+      14    "I have too much product left",
+      15    "It costs too much",
+     ...
+      37  const radio = (page: Page, name: string) => plan(page).getByRol
+          e("radio", { name, exact: true });
+      38  const multivitamin = (page: Page) => plan(page).getByRole("comb
+          obox", { name: "Multivitamin, 30 tablets quantity" });
+      39  const pendingLines = (page: Page) => plan(page).getByRole("list
+          item");
+      40 +const skipDialog = (page: Page) => page.getByRole("dialog", { n
+         +ame: "Skip your next order?" });                               
+      41 +const skipButton = (page: Page) => page.getByRole("button", { n
+         +ame: "Skip next order" });                                     
+      42 +const nextOrder = (page: Page) => page.locator("section", { has
+         +: page.getByRole("heading", { name: "Next order" }) });        
+      43  
+      36 -async function load(page: Page) {                              
+      37 -  await page.goto("/?part=a&fixture=active&conflict=never");   
+      44 +async function load(page: Page, conflict: "never" | "always" = 
+         +"never") {                                                     
+      45 +  await page.goto(`/?part=a&fixture=active&conflict=${conflict}
+         +`);                                                            
+      46    await expect(trigger(page)).toBeVisible();
+      47  }
+      48  
+     ...
+      155    await expect(badge(page)).toHaveText("Status: Active");
+      156  });
+      157  
+      158 +test("R5, 002 R6: a skip taken from the cancel flow goes throu
+          +gh, and the subscription stays active", async ({              
+      159 +  page,                                                       
+      160 +}) => {                                                       
+      161 +  await atStep2(page, "I have too much product left");        
+      162 +  await step2(page).getByRole("button", { name: "Skip my Dec 1
+          +6 order" }).click();                                          
+      163 +  await skipDialog(page).getByRole("button", { name: "Skip Dec
+          + 16 order" }).click();                                        
+      164 +                                                              
+      165 +  await expect(status(page)).toHaveText("Skipped. Your next or
+          +der is Jan 15, 2027.", SLOW);                                 
+      166 +  await expect(openDialogs(page)).toHaveCount(0);             
+     … 49 more lines (ctrl+o to expand)
+  ⎿  (timeout 6m 40s)
+
+● 44 passed, including the 4 new tests. Two breaks to prove the new e2e checks
+  can fail:
+
+  1. The leave warning never comes back after Undo.
+  2. The skip offer no longer hands over to 002's skip dialog.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both breaks were caught: 2 tests failed for the leave warning and 6 for the
+  skip handover. Both files are back to their committed versions. Running the
+  full check for T10:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All tests pass (446 unit/component, 114 e2e with 14 skipped), so I'm marking
+  spec 004 as Implemented since every task and criterion is complete. I also
+  noticed spec 002-a still says "Approved" despite appearing finished, but I'll
+  leave that untouched for now.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/004-a-cancel-retention/task.md'…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+      20        offer and "different product" has no "Instead, you can:";
+           with 90 days and every quantity at 1 pending,
+      21        "costs" shows no offer; a pending quantity of 1 drops tha
+          t item's offer. Plus a unit test for a server at 90
+      22        days with every quantity at 1
+      23 -- [ ] T10 (R5, R8, 002 R6–R8): e2e for the skip offer to the en
+         -d. `conflict=never`: confirm, then "Skipped. Your next         
+      23 +- [x] T10 (R5, R8, 002 R6–R8): e2e for the skip offer to the en
+         +d. `conflict=never`: confirm, then "Skipped. Your next         
+      24        order is Jan 15, 2027." `conflict=always`: the 409 alert,
+           then Keep. The Undo e2e also checks the
+      25        `beforeunload` prompt.
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+1 -1)
+      1  # 004: Cancel with a matching alternative
+      2  
+      3 -Status: Approved                                                
+      3 +Status: Implemented                                             
+      4  
+      5  ## Problem
+      6  
+  ⎿  Updated SPECS/CHANGELOG.md (+20 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T10: the skip offer to 
+         +the end, and the leave prompt after Undo                       
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `e2e/a-cancel.spec.ts`:                                    
+       9 +    - "Too much product" → "Skip my Dec 16 order" → confirm. "S
+         +kipped. Your next order is Jan 15, 2027." is                   
+      10 +      announced, no dialog stays open, focus is on "Skip next o
+         +rder" (002 R6), and the status is still Active.                
+      11 +    - "I'm trying a different product" → its skip offer → confi
+         +rm, with `conflict=always`. 002's 409 alert shows,             
+      12 +      only one modal is open, and focus is on "Keep my order". 
+         +Keep closes it with Dec 16 unchanged.                          
+      13 +    - The Undo-with-changes test now also follows the "Part B" 
+         +link. The browser asks first (`beforeunload`),                 
+      14 +      staying keeps the page, and the pending lines are still t
+         +here.                                                          
+      15 +    - New helpers: `SLOW`, `CONFLICT_MESSAGE`, and a `conflict`
+         + parameter for `load`.                                         
+      16 +  - `spec.md`: status Implemented. All tasks and acceptance cri
+         +teria are ticked.                                              
+      17 +- **Decisions:** the 409 flow uses the "different product" skip
+         + offer, so both skip offers run end to end against             
+      18 +  the real mock.                                               
+      19 +- **Verified:**                                                
+      20 +  - Two temporary breaks, each caught and then reverted:       
+      21 +    - no leave warning after a cancel has happened: the Undo te
+         +st fails on both projects                                      
+      22 +    - the skip offer not handing over to `skip/opened`: 6 tests
+         + fail (3 per project)                                          
+      23 +  - `npm run check` passed: 446 unit and component tests, and e
+         +2e 114 passed, 14 skipped.                                     
+      24 +                                                               
+      25  ## 2026-11-03: 004-a-cancel-retention / T9: the fallbacks
+      26  
+      27  - **Changed:**
+
+● 004 is finished. T5 is committed (2278e16), and so is T6 (20e2500). T7–T10 are
+  not committed yet. The spec is now marked Implemented, and npm run check
+  passes: 446 unit and component tests, and 114 end-to-end tests passed with 14
+  skipped (screen sizes already covered on mobile).
+
+  T6, end-to-end tests (e2e/a-cancel.spec.ts). These cover everything the plan
+  listed. The mobile project uses real taps for the "3 taps" check.
+  - Gap fixed: the overflow check missed text spilling out of the offer buttons
+    at 320px, because it only measured page width and a dialog overflows on its
+    own layer. It now also checks inside the open dialog and each button, and
+    that error is caught.
+  - Same gap in 002: the skip dialog's test has this blind spot too. I left it
+    alone because it's outside this task and its labels are short.
+
+  T7, your table:
+  - Already covered (15, 16, 17): 16 was already behaving the way you wanted, so
+    I only wrote it into the spec. For 17, the spec wrongly said R9 wasn't
+    tested; it has had unit tests since T2, so I corrected that line.
+  - New tasks: the rest became T8–T10.
+  - Spec changes, made before any code: the cap, clearing the "Other" text, two
+    new acceptance criteria, and the R9 line.
+
+  T8, the cap you chose. The "It costs too much" step shows at most 2 "get one
+  fewer" offers, largest saving first; on a tie, the server's order wins.
+  - An offer the cap drops is also refused if it's somehow submitted anyway.
+  - An older T1 test expected the server's order, so I updated it: with Vitamin
+    D at 3 pending, the Multivitamin ($38.21) now comes first.
+
+  T9, the fallback cases. These cases already behaved correctly, so there was no
+  code change, only new tests.
+
+  T10, the skip offer through to the end. A skip taken from the cancel flow now
+  runs end to end against the mock: once succeeding (Jan 15, 2027 announced) and
+  once with conflict=always (the conflict message, then Keep). After Undo, the
+  browser's leave-page warning comes back.
+
+  I broke the code on purpose for every new test group, and each group failed as
+  it should. Every break was put back.
+
+  Decision for you: should I commit T7–T10? Two side notes:
+  - 002-a-skip-shipment/spec.md still says Approved although 002 looks finished.
+  - The docs/11-COnding_agent.txt file committed with T5 has a typo in its name.
+
+❯ Yes, commit all the current working tree, and set pp2 as finished
+
+● "pp2" reads as spec 002, the one I flagged as still Approved. Before I mark it
+  Implemented, I'll check that its tasks and acceptance criteria are actually
+  all ticked:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● All 002 tasks are complete except one acceptance criterion about hiding the
+  skip button for paused/cancelled states, which depended on 004's local cancel
+  work. I'll verify that's now covered before marking it done.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Confirmed this criterion is covered by the existing tests for paused/cancelled
+  states, cancellation-page buttons, and reducer behavior. Marking it complete,
+  updating 002 to Implemented, and logging/committing the change.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/002-a-skip-shipment/spec.md'…)
+  ⎿  Updated SPECS/002-a-skip-shipment/spec.md (+2 -2)
+      1  # 002: Skip next shipment
+      2  
+      3 -Status: Approved                                                
+      3 +Status: Implemented                                             
+      4  
+      5  ## Problem
+      6  
+     ...
+      69  
+      70  ## Acceptance criteria
+      71  
+      72 -- [ ] R1: Given paused, cancelled or locally cancelled, then th
+         -ere is no skip button.                                         
+      72 +- [x] R1: Given paused, cancelled or locally cancelled, then th
+         +ere is no skip button.                                         
+      73  - [x] R1: Given active without `nextChargeAt`, then there is no
+           skip button.
+      74  - [x] R2: Given active with `nextChargeAt` N and an interval of
+           30, then the dialog shows N and N + 30 days.
+      75  - [x] R2: Given N + 30 days falls in the next year, then the ne
+          w date shows the year.
+  ⎿  Updated SPECS/CHANGELOG.md (+11 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 002-a-skip-shipment: marked Implemented         
+       6 +                                                               
+       7 +- **Changed:** `SPECS/002-a-skip-shipment/spec.md`: status Impl
+         +emented, and the last open criterion (R1, no skip              
+       8 +  button when paused, cancelled or locally cancelled) is ticked
+         +. The human asked for this.                                    
+       9 +- **Decisions:** the criterion was waiting on 004's local cance
+         +l. It is covered now by three tests:                           
+      10 +  - `SubscriptionCard.test.tsx`: paused and cancelled have no b
+         +uttons                                                         
+      11 +  - `CancelDialog.test.tsx` (004 T5): after a local cancel, the
+         + only button is "Undo cancellation"                            
+      12 +  - `cancelReducer.test.ts`: `skip/opened` is ignored while loc
+         +ally cancelled                                                 
+      13 +- **Verified:** every 002 task and criterion is ticked. `npm ru
+         +n check` passed with the 004 T10 run, and this                 
+      14 +  change touches docs only.                                    
+      15 +                                                               
+      16  ## 2026-11-03: 004-a-cancel-retention / T10: the skip offer to 
+          the end, and the leave prompt after Undo
+      17  
+      18  - **Changed:**
+
+● I committed everything to develop as b3403e5, and the working tree is clean. I
+  took "pp2" to mean spec 002 (skip next shipment), which is now marked
+  Implemented.
+
+  - 002: all its tasks were done, but one acceptance criterion was still open:
+    no "Skip next order" button when the subscription is paused, cancelled, or
+    cancelled on this page. It was waiting on 004's local cancel. Existing tests
+    now cover all three cases, so I ticked it and logged it in CHANGELOG.md.
+  - The commit contains 004 T7–T10, the 004 spec marked Implemented, and the 002
+    change. The last npm run check passed, with the T10 changes in; the 002
+    change only touched docs.
+
+  So 001–004 of Part A are all Implemented. The docs/11-COnding_agent.txt
+  filename typo is still there, if you want it renamed.

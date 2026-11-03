@@ -1,0 +1,642 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/004-a-cancel-retention/spec.md in
+  the IDE. This may or may not be related to the current
+  task.</ide_opened_file>
+
+❯ Lets start working on this spec, I only have one comment about the step 2
+  button label. Rename it "Yes, cancel my subscription" so it isn't the same
+  text as the trigger. Two identical names confuse screen readers and the
+  tests.
+
+● I'll start by reading the spec, the spec workflow, and the memory note.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● The spec is approved, so I'll edit it first, then draft plan.md and task.md
+  for your review before writing any code. Next I'll review the existing code
+  along with the 003 plan and tasks to keep the new plan consistent.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Next I'll read the Part A code the cancel flow builds on: the reducer, the
+  card, the views, the skip dialog, and the API.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Now the fixtures, the mock's query parameters, and the e2e setup. I want to
+  check which date the spec's "Nov 8" refers to.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● I'll check the untracked docs file for your notes and review how the spec was
+  approved, since "Nov 8" was just an example date—the actual date comes from
+  the server's nextChargeAt, which is Dec 16 in e2e.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● That file is a transcript from an earlier session, so it doesn't affect 004.
+  Next I'll check how earlier spec edits and plan drafts were logged, so the new
+  entries match.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I have enough context. Spec first: I'll rename the step 2 button in R3, R7 and
+  the R3 criterion. The trigger in R1 and R10 stays "Cancel subscription".
+
+● Update(SPECS/004-a-cancel-retention/spec.md)
+  ⎿  Added 3 lines, removed 2 lines
+      21  - R2 Step 1 asks "Why are you cancelling?" and shows the five r
+          easons as a list of buttons. Each button goes
+      22    straight to step 2, with no separate "Continue". This keeps t
+          he flow at 3 taps; auto-advancing radios would be an
+      23    accessibility anti-pattern.
+      24 -- R3 Step 2 shows the alternative for the chosen reason. "Cance
+         -l subscription" is always there with the same size and         
+      25 -  contrast as the offer buttons. There is also a "Back" button.
+      24 +- R3 Step 2 shows the alternative for the chosen reason. "Yes, 
+         +cancel my subscription" is always there with the same          
+      25 +  size and contrast as the offer buttons. There is also a "Back
+         +" button. The label differs from R1's trigger, so              
+      26 +  the two buttons never share an accessible name.              
+      27    - **Too much product:** the main button is "Skip my Nov 8 ord
+          er", and the second is "Ship every 60 days" (003),
+      28      for customers whose problem is long term.
+      29    - **Costs too much:** the main button is "Ship every 60 days:
+           {total} every 60 days instead of every 30". The
+
+● Update(SPECS/004-a-cancel-retention/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      40    and the customer still sees the exact new date before confirm
+          ing.
+      41  - R6 A frequency or quantity offer closes the flow, applies the
+           003 change, and announces it. The customer stays
+      42    subscribed.
+      43 -- R7 "Cancel subscription" in step 2 cancels locally. That make
+         -s 3 taps: open, choose a reason, confirm.                      
+      43 +- R7 "Yes, cancel my subscription" in step 2 cancels locally. T
+         +hat makes 3 taps: open, choose a reason, confirm.              
+      44    The page then shows the cancelled view: "Your subscription is
+           cancelled. You won't be charged again." There is no
+      45    date, because the server never sent one.
+      46  - R8 After a local cancel, "Undo cancellation" clears it. The s
+          erver's active data is still stored, so the page shows
+
+● Update(SPECS/004-a-cancel-retention/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      52  ## Acceptance criteria
+      53  
+      54  - [ ] R1, R2, R3, R7: From the active view, a customer can fini
+          sh cancelling in 3 taps for any reason.
+      55 -- [ ] R3: Each reason shows the right offers, and "Cancel subsc
+         -ription" is always visible.                                    
+      55 +- [ ] R3: Each reason shows the right offers, and "Yes, cancel 
+         +my subscription" is always visible.                            
+      56  - [ ] R3, R5: "Too much product" → "Skip my Nov 8 order" opens 
+          the skip dialog with both dates.
+      57  - [ ] R4: Given a pending 90 days, the "costs too much" offers 
+          show no frequency button.
+      58  - [ ] R6: "Ship every 60 days" applies the pending change and t
+          he subscription stays active.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● The spec now uses the new label everywhere it means the step 2 button. R1 and
+  R10 keep "Cancel subscription" because they mean the trigger. Next I'll write
+  the plan and the task list.
+
+● Write(SPECS/004-a-cancel-retention/plan.md)
+  ⎿  Wrote 238 lines to SPECS/004-a-cancel-retention/plan.md
+      1 # 004: Plan
+      2
+      3 Status: Draft
+      4
+      5 Spec: [spec.md](spec.md) (Approved)
+      6
+      7 ## Approach
+      8
+      9 The cancel flow is a fourth layer on the reducer, next to `load`,
+         `skip` and `local`. It has two parts:
+     … +229 lines (ctrl+o to expand)
+
+● Write(SPECS/004-a-cancel-retention/task.md)
+  ⎿  Wrote 16 lines to SPECS/004-a-cancel-retention/task.md
+      1 # 004: Tasks
+      2
+      3 - [ ] T1 (R2–R4): `cancel.ts` with `REASONS`, `slowerFrequency` a
+        nd `offersFor` with their texts, plus unit tests
+      4       (every reason, $38.20, a pending 90, a pending quantity, a
+        server quantity of 12, no next order date)
+      5 - [ ] T2 (R1, R5–R10): reducer cancel layer with `cancel` and `ca
+        ncelled`, the seven `cancel/*` actions,
+      6       `viewOf(server, cancelled)` guarding `plan/*` and `skip/ope
+        ned`, and the three focus targets, plus unit tests
+     … +10 lines (ctrl+o to expand)
+
+● Next, the changelog entry and a Prettier pass on the edited Markdown.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 20 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / spec rename, plan and t
+         +asks                                                           
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `SPECS/004-a-cancel-retention/spec.md`: at the human's requ
+         +est, the step 2 confirm button is now "Yes, cancel             
+       9 +    my subscription" in R3, R7 and the R3 criterion, so it no l
+         +onger shares the trigger's name "Cancel                        
+      10 +    subscription". R1 and R10 still name the trigger. The statu
+         +s stays Approved, because the human made the change.           
+      11 +  - New `plan.md` (Draft) and `task.md` (T1–T7).               
+      12 +- **Decisions:**                                               
+      13 +  - The local cancel is a top-level `cancelled` field, not part
+         + of `Local` as 003's plan suggested. That way                  
+      14 +    `plan/discarded` can never reset it.                       
+      15 +  - Taking an offer reuses the reducer's `skip/opened`, `plan/f
+         +requency` and `plan/quantity` cases, and the offer             
+      16 +    is checked against `offersFor` first.                      
+      17 +  - `viewOf(server, cancelled)` is the one R9 rule, and it also
+         + guards `plan/*` and `skip/opened`. `canSkip` keeps            
+      18 +    one argument.                                              
+      19 +  - Offers that can't apply are left out: a skip offer without 
+         +a next order date, and a quantity offer whose                  
+      20 +    lowered value isn't a choice.                              
+      21 +  - The step 2 title, the "Instead, you can:" lead, the undo an
+         +nouncement and the textarea label aren't in the                
+      22 +    spec. The plan proposes them for review.                   
+      23 +- **Verified:** no code touched, only specs. Prettier checked o
+         +n the edited Markdown.                                         
+      24 +                                                               
+      25  ## 2026-11-03: 003-a-plan-changes / T10: warn before leaving wi
+          th pending changes
+      26  
+      27  - **Changed:**
+
+● Bash(npx prettier --write SPECS/004-a-cancel-retention/*.md SPECS/CHANGELOG.md
+      && npx prettier --check SPECS && git diff --stat && git status --short)
+  ⎿  Updated SPECS/004-a-cancel-retention/plan.md (+35 -38)
+      27  type Reason = "too-much" | "costs" | "different" | "no-results"
+           | "other";
+      28  
+      29  /** R2, R3: the dialog's step. `previous` is the reason to focu
+          s after "Back". */
+      30 -type CancelFlow =                                              
+      31 -  | { kind: "closed" }                                         
+      32 -  | { kind: "reason"; previous: Reason | null }                
+      33 -  | { kind: "offer"; reason: Reason };                         
+      30 +type CancelFlow = { kind: "closed" } | { kind: "reason"; previo
+         +us: Reason | null } | { kind: "offer"; reason: Reason };       
+      31  
+      32  interface State {
+      33    // ...001–003 fields unchanged
+     ...
+      44  
+      45  ## Actions and transitions
+      46  
+      50 -| Action                | Accepted when                        
+         -                                        | Result               
+         -                                                               
+         -                                                               
+         -                    |                                          
+      51 -| --------------------- | -------------------------------------
+         ---------------------------------------- | ---------------------
+         ----------------------------------------------------------------
+         ----------------------------------------------------------------
+         -------------------- |                                          
+      52 -| `cancel/opened`       | `load` is ready, `viewOf` is active, 
+         -and both dialogs are closed              | `cancel` = `reason` 
+         -with `previous: null`, announcement cleared, focus `cancel-reas
+         -on` (the first reason) (R1)                                    
+         -                     |                                         
+      53 -| `cancel/reasonChosen` | `cancel` is `reason`                 
+         -                                        | `cancel` = `offer` fo
+         -r that reason, focus `cancel-heading` (R2)                     
+         -                                                               
+         -                     |                                         
+      54 -| `cancel/back`         | `cancel` is `offer`                  
+         -                                        | `cancel` = `reason` w
+         -ith `previous` set to that reason, focus `cancel-reason` (the r
+         -eason chosen before) (R3)                                      
+         -                     |                                         
+      55 -| `cancel/closed`       | `cancel` isn't closed                
+         -                                        | `cancel` closed, focu
+         -s `cancel-button` (R10)                                        
+         -                                                               
+         -                     |                                         
+      56 -| `cancel/offerTaken`   | `cancel` is `offer`, and the offer is
+         - in `offersFor(reason, server, local)` | `cancel` closed, then 
+         -the result of `skip/opened` (R5), or of `plan/frequency` / `pla
+         -n/quantity` with focus `plan-heading` (R6)                     
+         -                   |                                           
+      57 -| `cancel/confirmed`    | `cancel` is `offer`, and `viewOf` is 
+         -active                                  | `cancelled` = true, `
+         -cancel` closed, announcement (R7), focus `heading`             
+         -                                                               
+         -                      |                                        
+      58 -| `cancel/undone`       | `cancelled`, and the server is active
+         -                                        | `cancelled` = false, 
+         -announcement (R8), focus `heading`                             
+         -                                                               
+         -                     |                                         
+      47 +| Action                | Accepted when                        
+         +                                       | Result                
+         +                                                               
+         +                                           |                   
+      48 +| --------------------- | -------------------------------------
+         +-------------------------------------- | ----------------------
+         +---------------------------------------------------------------
+         +------------------------------------------ |                   
+      49 +| `cancel/opened`       | `load` is ready, `viewOf` is active, 
+         +and both dialogs are closed            | `cancel` = `reason` wi
+         +th `previous: null`, announcement cleared, focus `cancel-reason
+         +` (the first reason) (R1)                  |                   
+      50 +| `cancel/reasonChosen` | `cancel` is `reason`                 
+         +                                       | `cancel` = `offer` for
+         + that reason, focus `cancel-heading` (R2)                      
+         +                                           |                   
+      51 +| `cancel/back`         | `cancel` is `offer`                  
+         +                                       | `cancel` = `reason` wi
+         +th `previous` set to that reason, focus `cancel-reason` (the re
+         +ason chosen before) (R3)                   |                   
+      52 +| `cancel/closed`       | `cancel` isn't closed                
+         +                                       | `cancel` closed, focus
+         + `cancel-button` (R10)                                         
+         +                                           |                   
+      53 +| `cancel/offerTaken`   | `cancel` is `offer`, and the offer is
+         + in `offersFor(reason, server, local)` | `cancel` closed, then 
+         +the result of `skip/opened` (R5), or of `plan/frequency` / `pla
+         +n/quantity` with focus `plan-heading` (R6) |                   
+      54 +| `cancel/confirmed`    | `cancel` is `offer`, and `viewOf` is 
+         +active                                 | `cancelled` = true, `c
+         +ancel` closed, announcement (R7), focus `heading`              
+         +                                           |                   
+      55 +| `cancel/undone`       | `cancelled`, and the server is active
+         +                                       | `cancelled` = false, a
+         +nnouncement (R8), focus `heading`                              
+         +                                           |                   
+      56  
+      57  Anything else is ignored and returns the same `state`.
+      58  
+     ...
+      105  
+      106  With the e2e fixture (next order Dec 16, $101.87, every 30 day
+           s, Vitamin D × 1, Multivitamin × 2):
+      107  
+      111 -| Where                          | Text                       
+          -                                                              
+          -                |                                             
+      112 -| ------------------------------ | ---------------------------
+          ---------------------------------------------------------------
+          ---------------- |                                             
+     … 58 more lines (ctrl+o to expand)
+
+● I renamed the step 2 button to "Yes, cancel my subscription" in the spec, and
+  wrote plan.md (SPECS/004-a-cancel-retention/plan.md) and task.md
+  (SPECS/004-a-cancel-retention/task.md). No code is written yet, because the
+  workflow needs your review of the plan first.
+
+  The rename: it changed in R3, R7 and the R3 acceptance criterion. R1 and R10
+  still say "Cancel subscription", because they mean the button that opens the
+  flow. I also added a line to R3 saying the two labels must stay different. The
+  spec stays Approved, since you made the change.
+
+  Decisions to review:
+
+  1. New copy. The spec doesn't give these texts, so I wrote them:
+     - Step 2 title: "Cancel your subscription?" The "Yes, cancel my
+       subscription" button then reads as its answer.
+     - A line before the offers: "Instead, you can:"
+     - What screen readers hear after Undo: "Cancellation undone. Your
+       subscription is active."
+     - The label for the "Other" text field: "Tell us more (optional)"
+  2. Product name in the quantity offer. The spec's example says "Get 1
+     Multivitamin instead of 2", but the API only has the full name. So the
+     button reads "Get 1 Multivitamin, 30 tablets instead of 2: save $38.20 per
+     order". That matches how 003 labels products. The saving is $38.20 by the
+     spec's formula. A discounted unit price would give $38.21.
+  3. Focus:
+     - Opening the dialog focuses the first reason, and step 2 focuses its
+       title.
+     - "Back" returns focus to the reason chosen before.
+     - Confirming or undoing moves focus to the page heading, not onto the Undo
+       button, to avoid a mis-tap.
+     - A frequency or quantity offer moves focus to "Change your plan", where
+       the change appears.
+  4. The skip offer hands over to the skip dialog. When that dialog closes,
+     focus goes to "Skip next order", not back to "Cancel subscription". That
+     keeps one shared code path for skipping, which R5 asks for.
+  5. Offers that can't apply are hidden. The skip offers are hidden when there
+     is no next order date. A quantity offer is hidden when the lower amount
+     isn't one of the choices, for example when the server says 12.
+  6. The local cancel is its own field, not part of 003's plan-change state as
+     003's plan suggested. That way "Discard changes" can never undo a cancel.
+
+  Checks: I only edited Markdown in SPECS/ and ran Prettier, which passes. I
+  didn't run npm run check because no code changed. Nothing is committed.
+
+  Once you approve the plan, or tell me what to change, I'll start on T1.
+
+❯ Yes Approved, start on T1
+
+● I'll mark the plan Approved, then build T1. First, the existing tests for the
+  003 rules, so the new tests match their style.
+
+● Bash(sed -i 's/^Status: Draft$/Status: Approved/'
+      SPECS/004-a-cancel-retention/plan.md && head -5
+      SPECS/004-a-cancel-retention/plan.md && cat src/part-a/plan.test.ts…)  ⎿  Updated SPECS/004-a-cancel-retention/plan.md (+1 -1)
+      1  # 004: Plan
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  Spec: [spec.md](spec.md) (Approved)
+      6  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'll pin the next order date to Dec 16 with fake timers for stable test
+  labels, matching the 003 startingAfter approach, and extract the shared
+  pending-quantity logic into a reusable pendingItems helper in plan.ts to avoid
+  duplication.
+
+● Update(src/part-a/plan.ts)
+  ⎿  Added 7 lines, removed 3 lines
+      60    return pending.intervalDays !== null || pending.quantities.le
+          ngth > 0;
+      61  }
+      62  
+      63 +/** The server's items with pending quantities applied, in the 
+         +server's order (R4, 004 R3). */                                
+      64 +export function pendingItems(server: Subscription, pending: Pen
+         +ding): SubscriptionItem[] {                                    
+      65 +  const picked = new Map(pending.quantities.map(({ item, quanti
+         +ty }) => [item.sku, quantity]));                               
+      66 +  return server.items.map((item) => ({ ...item, quantity: picke
+         +d.get(item.sku) ?? item.quantity }));                          
+      67 +}                                                              
+      68 +                                                               
+      69  /** R4: the server's own formula (001 R4) with pending quantiti
+          es applied. Null when no quantity is pending. */
+      70  export function totalAfter(server: Subscription, pending: Pendi
+          ng): number | null {
+      71    if (pending.quantities.length === 0) return null;
+      66 -  const picked = new Map(pending.quantities.map(({ item, quanti
+         -ty }) => [item.sku, quantity]));                               
+      67 -  const items = server.items.map((item) => ({ ...item, quantity
+         -: picked.get(item.sku) ?? item.quantity }));                   
+      68 -  return totalAfterDiscount(items, server.discountPercent);    
+      72 +  return totalAfterDiscount(pendingItems(server, pending), serv
+         +er.discountPercent);                                           
+      73  }
+      74  
+      75  /** R3: "starting after your Dec 16 order", or "starting after 
+          your next order" without a date (001 R3). */
+
+● Write(src/part-a/cancel.ts)
+  ⎿  Wrote 79 lines to src/part-a/cancel.ts
+      1 // 004: the rules behind the cancel flow. The offers are rebuilt
+        from the server's data and the pending 003 changes
+      2 // on every render, so no date, amount or label is ever stored.
+      3 import { totalAfterDiscount } from "../api/fixtures";
+      4 import type { Subscription, SubscriptionItem } from "../api/types
+        ";
+      5 import { formatDate, formatMoney } from "./format";
+      6 import { FREQUENCIES, type Local, pendingItems, pendingOf, quanti
+        tyOptions } from "./plan";
+      7 import { canSkip } from "./skip";
+     … +72 lines (ctrl+o to expand)
+
+● Next, the T1 unit tests, plus one test for the new pendingItems helper in the
+  003 test file.
+
+● Write(src/part-a/cancel.test.ts)
+  ⎿  Wrote 157 lines to src/part-a/cancel.test.ts
+       1 import { afterEach, beforeEach, describe, expect, it, vi } from
+         "vitest";
+       2 import { fixtures } from "../api/fixtures";
+       3 import { offersFor, REASONS, slowerFrequency } from "./cancel";
+       4 import type { Local } from "./plan";
+       5
+       6 const none: Local = { intervalDays: null, quantities: {} };
+       7
+       8 // Vitamin D × 1 at $29.95 and Multivitamin × 2 at $44.95, 15% o
+         ff: $101.87, every 30 days. Local-time constructors
+     … +149 lines (ctrl+o to expand)
+
+● Update(src/part-a/plan.test.ts)
+  ⎿  Added 12 lines
+      112    });
+      113  });
+      114  
+      115 +describe("pendingItems (R4)", () => {                         
+      116 +  it("applies pending quantities in the server's order and lea
+          +ves the rest as the server's", () => {                        
+      117 +    const pending = pendingOf(server, { ...none, quantities: {
+          + "NW-MULTI-30": 1 } });                                       
+      118 +    expect(pendingItems(server, pending)).toEqual([vitaminD, {
+          + ...multivitamin, quantity: 1 }]);                            
+      119 +  });                                                         
+      120 +                                                              
+      121 +  it("never changes the server's items", () => {              
+      122 +    pendingItems(server, pendingOf(server, { ...none, quantiti
+          +es: { "NW-MULTI-30": 1 } }));                                 
+      123 +    expect(multivitamin.quantity).toBe(2);                    
+      124 +  });                                                         
+      125 +});                                                           
+      126 +                                                              
+      127  describe("totalAfter (R4)", () => {
+      128    it("rounds Multivitamin 2 → 1 the way the mock does", () => 
+           {
+      129      // (2995 + 4495) × 0.85 = 6366.5
+
+● Update(src/part-a/plan.test.ts)
+  ⎿  Added 1 line
+       5    FREQUENCIES,
+       6    hasPending,
+       7    type Local,
+       8 +  pendingItems,                                                
+       9    pendingOf,
+      10    QUANTITIES,
+      11    quantityOptions,
+
+● Bash(npx prettier --write src/part-a/cancel.ts src/part-a/cancel.test.ts
+      src/part-a/plan.ts src/part-a/plan.test.ts >/dev/null && npx vitest run
+      src/part-a/cancel.te…)
+  ⎿  Updated src/part-a/cancel.ts (+3 -1)
+      45      const lower = quantity - 1;
+      46      // `plan/quantity` would ignore a quantity that isn't a cho
+          ice, such as 11 when the server sends 12.
+      47      if (lower < 1 || !quantityOptions(item).includes(lower)) re
+          turn [];
+      48 -    const lowered = current.map((candidate) => (candidate.sku =
+         -== item.sku ? { ...candidate, quantity: lower } : candidate)); 
+      48 +    const lowered = current.map((candidate) =>                 
+      49 +      candidate.sku === item.sku ? { ...candidate, quantity: lo
+         +wer } : candidate,                                             
+      50 +    );                                                         
+      51      const saving = total - totalAfterDiscount(lowered, server.d
+          iscountPercent);
+      52      const label = `Get ${lower} ${item.name} instead of ${quant
+          ity}: save ${formatMoney(saving)} per order`;
+      53      return [{ kind: "quantity", sku: item.sku, quantity: lower,
+           label }];
+
+● All 53 tests pass on the first run. Now I'll verify test robustness by
+  introducing three temporary bugs in cancel.ts one at a time (wrong unit price
+  in savings calc, ignoring pending change on slower frequency, removing
+  quantity validation check), restoring the file after each.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Each break failed at least one test, and the file is restored. Next I'll tick
+  T1, add the changelog entry, and run the full npm run check.
+
+● Update(SPECS/004-a-cancel-retention/task.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # 004: Tasks
+      2  
+      3 -- [ ] T1 (R2–R4): `cancel.ts` with `REASONS`, `slowerFrequency` 
+        -and `offersFor` with their texts, plus unit tests               
+      3 +- [x] T1 (R2–R4): `cancel.ts` with `REASONS`, `slowerFrequency` 
+        +and `offersFor` with their texts, plus unit tests               
+      4        (every reason, $38.20, a pending 90, a pending quantity, a
+          server quantity of 12, no next order date)
+      5  - [ ] T2 (R1, R5–R10): reducer cancel layer with `cancel` and `c
+         ancelled`, the seven `cancel/*` actions,
+      6        `viewOf(server, cancelled)` guarding `plan/*` and `skip/op
+         ened`, and the three focus targets, plus unit tests
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 24 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T1: cancel rules       
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `SPECS/004-a-cancel-retention/plan.md`: status set to Appro
+         +ved by the human.                                              
+       9 +  - New `src/part-a/cancel.ts`:                                
+      10 +    - `Reason` and `REASONS` (R2)                              
+      11 +    - `Offer` and `slowerFrequency` (R4)                       
+      12 +    - `offersFor(reason, server, local)`, which builds the offe
+         +rs and their texts from the server's data and the              
+      13 +      pending 003 changes (R3)                                 
+      14 +  - `src/part-a/plan.ts`: new `pendingItems(server, pending)`, 
+         +which `totalAfter` and `offersFor` both use. The               
+      15 +    plan's file table didn't list `plan.ts`, but the change is 
+         +a pure extraction, and 003's behaviour is unchanged.           
+      16 +  - New `src/part-a/cancel.test.ts` (22 tests), and two `pendin
+         +gItems` tests in `plan.test.ts`.                               
+      17 +- **Decisions:**                                               
+      18 +  - The skip offers check `canSkip`, so a missing next order da
+         +te shows no skip.                                              
+      19 +  - A quantity offer is left out when one unit less isn't in `q
+         +uantityOptions`, for example 11 for a server 12.               
+      20 +  - The totals always come from the item prices, so the offers 
+         +still work without `nextChargeTotalCents`.                     
+      21 +  - The tests pin the spec's reason for using totals. With the 
+         +fixture, the saving is $38.20, where the unit price            
+      22 +    would give $38.21. With Vitamin D 3 pending, the same Multi
+         +vitamin saving comes out at $38.21.                            
+      23 +- **Verified:**                                                
+      24 +  - `cancel.test.ts` and `plan.test.ts`: 53 passed.            
+      25 +  - Three temporary breaks, each caught and then reverted: a un
+         +it-price saving, ignoring a pending frequency, and             
+      26 +    no `quantityOptions` check.                                
+      27 +  - `npm run check`: see below.                                
+      28 +                                                               
+      29  ## 2026-11-03: 004-a-cancel-retention / spec rename, plan and t
+          asks
+      30  
+      31  - **Changed:**
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Check is green. I'll put the results in the changelog.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 2 lines, removed 1 line
+      24    - `cancel.test.ts` and `plan.test.ts`: 53 passed.
+      25    - Three temporary breaks, each caught and then reverted: a un
+          it-price saving, ignoring a pending frequency, and
+      26      no `quantityOptions` check.
+      27 -  - `npm run check`: see below.                                
+      27 +  - `npm run check` passed: 315 unit and component tests, and e
+         +2e 70 passed, 10 skipped. Those 10 are the                     
+      28 +    existing viewport-specific tests, skipped as before.       
+      29  
+      30  ## 2026-11-03: 004-a-cancel-retention / spec rename, plan and t
+          asks
+      31  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● T1 is finished and npm run check passes. The plan is marked Approved.
+
+  What's new:
+  - cancel.ts (src/part-a/cancel.ts) holds the cancel rules: the five reasons in
+    the spec's order, and the next slower frequency (30 → 60 → 90, none at 90).
+    It also builds each reason's offer buttons and their labels from the
+    server's data plus any pending plan changes. Nothing on the page uses it
+    yet; that comes in T2–T4.
+  - In plan.ts (src/part-a/plan.ts), I moved the "items with pending quantities
+    applied" step into a small pendingItems helper, used by 003's "After that"
+    total and by the new offers. The approved plan didn't list plan.ts as a file
+    to change, but the edit doesn't change how 003 behaves, and I noted it in
+    the changelog.
+
+  Behaviour the tests pin:
+  - With the e2e data, "It costs too much" offers "Ship every 60 days: $101.87
+    every 60 days instead of every 30" and "Get 1 Multivitamin, 30 tablets
+    instead of 2: save $38.20 per order".
+  - The saving comes from the difference between the two order totals, as the
+    spec requires. A discounted unit price would give $38.21. With 3 Vitamin D
+    pending, the Multivitamin saving does come out at $38.21, so the rounding
+    really depends on the rest of the order.
+  - A pending 90 days hides the frequency offer, and a pending 60 offers "every
+    90 days instead of every 60".
+  - Without a next order date there are no skip offers. A server quantity of 12
+    gets no quantity offer, because 11 isn't one of the choices.
+
+  Checks:
+  - cancel.test.ts (src/part-a/cancel.test.ts) has 22 tests, and plan.test.ts
+    has 2 new ones for pendingItems.
+  - I made three temporary breaks in cancel.ts, one at a time. Each failed at
+    least one test, and the file is restored. The breaks were: a unit-price
+    saving, ignoring the pending frequency, and dropping the valid-choice check.
+  - npm run check: 315 unit and component tests passed, and e2e had 70 passed
+    and 10 skipped. The 10 skipped are viewport-specific tests that only run on
+    one of the two screen sizes, the same count as before.
+
+  T1 is ticked and logged in SPECS/CHANGELOG.md. Nothing is committed yet.
+  Should I commit before starting T2, which adds the cancel flow to the page's
+  reducer?
+
+❯ only commit all the current working tree
+
+● I'll commit everything, including the untracked docs/09-Coding_agent.txt
+  transcript. First, a look at an earlier commit message so this one matches.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I committed the whole working tree to develop as 3be5ee7, "004 spec rename,
+  plan and T1: cancel rules", and nothing is left uncommitted. Nothing was
+  pushed.
+
+  The commit holds:
+  - the spec rename to "Yes, cancel my subscription"
+  - the approved plan and task list
+  - T1, with the new cancel.ts (src/part-a/cancel.ts), its tests, and the
+    pendingItems helper in plan.ts (src/part-a/plan.ts)
+  - the changelog entries
+  - the untracked session transcript docs/09-Coding_agent.txt
+
+  T2 is next: it adds the cancel flow to the page's reducer.

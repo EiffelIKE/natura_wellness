@@ -1,0 +1,239 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file /home/eiffelike/work/natura_wellnes
+  s/SPECS/001-a-subscription-overview/task.md in the IDE. This may or may not
+  be related to the current task.</ide_opened_file>
+
+❯ lets start T2
+
+  Listed 1 directory, ran 2 shell commands (ctrl+o to expand)
+
+● I found a gap: the plan only tracks requestId on loading/failed, which breaks
+  stale-response filtering once state hits ready under StrictMode's dual loads.
+  I'll fix this by hoisting requestId to the top of State for a single universal
+  comparison rule, and also simplify viewOf(state) to viewOf(server) since the
+  view only needs server data in 001—updating plan.md accordingly before writing
+  code.
+
+● Write(src/part-a/subscriptionReducer.ts)
+  ⎿  Wrote 45 lines to src/part-a/subscriptionReducer.ts
+       1 // 001: the load lifecycle. 002–004 add their own layers to `Sta
+         te` without reshaping `load` (plan.md).
+       2 import { ApiError, type Subscription, type SubscriptionStatus }
+         from "../api/types";
+       3
+       4 export type Load =
+       5   | { kind: "loading" }
+       6   | { kind: "failed" } // 500 or anything unknown → R2 "Try agai
+         n"
+       7   | { kind: "not-found" } // 404 → R2 contact link, no retry
+     … +38 lines (ctrl+o to expand)
+
+● Write(src/part-a/subscriptionReducer.test.ts)
+  ⎿  Wrote 82 lines to src/part-a/subscriptionReducer.test.ts
+       1 import { describe, expect, it } from "vitest";
+       2 import { fixtures } from "../api/fixtures";
+       3 import { ApiError } from "../api/types";
+       4 import { type Action, type State, initialState, loadErrorKind, s
+         ubscriptionReducer, viewOf } from "./subscriptionReducer";
+       5
+       6 const run = (actions: Action[], from: State = initialState) => a
+         ctions.reduce(subscriptionReducer, from);
+       7 const started = (requestId: number): Action => ({ type: "load/st
+         arted", requestId });
+     … +75 lines (ctrl+o to expand)
+
+● Bash(npx prettier --write src/part-a/subscriptionReducer*.ts >/dev/null && npx
+      vitest run src/part-a/subscriptionReducer.test.ts 2>&1 | tail -15)
+  ⎿  Updated src/part-a/subscriptionReducer.test.ts (+8 -1)
+       1  import { describe, expect, it } from "vitest";
+       2  import { fixtures } from "../api/fixtures";
+       3  import { ApiError } from "../api/types";
+       4 -import { type Action, type State, initialState, loadErrorKind, 
+         -subscriptionReducer, viewOf } from "./subscriptionReducer";    
+       4 +import {                                                       
+       5 +  type Action,                                                 
+       6 +  type State,                                                  
+       7 +  initialState,                                                
+       8 +  loadErrorKind,                                               
+       9 +  subscriptionReducer,                                         
+      10 +  viewOf,                                                      
+      11 +} from "./subscriptionReducer";                                
+      12  
+      13  const run = (actions: Action[], from: State = initialState) => 
+          actions.reduce(subscriptionReducer, from);
+      14  const started = (requestId: number): Action => ({ type: "load/s
+          tarted", requestId });
+
+● All 15 tests pass. Now I'll verify the stale-response tests are meaningful by
+  swapping in the weaker guard rule to confirm they fail as expected.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● With the weaker guard, both "arrives after ready" tests fail, so they test
+  something real. The file is restored. Next I'll update the plan to match the
+  code, tick T2 and add the changelog entry.
+
+● Bash(grep -c 'state.load.kind === "loading" &&'
+      src/part-a/subscriptionReducer.ts; python3 - <<'EOF'
+      import re…)
+  ⎿  Updated SPECS/001-a-subscription-overview/plan.md (+11 -7)
+      12  
+      13  ```ts
+      14  type Load =
+      15 -  | { kind: "loading"; requestId: number }                     
+      16 -  | { kind: "failed"; requestId: number } // 500 or unknown → R
+         -2 "Try again"                                                  
+      15 +  | { kind: "loading" }                                        
+      16 +  | { kind: "failed" } // 500 or unknown → R2 "Try again"      
+      17    | { kind: "not-found" } // 404 → R2 contact link
+      18    | { kind: "ready"; server: Subscription };
+      19  
+      20  interface State {
+      21 +  requestId: number; // the latest request sent                
+      22    load: Load;
+      23    // Added later, never merged into `server` (001 R7, 003 R7):
+      24    // local: { frequencyDays?: number; quantities: Record<string
+          , number>; cancelled: boolean }  (003, 004)
+     ...
+      31    | { type: "load/failed"; requestId: number; error: unknown };
+      32  ```
+      33  
+      33 -- **`requestId`:** the reducer ignores responses whose id isn't
+         - the latest. This covers the double effect in React            
+      34 -  StrictMode (main.tsx), and later the reloads after a skip fai
+         -lure (002 R7). The mock takes no `AbortSignal`, so             
+      35 -  dropping stale results is the only option.                   
+      34 +- **`requestId`:** the reducer ignores responses whose id isn't
+         + `state.requestId`, whatever `load` is. The id lives           
+      35 +  on `State`, not on a `Load` variant, so a late response is st
+         +ill recognized as stale after the latest one has               
+      36 +  loaded (the mock's latency is random, so request 2 can resolv
+         +e before request 1). This covers the double effect in          
+      37 +  React StrictMode (main.tsx), and later the reloads after a sk
+         +ip failure (002 R7). The mock takes no `AbortSignal`,          
+      38 +  so dropping stale results is the only option.                
+      39  - **Errors:** `ApiError` 404 maps to `not-found`, and anything 
+          else maps to `failed`. This mapping lives in the
+      40    reducer, as a pure function that is unit-tested.
+      38 -- **Effective status:** there is a selector, `viewOf(state)`, t
+         -hat returns `active | paused | cancelled`. In 001 it is        
+      39 -  just `server.status`. 004 adds the local cancel to it, applyi
+         -ng 001 R7: a server status that isn't active wins.             
+      41 +- **Effective status:** there is a selector, `viewOf(server)`, 
+         +that returns `active | paused | cancelled`. In 001 it          
+      42 +  is just `server.status`. 004 adds the local cancel as a secon
+         +d argument, applying 001 R7: a server status that              
+      43 +  isn't active wins.                                           
+      44  
+      45  ## Files
+      46  
+  ⎿  Updated SPECS/001-a-subscription-overview/task.md (+1 -1)
+      1  # 001: Tasks
+      2  
+      3  - [x] T1 (R4, R9): `format.ts` with `formatDate`, `formatMoney`,
+          `formatFrequency`, plus unit tests
+      4 -- [ ] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load li
+        -fecycle, `requestId`, error mapping and `viewOf`,               
+      4 +- [x] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load li
+        +fecycle, `requestId`, error mapping and `viewOf`,               
+      5        plus unit tests
+      6  - [ ] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleton
+         , load error with "Try again", and the 404 view
+      7        with the contact link, plus component tests
+  ⎿  Updated SPECS/CHANGELOG.md (+23 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001-a-subscription-overview / T2: subscription r
+         +educer                                                         
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - New `src/part-a/subscriptionReducer.ts` with `State`, `Acti
+         +on`, `initialState`, `subscriptionReducer`,                    
+       9 +    `loadErrorKind(error)` and `viewOf(server)`.               
+      10 +  - New `src/part-a/subscriptionReducer.test.ts` with 15 tests.
+      11 +  - `plan.md` (State shape, `requestId`, effective status) now 
+         +matches the code, see Decisions.                               
+      12 +- **Decisions:**                                               
+      13 +  - `requestId` moved from the `loading` and `failed` variants 
+         +to `State`. In the plan's shape, `ready` had no id, so         
+      14 +    once request 2 had loaded, a late response from request 1 c
+         +ouldn't be told apart from a fresh one. The mock's             
+      15 +    latency is random, so that order can happen under the Stric
+         +tMode double effect. Now one rule covers every                 
+      16 +    state: an id that isn't `state.requestId` is dropped, and t
+         +he same state object is returned so React skips the            
+      17 +    render.                                                    
+      18 +  - `viewOf` takes the server subscription instead of the whole
+         + state, so it never has to return a value for a                
+      19 +    state that hasn't loaded. 004 adds the local cancel as a se
+         +cond argument.                                                 
+      20 +  - `loadErrorKind`: only an `ApiError` 404 is `not-found`. Eve
+         +rything else, including non-API errors, is `failed`,           
+      21 +    because retrying a read is always safe (R2).               
+      22 +  - `initialState` is already `loading`, so the skeleton shows 
+         +on the first render, before the load effect runs.              
+      23 +- **Verified:**                                                
+      24 +  - A planted bug that compared ids only while loading (the pla
+         +n's original shape) failed both "late response after           
+      25 +    ready" tests. It was reverted.                             
+      26 +  - `npm run check` is green.                                  
+      27 +                                                               
+      28  ## 2026-11-03: 001-a-subscription-overview / T1: formatters
+      29  
+      30  - **Changed:**
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● T2 is done and npm run check passes: typecheck, lint, format, 29 unit tests
+  and 4 e2e smoke tests.
+
+  What I built: subscriptionReducer.ts (src/part-a/subscriptionReducer.ts)
+  handles loading the subscription and dropping out-of-date responses. It has
+  three pieces:
+  - loadErrorKind: a 404 means "not found", and any other error means "failed,
+    try again".
+  - viewOf(server): picks the active, paused or cancelled view.
+  - initialState: starts as loading, so the skeleton shows on the very first
+    render.
+
+  subscriptionReducer.test.ts (src/part-a/subscriptionReducer.test.ts) has 15
+  tests for the load steps, stale responses, error mapping and viewOf.
+
+  Two changes from the plan you approved. I updated plan.md
+  (SPECS/001-a-subscription-overview/plan.md) to match and explained both in the
+  changelog:
+  1. The request id now sits on the whole state, not on the loading/failed
+     cases. In the plan, ready had no id. The mock's delay is random, and React
+     StrictMode sends two requests, so request 2 can come back before request 1.
+     Request 1's late response would then overwrite fresh data, or replace it
+     with an error, with nothing to tell it was stale. Now a response is ignored
+     whenever its id isn't the latest, whatever state the page is in.
+  2. viewOf takes the server subscription instead of the whole state. This way
+     it never has to return something for a page that hasn't loaded yet. 004
+     will add the local cancel as a second argument.
+
+  Checking the tests catch the bug: I temporarily switched the code back to the
+  plan's original rule, where ids were only compared while loading. The two
+  "late response after the data has loaded" tests failed, so they catch this
+  bug. I then restored the code.
+
+  task.md (SPECS/001-a-subscription-overview/task.md) has T2 ticked, and
+  CHANGELOG.md (SPECS/CHANGELOG.md) has the entry. Nothing is committed yet.
+  Should I commit T2 to develop, or go straight on to T3 (the load effect,
+  skeleton, error and 404 views)?
+
+❯ commit T2 to develop
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I committed T2 to develop as 907ce3c. The commit has the reducer, its tests,
+  the updated plan, the ticked task list and the changelog entry. I didn't add
+  docs/03-Coding_agent.txt because it wasn't part of this task, so it's still
+  untracked.
+
+  Should I start T3 next? That's the load effect, the loading skeleton, the
+  error view with "Try again" and the 404 view with the contact link.

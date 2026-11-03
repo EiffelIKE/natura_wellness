@@ -1,0 +1,629 @@
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/CLAUDE.md in the IDE. This may or may
+  not be related to the current task.</ide_opened_file>
+
+❯ Read the INSTRUCTIONS.md file, there you would find the full description and
+  objetives of the work that we need to do on this repo. Then, lets talk about
+  the parts and my first thoughts as follows: Part A- this is the part the most
+  weight, here one important detail: with conflict=always retrying never
+  works(we cant retry forever), we need to skip confirmation it should show the
+  specific new date. To the retention, we need to discuss  a cancellation
+  flow, maybe with a matching offer for each. Part B is actually very easy to
+  complete, we only need to take the measurements from the image and divide by
+  2 (remember always use relative units rem) then we can use Chrome dev tools
+  MCP or Playwright to compare. Proyect deps: I think the proyect is currenlty
+  tiny enough to not need anything beyond react, we dont need routing, I
+  thought about TailwindCSS but css modules with some good BEM is more than
+  enough, no fetching libraries, I think a reducer for subs states could be
+  enough, no date/money libs either, native dialog and for dev only lets use
+  vitest with testing library, Playwright for e2e and axe-core for a11y. SDD
+  strat: I think the current tasks are already too tiny for a full SDD, but I
+  want to show how do I use coding agents dail, but lets keep it lightweight,
+  lets create an ./SPECS path, it will contain: README.md with rules lifecycle
+  mainly how we work, a CHANGELOG.md to log agent work (newest first) and then
+  a path for every feature (not individual test part), each spec path will be
+  named as follow: {number}-{part}-feature}, and inside will have spec.md,
+  plan.md, and task.md. I already created a new git repo and we are going to
+  work directly on develop, dont worry about git flow for this test, also
+  aready created the mise.toml with the node version, lets use npm as the
+  template follows
+
+● I'll start by reading the instructions and getting a look at the repo.
+
+  Read 1 file, listed 1 directory, ran 3 shell commands, wrote 1 memory (ctrl+o to expand)
+
+● I've read INSTRUCTIONS.md, all of src/api/, the starter files and the
+  reference image. I agree with most of your plan. Below are my notes on each
+  point, including a few places where I'd push back.
+
+  Part A: skip
+
+  Why conflict=always can never succeed. In mockApi.ts:34-37
+  (src/api/mockApi.ts#L34-L37), the mock sets server.updatedAt = now before it
+  checks expectedUpdatedAt. So every attempt fails, even one sent right after a
+  refetch. Auto-retrying is also unsafe for a more basic reason: a skip changes
+  data and can't safely be repeated. If the subscription "changed elsewhere"
+  because someone already skipped, a blind retry would skip a second time. So
+  the flow on a 409 should be:
+
+  1. Confirm step shows the actual change, for example "Your next charge moves
+     from Sun, Nov 8 to Tue, Dec 8", along with the items and the total. The new
+     date is nextChargeAt + intervalDays, which is the same calculation the
+     mock does.
+  2. On a 409: call getSubscription() again, then show "Your subscription was
+     updated since you opened this page" with the fresh data. Then do one of two
+     things:
+     - If it's still active, show the confirmation again with the recalculated
+       date and let the customer decide.
+     - If it's now paused or cancelled, hide the skip option and explain why.
+  3. On a second 409: stop. Show "We couldn't skip right now", that nothing was
+     charged or changed, and a contact-support path. This is the end state for
+     conflict=always.
+  4. Also handle the other failures the API can return: 400 (no longer active),
+     404, and a 500 when loading (fixture=error, which needs a Retry button).
+
+  Why a confirmation and not an Undo button: the API has no un-skip endpoint. A
+  local Undo would claim to reverse a change the server never reversed. So
+  confirmation is the only safeguard against accidental skips.
+
+  Slow API: latency is 0.4 to 2.5 s. I'd use a skeleton while the page loads, a
+  pending state on the button that blocks double submits, and an aria-live
+  message for the result.
+
+  Part A: retention
+
+  I'd build the cancel flow as reason → one matching offer → confirm. Someone
+  who really wants to cancel gets there in three taps: Cancel, pick a reason,
+  "No thanks, cancel". The "continue to cancel" button should always be visible
+  at equal weight, with no guilt-trip wording. Offer per reason:
+
+  Reason: Too much product (38%)
+  Offer: Change frequency to 60/90 days, or skip the next shipment (the real API
+
+  call)
+  Why: Fixes the actual problem for the largest group
+  ────────────────────────────────────────
+  Reason: Costs too much (24%)
+  Offer: Reduce the quantity (the fixture has 2× Multivitamin) or remove an
+  item,
+  showing the new total live
+  Why: Uses the real cart. I'd avoid inventing an extra discount, since that's a
+
+  business decision we'd be making up
+  ────────────────────────────────────────
+  Reason: Trying a different product (15%)
+  Offer: Pause
+  Why: Lets them come back without signing up again
+  ────────────────────────────────────────
+  Reason: Didn't see results (12%)
+  Offer: Swap to another catalog product, or pause
+  Why: No health claims ("give it 8 weeks")
+  ────────────────────────────────────────
+  Reason: Other (11%)
+  Offer: Optional free text, then confirm
+  Why:
+
+  That leaves four simulated actions: frequency, pause, quantity/remove, and
+  swap. Frequency and quantity are also useful on the main page, not just in the
+  cancel flow. If we need to cut scope, swap goes first.
+
+  One trap with local simulation: local changes must never touch updatedAt, or
+  every real skip will return a 409. A related issue: if the customer changes
+  the frequency locally to 60 days, the server still skips 30. We need a rule
+  for that. I'd keep server data and a local overlay in separate reducer slices
+  and decide the rule in the spec. My suggestion is that a frequency change also
+  reschedules the next charge locally and the skip confirmation reads the
+  overlaid interval.
+
+  Part B
+
+  Dividing by 2 and using rem is right. Two adjustments:
+
+  - Borders in px: keep the 1px hairlines and the 2px selected border in px. Rem
+    borders grow when the user scales their font size, which is rarely what you
+    want. Use rem for type, spacing and radii.
+  - Measure on the original pixels: take measurements and colors from the full
+    2400px file with a script, not by eye. Then compare objectively.
+    Playwright's toHaveScreenshot() can use buy-box.png directly as the baseline
+    at viewport 1200×780 and deviceScaleFactor: 2, which produces a diff image
+    with no extra dependency. Font rendering differs on Linux, so we'd treat the
+    diff as a guide rather than a pass/fail gate.
+
+  "Has to work" also means:
+  - The fine print in copy.ts hardcodes "30 days at $25.46". It needs to be
+    built from the selected frequency and price, and hidden or changed for
+    one-time purchases.
+  - The cart total is price × quantity, and the struck-through compare price
+    should scale with quantity too.
+  - Use real radio inputs and a native <select>, and set bounds on the quantity.
+  - It should still be usable at 375px.
+
+  Suggested order: build B first. It takes little time and gives us the brand
+  tokens (colors, type scale, radii) as CSS custom properties. Part A then
+  reuses them, so both parts look like the same brand.
+
+  Dependencies
+
+  I agree with all of them. A few notes:
+  - CSS modules + BEM: modules already scope each file. I'd treat the file as
+    the block and use .element / .element--modifier inside it, so we don't write
+    styles['card__header'] everywhere.
+  - Dates and money: Intl.DateTimeFormat and Intl.NumberFormat cover both, so I
+    agree on not adding libraries.
+  - Test dependencies: vitest, jsdom, @testing-library/react, user-event,
+    jest-dom, @playwright/test, @axe-core/playwright.
+  - Native <dialog> in tests: I believe jsdom still doesn't implement
+    showModal(). We'd stub it in the Vitest setup and test real dialog behavior
+    in Playwright.
+  - Deterministic tests: unit tests mock ../api/mockApi. E2e tests always pass
+    conflict=never or conflict=always, because the default is a random
+    one-in-three conflict.
+
+  SDD
+
+  The lightweight setup looks good. Two suggestions:
+  - CLAUDE.md already points to AGENTS.md, which is empty. I'd put the short
+    working rules there (stack, units, test commands, "read SPECS/README.md
+    before any feature work") so every agent loads them automatically.
+  - Proposed spec folders:
+    - 001-b-buy-box
+    - 002-a-subscription-overview (loading, error, the three statuses, the
+      next-shipment summary)
+    - 003-a-skip-shipment
+    - 004-a-cancel-retention
+
+    Tooling setup would only get a CHANGELOG entry, not a spec.
+
+  Decisions I need from you
+
+  1. Build B first, or A first?
+  2. Is the retention scope right (the four actions above, with swap cut first
+     if needed), and do you agree to no invented discount?
+  3. Do you agree with the spec folder list?
+
+  Once you confirm, I'll set up SPECS/ and AGENTS.md, install the tooling, and
+  add the first CHANGELOG entry. I've saved a note to memory that we work
+  directly on develop and that this conversation will be submitted.
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/AGENTS.md in the IDE. This may or may
+  not be related to the current task.</ide_opened_file>
+
+❯ I already make a few changes to AGENTS.md and CLAUDE.md file, we need to
+  create the "check" script mentioned there after installing and setting up the
+  dev deps for testing and eslint-prettier, this is an agent hygiene script
+  mostly, and the CHANGELOG.md in the spec path is an agent work log, not a
+  product changelog, so an agent adds an entry after each completed task. I'm
+  ok with the proposed spec folders  your Deps notes, and the adjustements to
+  the Part B. Lets start with A, right after setup since is where most of the
+  product decisions are and B is lower risk, No invented discounts. I'm kinda
+  disagree with the Part A: retention that you proposed, dates come only from
+  the "server", a frecuency change is shown as "Every 60 days, starting ...etc"
+  and doesnt change nextChargeAt, so the skip dialog predicts the new date
+  from the servers interval and after a successful skip we show the date the
+  "server" returns. We need to add as a know limitation that the mock cant save
+  a frequency change, before creating the specs related to A we will discuss a
+  little more about this
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Two things in your updated AGENTS.md don't match what we agreed, and it also
+  says "no new dependencies without human confirmation". I'll sort these out
+  before installing anything.
+
+● User answered Claude's questions:
+  ⎿  · AGENTS.md says the stack is "Vite, React 19, TypeScript, Tailwind v4,
+     Playwright", but we agreed on CSS Modules (BEM-ish) and no Tailwind. Which
+     is correct? → CSS Modules (Recommended)
+     · AGENTS.md defines `npm run check` as typecheck + lint + format + e2e.
+     Vitest unit tests aren't in it. Should check also run them? → Add unit
+     tests (Recommended)
+     · These are the dev deps I'd install. Approve the list, or add the optional
+     a11y lint plugin? → Base + jsx-a11y (Recommended)
+
+● Bash(npm install 2>&1 | tail -3 && npm install -D vitest jsdom
+      @testing-library/react @testing-library/user-event
+      @testing-library/jest-dom @playwright/test @axe-cor…)
+  ⎿  Updated package-lock.json (+6 -42)
+      50        "integrity": "sha512-RgHBCvtjbOK2gXSNBNIkNoEc9qoVEtau3hj8
+          gEqKQuL3HZAibKarWFEI3Lfm6EYKkLalOh8eSrj9b+ch9H/VBA==",
+      51        "dev": true,
+      52        "license": "MIT",
+      53 +      "peer": true,                                            
+      54        "dependencies": {
+      55          "@babel/code-frame": "^7.29.7",
+      56          "@babel/generator": "^7.29.7",
+     ...
+      802          "x64"
+      803        ],
+      804        "dev": true,
+      804 -      "libc": [                                               
+      805 -        "glibc"                                               
+      806 -      ],                                                      
+      805        "license": "MIT",
+      806        "optional": true,
+      807        "os": [
+     ...
+      910          "arm"
+      911        ],
+      912        "dev": true,
+      915 -      "libc": [                                               
+      916 -        "glibc"                                               
+      917 -      ],                                                      
+      913        "license": "MIT",
+      914        "optional": true,
+      915        "os": [
+     ...
+      924          "arm"
+      925        ],
+      926        "dev": true,
+      932 -      "libc": [                                               
+      933 -        "musl"                                                
+      934 -      ],                                                      
+      927        "license": "MIT",
+      928        "optional": true,
+      929        "os": [
+     ...
+      938          "arm64"
+      939        ],
+      940        "dev": true,
+      949 -      "libc": [                                               
+      950 -        "glibc"                                               
+      951 -      ],                                                      
+     … 128 more lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● eslint-plugin-jsx-a11y doesn't support ESLint 10 yet, so instead of forcing
+  the install, I'll pin eslint and @eslint/js back to version 9.
+
+● Bash(npm install -D eslint@^9 @eslint/js@^9 vitest jsdom
+      @testing-library/react @testing-library/user-event
+      @testing-library/jest-dom @playwright/test @axe-core/play…)
+  ⎿  Updated package.json (+17 -1)
+      13      "react-dom": "^19.1.0"
+      14    },
+      15    "devDependencies": {
+      16 +    "@axe-core/playwright": "^4.14.0",                         
+      17 +    "@eslint/js": "^9.39.5",                                   
+      18 +    "@playwright/test": "^1.64.1",                             
+      19 +    "@testing-library/jest-dom": "^7.0.1",                     
+      20 +    "@testing-library/react": "^16.3.3",                       
+      21 +    "@testing-library/user-event": "^14.6.8",                  
+      22      "@types/react": "^19.1.0",
+      23      "@types/react-dom": "^19.1.0",
+      24      "@vitejs/plugin-react": "^5.0.0",
+      25 +    "eslint": "^9.39.5",                                       
+      26 +    "eslint-config-prettier": "^10.1.8",                       
+      27 +    "eslint-plugin-jsx-a11y": "^6.10.2",                       
+      28 +    "eslint-plugin-react-hooks": "^7.1.1",                     
+      29 +    "eslint-plugin-react-refresh": "^0.5.7",                   
+      30 +    "globals": "^17.14.0",                                     
+      31 +    "jsdom": "^29.1.1",                                        
+      32 +    "prettier": "^3.9.10",                                     
+      33      "typescript": "~5.8.3",
+      20 -    "vite": "^7.0.0"                                           
+      34 +    "typescript-eslint": "^8.72.1",                            
+      35 +    "vite": "^7.0.0",                                          
+      36 +    "vitest": "^5.1.0"                                         
+      37    }
+      38  }
+  ⎿  … 1 more file changed
+  ⎿  (timeout 5m)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'll accept the moderate ReDoS flagged in minimatch (it's only pulled in via
+  the dev-only ESLint toolchain, and fixing it would force a major downgrade of
+  eslint-config-prettier), and note this in the log. I'll also verify
+  Playwright's Chromium, installed via its Ubuntu fallback build on Fedora,
+  actually runs before moving on to review the config files.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(cat > .prettierrc.json <<'EOF'
+      {…)
+  ⎿  Created .prettierrc.json (+3 -0)
+      1 +{                                                               
+      2 +  "printWidth": 120                                             
+      3 +}                                                               
+  ⎿  Created .prettierignore (+9 -0)
+      1 +# src/api is read-only (see AGENTS.md); keep the starter's forma
+        +tting untouched                                                 
+      2 +src/api                                                         
+      3 +INSTRUCTIONS.md                                                 
+      4 +package-lock.json                                               
+      5 +public                                                          
+      6 +dist                                                            
+      7 +coverage                                                        
+      8 +playwright-report                                               
+      9 +test-results                                                    
+
+● With printWidth: 120, Prettier accepts the starter files exactly as they are,
+  so src/api isn't touched. Now ESLint, Vitest and Playwright:
+
+● Bash(cat > eslint.config.js <<'EOF'
+      import js from "@eslint/js";…)
+  ⎿  Created eslint.config.js (+25 -0)
+       1 +import js from "@eslint/js";                                   
+       2 +import prettier from "eslint-config-prettier";                 
+       3 +import jsxA11y from "eslint-plugin-jsx-a11y";                  
+       4 +import reactHooks from "eslint-plugin-react-hooks";            
+       5 +import reactRefresh from "eslint-plugin-react-refresh";        
+       6 +import globals from "globals";                                 
+       7 +import tseslint from "typescript-eslint";                      
+       8 +                                                               
+       9 +export default tseslint.config(                                
+      10 +  { ignores: ["dist", "coverage", "playwright-report", "test-re
+         +sults"] },                                                     
+      11 +  {                                                            
+      12 +    files: ["**/*.{ts,tsx}"],                                  
+      13 +    extends: [js.configs.recommended, ...tseslint.configs.recom
+         +mendedTypeChecked],                                            
+      14 +    languageOptions: {                                         
+      15 +      globals: globals.browser,                                
+      16 +      parserOptions: { projectService: true, tsconfigRootDir: i
+         +mport.meta.dirname },                                          
+      17 +    },                                                         
+      18 +  },                                                           
+      19 +  {                                                            
+      20 +    files: ["src/**/*.tsx"],                                   
+      21 +    extends: [reactHooks.configs.flat["recommended-latest"], re
+         +actRefresh.configs.vite, jsxA11y.flatConfigs.recommended],     
+      22 +  },                                                           
+      23 +  { files: ["**/*.js"], extends: [js.configs.recommended], lang
+         +uageOptions: { globals: globals.node } },                      
+      24 +  prettier,                                                    
+      25 +);                                                             
+  ⎿  Updated vite.config.ts (+6 -1)
+       1 -import { defineConfig } from "vite";                           
+       1 +import { defineConfig } from "vitest/config";                  
+       2  import react from "@vitejs/plugin-react";
+       3  
+       4  export default defineConfig({
+       5    plugins: [react()],
+       6 +  test: {                                                      
+       7 +    environment: "jsdom",                                      
+       8 +    setupFiles: ["src/test/setup.ts"],                         
+       9 +    include: ["src/**/*.test.{ts,tsx}"],                       
+      10 +  },                                                           
+      11  });
+  ⎿  Created playwright.config.ts (+20 -0)
+       1 +import { defineConfig, devices } from "@playwright/test";      
+       2 +                                                               
+       3 +const port = 5179;                                             
+       4 +                                                               
+       5 +export default defineConfig({                                  
+       6 +  testDir: "e2e",                                              
+       7 +  fullyParallel: true,                                         
+       8 +  reporter: "list",                                            
+       9 +  use: { baseURL: `http://localhost:${port}`, trace: "retain-on
+         +-failure" },                                                   
+      10 +  projects: [                                                  
+      11 +    // Most customers are on a 375px phone, so mobile is the pr
+         +imary project.                                                 
+      12 +    { name: "mobile", use: { ...devices["Desktop Chrome"], view
+         +port: { width: 375, height: 812 }, hasTouch: true } },         
+      13 +    { name: "desktop", use: { ...devices["Desktop Chrome"], vie
+         +wport: { width: 1200, height: 780 } } },                       
+      14 +  ],                                                           
+      15 +  webServer: {                                                 
+      16 +    command: `npm run dev -- --port ${port} --strictPort`,     
+      17 +    url: `http://localhost:${port}`,                           
+      18 +    reuseExistingServer: true,                                 
+      19 +  },                                                           
+      20 +});                                                            
+  ⎿  Updated .gitignore (+4 -0)
+      1  node_modules
+      2  dist
+      3 +coverage                                                        
+      4 +playwright-report                                               
+      5 +test-results                                                    
+      6 +blob-report                                                     
+  ⎿  Updated tsconfig.json (+1 -1)
+      11      "isolatedModules": true,
+      12      "types": ["vite/client"]
+      13    },
+      14 -  "include": ["src", "vite.config.ts"]                         
+      14 +  "include": ["src", "e2e", "vite.config.ts", "playwright.confi
+         +g.ts"]                                                         
+      15  }
+  ⎿  … 3 more files changed
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The one lint error is in mockApi.ts:17 (src/api/mockApi.ts#L17), which
+  AGENTS.md marks read-only. I'll exclude src/api from linting the same way it's
+  excluded from Prettier, rather than edit it:
+
+● Bash(sed -i 's|  { ignores: \["dist", "coverage", "playwright-report",
+      "test-results"\] },|  // src/api is read-only (see AGENTS.md), so it is
+      not ours to lint.\n  {…)
+  ⎿  Updated eslint.config.js (+7 -2)
+       7  import tseslint from "typescript-eslint";
+       8  
+       9  export default tseslint.config(
+      10 -  { ignores: ["dist", "coverage", "playwright-report", "test-re
+         -sults"] },                                                     
+      10 +  // src/api is read-only (see AGENTS.md), so it is not ours to
+         + lint.                                                         
+      11 +  { ignores: ["dist", "coverage", "playwright-report", "test-re
+         +sults", "src/api"] },                                          
+      12    {
+      13      files: ["**/*.{ts,tsx}"],
+      14      extends: [js.configs.recommended, ...tseslint.configs.recom
+          mendedTypeChecked],
+     ...
+      19    },
+      20    {
+      21      files: ["src/**/*.tsx"],
+      21 -    extends: [reactHooks.configs.flat["recommended-latest"], re
+         -actRefresh.configs.vite, jsxA11y.flatConfigs.recommended],     
+      22 +    extends: [                                                 
+      23 +      reactHooks.configs.flat["recommended-latest"],           
+      24 +      reactRefresh.configs.vite,                               
+      25 +      jsxA11y.flatConfigs.recommended,                         
+      26 +    ],                                                         
+      27    },
+      28    { files: ["**/*.js"], extends: [js.configs.recommended], lang
+          uageOptions: { globals: globals.node } },
+      29    prettier,
+  ⎿  Updated e2e/smoke.spec.ts (+3 -1)
+      17      await page.goto(path);
+      18      await expect(page.locator("#root")).not.toBeEmpty();
+      19  
+      20 -    const axe = await new AxeBuilder({ page }).withTags(["wcag2
+         -a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();  
+      20 +    const axe = await new AxeBuilder({ page })                 
+      21 +      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "w
+         +cag22aa"])                                                     
+      22 +      .analyze();                                              
+      23      expect(axe.violations).toEqual([]);
+      24      expect(errors).toEqual([]);
+      25    });
+  ⎿  (timeout 5m)
+
+● All tests pass, but I want to confirm the checks actually catch failures—so
+  I'll temporarily introduce two deliberate bugs (an image missing alt text and
+  a broken unit test using jest-dom/dialog stub) to verify detection, then
+  revert them.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both checks failed as expected—axe flagged image-alt, and the throwaway test
+  confirmed jest-dom matchers and the <dialog> stub work—so I've reverted both
+  files. Next I'll update SPECS/ and apply the AGENTS.md fixes.
+
+● Write(SPECS/README.md)
+  ⎿  Wrote 88 lines to SPECS/README.md
+       1 # Specs
+       2
+       3 Lightweight spec-driven development. Each feature gets a short s
+         pec that a human approves before any code is
+       4 written, and the spec stays the source of truth while the featur
+         e is built.
+       5
+       6 ## Layout
+       7
+       8 ```
+     … +80 lines (ctrl+o to expand)
+
+● Write(SPECS/CHANGELOG.md)
+  ⎿  Wrote 27 lines to SPECS/CHANGELOG.md
+       1 # Agent work log
+       2
+       3 Newest first. One entry per completed task. Format and rules are
+          in [README.md](README.md).
+       4
+       5 ## 2026-11-02: setup: dev tooling and `npm run check`
+       6
+       7 - **Changed:**
+       8   - Added dev deps: Vitest, jsdom, Testing Library (react, user-
+         event, jest-dom), Playwright, @axe-core/playwright,
+     … +19 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p="AGENTS.md"; s=open(p).read()…)
+  ⎿  Updated AGENTS.md (+4 -3)
+       2  
+       3  Customer-facing pages for a fictional supplement brand:
+       4  Part A, "Manage my subscription" (src/part-a), and Part B, a pi
+          xel-perfect buy box (src/part-b).
+       5 -Stack: Vite, React 19, TypeScript, Tailwind v4, Playwright.    
+       5 +Stack: Vite, React 19, TypeScript, CSS Modules. Vitest + Testin
+         +g Library, Playwright + axe-core, ESLint + Prettier.           
+       6  
+       7  ## Commands
+       8  
+       9 -npm run dev | npm run check (typecheck + lint + format + e2e)  
+       9 +npm run dev | npm run check (typecheck + lint + format + unit +
+         + e2e)                                                          
+      10  
+      11  ## Rules
+      12  
+      13  - No new dependencies without human confirmation.
+      14 -- Specs are the source of truth. Update the spec before the cod
+         -e drifts from it.                                              
+      14 +- Specs are the source of truth. Update the spec before the cod
+         +e drifts from it. Workflow: SPECS/README.md.                   
+      15 +- After each completed task, add an entry to SPECS/CHANGELOG.md
+         + (agent work log, newest first).                               
+      16  - src/api/ is read-only. Part B text comes from src/part-b/copy
+          .ts.
+      17  - Semantic HTML first, ARIA only where HTML falls short. Labels
+          , keyboard support, focus management and live regions are requi
+          red.
+      18  - After finishing core functionality, ask the human which edge 
+          cases and e2e flows to cover.
+  ⎿  (timeout 5m)
+● Bash(npx prettier --write SPECS >/dev/null && git diff --no-index /dev/null
+      SPECS/README.md | head -0; npm run check 2>&1 | grep -E
+      "passed|failed|error|\[warn\]|Cod…)
+  ⎿  Updated SPECS/README.md (+3 -0)
+      50  Status: Draft | Approved | Implemented
+      51  
+      52  ## Problem
+      53 +                                                               
+      54  Who it is for and why it matters.
+      55  
+      56  ## Requirements
+      57 +                                                               
+      58  - R1 ...
+      59  
+      60  ## Acceptance criteria
+      61 +                                                               
+      62  - [ ] R1: Given / when / then ...
+      63  
+      64  ## Out of scope
+  ⎿  (timeout 5m)
+
+● Setup is finished and npm run check passes. Nothing is committed yet; say when
+  and I'll commit to develop.
+
+  What changed:
+  - npm run check runs typecheck → lint → format check → unit tests → e2e and
+    stops at the first failure.
+    - Lint: ESLint with type-aware typescript-eslint rules, react-hooks,
+      react-refresh and jsx-a11y.
+    - E2e: a smoke test on both parts at 375px and 1200px, checking for axe WCAG
+      2.2 A/AA violations and console errors.
+  - I tested that it catches failures: an image with no alt text made axe fail
+    with image-alt, and a throwaway unit test showed the test matchers and the
+    <dialog> stub work. Both are reverted.
+  - AGENTS.md: I changed the stack line to CSS Modules, added the unit-test step
+    to check, and added a rule to read SPECS/README.md and log each finished
+    task in SPECS/CHANGELOG.md. Your other rules are unchanged.
+  - SPECS/: README.md (SPECS/README.md) has the workflow, naming and templates,
+    plus a rule that every requirement gets a number (R1, R2…) that tasks and
+    tests refer to. CHANGELOG.md (SPECS/CHANGELOG.md) is the agent work log,
+    with the setup entry first.
+
+  Things I worked around:
+  - ESLint is pinned to 9, because eslint-plugin-jsx-a11y doesn't support 10
+    yet.
+  - src/api is skipped by ESLint and Prettier. It's read-only and has one
+    prefer-const error that isn't ours to fix.
+  - npm audit reports one moderate issue. It's in a sub-dependency of the ESLint
+    tools, which never ship to users, and the suggested fix would downgrade
+    eslint-config-prettier. I left it and noted it in the log.
+
+  Folder numbering: since A now comes first, the spec folders will be
+  001-a-subscription-overview, 002-a-skip-shipment, 003-a-cancel-retention and
+  004-b-buy-box.
+
+  Part A dates: you're right. Taking dates only from the server is simpler and
+  more honest than my local overlay. A few points to settle when we talk it
+  through:
+  1. "Every 60 days, starting …" needs a reference date. I'd suggest "starting
+     after your Nov 8 order", so the next charge stays whatever the server says.
+  2. Skipping after a frequency change. The dialog will say the charge moves 30
+     days, because that's the server's interval, while the page shows "Every 60
+     days". We need wording that explains this, or we treat it as part of the
+     known limitation.
+  3. A refetch after a 409 must keep the local frequency change. Local changes
+     and server data need to be stored separately.
+  4. "Too much product" (38%): a frequency change no longer pushes the next
+     charge back, so it doesn't fix the immediate problem by itself. The best
+     offer is probably skip (a real API call) plus a slower frequency.
