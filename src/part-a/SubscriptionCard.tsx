@@ -1,8 +1,10 @@
-// Part A: "Manage my subscription" (001, 002). This container owns the state, the API calls and focus; views.tsx
-// and SkipDialog.tsx render it.
+// Part A: "Manage my subscription" (001–003). This container owns the state, the API calls and focus; views.tsx,
+// SkipDialog.tsx and PlanChanges.tsx render it.
 import { type Ref, useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { getSubscription, skipNextShipment } from "../api/mockApi";
 import type { Subscription } from "../api/types";
+import type { PlanChangesProps } from "./PlanChanges";
+import { hasPending, pendingOf } from "./plan";
 import { SkipDialog } from "./SkipDialog";
 import styles from "./SubscriptionCard.module.css";
 import { initialState, subscriptionReducer, viewOf } from "./subscriptionReducer";
@@ -12,13 +14,14 @@ interface StatusViewProps {
   subscription: Subscription;
   onSkip: () => void;
   skipButtonRef: Ref<HTMLButtonElement>;
+  plan: Omit<PlanChangesProps, "subscription">;
 }
 
-/** R7: the view follows the server's status, through `viewOf`. */
-function StatusView({ subscription, onSkip, skipButtonRef }: StatusViewProps) {
+/** R7: the view follows the server's status, through `viewOf`. 003 R7: plan changes are shown only when active. */
+function StatusView({ subscription, onSkip, skipButtonRef, plan }: StatusViewProps) {
   switch (viewOf(subscription)) {
     case "active":
-      return <ActiveView subscription={subscription} onSkip={onSkip} skipButtonRef={skipButtonRef} />;
+      return <ActiveView subscription={subscription} onSkip={onSkip} skipButtonRef={skipButtonRef} plan={plan} />;
     case "paused":
       return <PausedView subscription={subscription} />;
     case "cancelled":
@@ -34,6 +37,7 @@ export function SubscriptionCard() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const keepRef = useRef<HTMLButtonElement>(null);
   const checkAgainRef = useRef<HTMLButtonElement>(null);
+  const planHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // R1, R2: every load gets a fresh id, and the reducer drops any response that isn't the latest one. That covers
   // the StrictMode double effect, where the mock's random latency can resolve request 2 before request 1.
@@ -64,7 +68,7 @@ export function SubscriptionCard() {
     if (!dialogOpen && dialog.open) dialog.close();
   }, [dialogOpen]);
 
-  // 002: the reducer decides where focus goes (R4, R6, R7, R9, R10). This only applies it.
+  // 002, 003: the reducer decides where focus goes (002 R4, R6, R7, R9, R10, 003 R5). This only applies it.
   useEffect(() => {
     const targets = {
       keep: keepRef,
@@ -72,12 +76,30 @@ export function SubscriptionCard() {
       "skip-button": skipButtonRef,
       heading: headingRef,
       "heading-if-lost": headingRef,
+      "plan-heading": planHeadingRef,
     };
     if (!state.focus) return;
     // R10: a removed focused element leaves focus on <body>. Focus anywhere else was the customer's choice.
     if (state.focus === "heading-if-lost" && document.activeElement !== document.body) return;
     targets[state.focus].current?.focus();
   }, [state.focus]);
+
+  // 003 R9: the changes only live here, so leaving while they are shown asks first. Derived from the state, so
+  // Discard, setting every value back, a fresh server value or a view that isn't active ends it by itself.
+  const warnOnLeave =
+    state.load.kind === "ready" &&
+    viewOf(state.load.server) === "active" &&
+    hasPending(pendingOf(state.load.server, state.local));
+  useEffect(() => {
+    if (!warnOnLeave) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Older browsers only prompt when `returnValue` is set.
+      event.returnValue = true;
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [warnOnLeave]);
 
   // R7, R9: reloads behind the open dialog. Its own actions, because `load/started` would swap the page for the
   // skeleton and unmount the view behind the dialog.
@@ -121,6 +143,15 @@ export function SubscriptionCard() {
     if (state.skip.kind === "stale") refresh();
   };
 
+  // 003: no request is sent for a plan change (Known limitations), so these only dispatch.
+  const plan = {
+    local: state.local,
+    headingRef: planHeadingRef,
+    onFrequency: (days: number) => dispatch({ type: "plan/frequency", days }),
+    onQuantity: (sku: string, quantity: number) => dispatch({ type: "plan/quantity", sku, quantity }),
+    onDiscard: () => dispatch({ type: "plan/discarded" }),
+  };
+
   return (
     <main className={styles.card}>
       <h1 ref={headingRef} tabIndex={-1} className={styles.title}>
@@ -135,12 +166,12 @@ export function SubscriptionCard() {
       {state.load.kind === "not-found" && <NotFound />}
       {state.load.kind === "ready" && (
         <>
-          <StatusView subscription={state.load.server} onSkip={openSkip} skipButtonRef={skipButtonRef} />
+          <StatusView subscription={state.load.server} onSkip={openSkip} skipButtonRef={skipButtonRef} plan={plan} />
           {/* Outside the view, so it stays mounted when R10 swaps the view behind it. */}
           <SkipDialog
             subscription={state.load.server}
             skip={state.skip}
-            pendingIntervalDays={null}
+            pendingIntervalDays={pendingOf(state.load.server, state.local).intervalDays}
             dialogRef={dialogRef}
             keepRef={keepRef}
             checkAgainRef={checkAgainRef}

@@ -220,7 +220,12 @@ describe("SubscriptionCard: loaded views", () => {
     it("has one h1 and a heading for each section", async () => {
       await renderLoaded(active());
 
-      expect(headings()).toEqual(["H1 Manage my subscription", "H2 Next order", "H2 In your subscription"]);
+      expect(headings()).toEqual([
+        "H1 Manage my subscription",
+        "H2 Next order",
+        "H2 In your subscription",
+        "H2 Change your plan",
+      ]);
     });
 
     it("swaps an image that fails to load for the placeholder (T8)", async () => {

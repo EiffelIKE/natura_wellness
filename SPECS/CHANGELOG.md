@@ -2,6 +2,212 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 003-a-plan-changes / T10: warn before leaving with pending changes
+
+- **Changed:**
+  - `src/part-a/SubscriptionCard.tsx`: `warnOnLeave` is true when the subscription is ready, the view is active and
+    something is pending. While it is true, an effect adds a `beforeunload` listener that calls `preventDefault()`
+    and sets `returnValue`, and the effect's cleanup removes it.
+  - `src/part-a/PlanChanges.test.tsx`: six R9 tests. They check that a cancelable `beforeunload` is prevented with a
+    frequency or a quantity pending, and is not prevented after Discard, after setting every value back, after a 409
+    reload shows the subscription paused, or after unmount.
+  - `e2e/a-plan.spec.ts`: two R9 tests.
+    - With changes pending, the "Part B" link raises a `beforeunload` dialog. Dismissing it keeps the URL, the
+      lines and the controls, and after Discard the same link navigates with no second prompt.
+    - With nothing pending, the link navigates with no prompt.
+  - `SPECS/003-a-plan-changes/spec.md`: the R9 criterion ticked. Every criterion is now ticked, and the status is
+    `Implemented`.
+- **Decisions:**
+  - No reducer state. The warning is derived from `pendingOf` on each render, so every way of ending the changes
+    ends the warning too.
+  - `returnValue = true` rather than a message, because browsers show their own text (Known limitations).
+  - A reload with a change pending isn't tested in e2e. Dismissing the prompt cancels the reload, so
+    `page.reload()` would wait for a load that never comes. The nav link exercises the same listener.
+- **Verified:**
+  - 291 unit and component tests.
+  - The R9 e2e tests ran with `--repeat-each=5` on both projects: 20 passed.
+  - Six temporary breaks, each caught and then reverted. The component tests caught four: no `preventDefault`, no
+    active-view check, no cleanup, and warning with nothing pending. The e2e tests caught two: no listener at all,
+    and warning with nothing pending.
+  - `npm run check` passed: e2e 70 passed, 10 skipped.
+
+## 2026-11-03: 003-a-plan-changes / T9: "After that" without a next order total
+
+- **Changed:**
+  - `src/part-a/PlanChanges.test.tsx`: with `nextChargeTotalCents: null`, Multivitamin 2 → 1 still shows "After
+    that: $63.67 per order", and the next order shows no amount.
+  - `SPECS/003-a-plan-changes/spec.md`: the R4 criterion ticked.
+- **Decisions:** no code change. `totalAfter` already builds the total from the item prices and the discount, so this
+  test pins the behaviour the human chose.
+- **Verified:**
+  - 285 unit and component tests, plus typecheck, lint and Prettier.
+  - A temporary break, `totalAfter` returning null without `nextChargeTotalCents`, was caught and reverted.
+  - E2e was not rerun, because only a test file changed. It runs in the full check after T10.
+
+## 2026-11-03: 003-a-plan-changes / T8: server values outside the options
+
+- **Changed:**
+  - `SPECS/003-a-plan-changes/spec.md`: status set to Approved (R1–R9) after the human approved the edge-case
+    round. The R1 (45 days) and R2 (quantity 12) criteria are ticked.
+  - `src/part-a/plan.ts`: `frequencyOptions(server)` and `quantityOptions(item)`, each the fixed list plus the
+    server's own value, in numeric order.
+  - `src/part-a/subscriptionReducer.ts`: `plan/frequency` and `plan/quantity` validate against those lists, so the
+    server's 45 or 12 can be picked back to clear a change (R5). Any other value outside the range is still ignored.
+  - `src/part-a/PlanChanges.tsx`: the radios and options render from the same lists.
+  - Tests: `plan.test.ts` (values inside, below, between and above the range, and the constants left unchanged),
+    `planReducer.test.ts` (45 and 12 taken back, 15, 11 and another item's 12 ignored), `PlanChanges.test.tsx` (4
+    radios with "Every 45 days (current)" checked, 11 options with "12 (current)" selected, "12 → 3" and back).
+- **Decisions:**
+  - One helper, `withServers`, builds both lists, so the reducer and the view can't disagree about what can be picked.
+- **Verified:**
+  - 284 unit and component tests.
+  - Five temporary breaks, each caught by the new tests and then reverted: the radios and the options from the fixed
+    lists, the reducer validating against the fixed lists (two breaks), and the helper not sorting.
+  - `npm run check` passed: e2e 66 passed, 10 skipped.
+
+## 2026-11-03: 003-a-plan-changes / T7: edge-case round
+
+- **Changed:**
+  - `SPECS/003-a-plan-changes/spec.md`: four decisions from the human. The status says the round awaits review.
+    - R1: a server interval outside 30/60/90 gets a fourth radio, "Every 45 days (current)", in numeric order.
+    - R2: the server's quantity is always an option, even outside 1–10 ("12 (current)").
+    - R4: "After that" shows even without `nextChargeTotalCents`.
+    - New R9: a `beforeunload` prompt while pending changes are shown.
+    - Four new acceptance criteria, and two Known limitations: the prompt text is the browser's, and Mobile Safari
+      ignores `beforeunload`.
+  - `SPECS/003-a-plan-changes/plan.md`:
+    - `frequencyOptions` / `quantityOptions` in `plan.ts`, which the reducer validates against.
+    - The R9 effect in `SubscriptionCard`, and the edge-case tests.
+    - The "values the mock never sends" risk now records the decision.
+  - `SPECS/003-a-plan-changes/task.md`: T7 ticked; T8–T10 added.
+- **Decisions:**
+  - Quantity above 10 was raised as a likely bug, not a nice-to-have. A controlled `<select>` with no matching
+    option shows its first option, so the page would have shown "1" for a server quantity of 12.
+  - The human declined the arrow-key burst and the paused/cancelled e2e flows.
+  - R9 warns only while the changes are shown (R7). Warning about changes hidden behind a paused view would be
+    confusing.
+  - The warning is an effect in `SubscriptionCard` derived from `pendingOf`, with no new reducer state, so Discard,
+    setting back and a fresh server end it by themselves.
+- **Verified:** spec, plan and task changes only. Prettier checked; no code touched.
+
+## 2026-11-03: 003-a-plan-changes / T6: e2e for plan changes
+
+- **Changed:**
+  - New `e2e/a-plan.spec.ts`: 7 tests against the real mock on both projects (the 320px one runs on mobile only):
+    - keyboard only: Tab to the checked radio, ArrowDown to 60, Tab twice to the Multivitamin select, and ArrowUp
+      for a quantity of 1. It checks both announcements, the lines, "After that: $63.67 per order", and that Dec
+      16, $101.87 and "Every 30 days" are unchanged.
+    - a skip with `conflict=never`: the dialog's pending-frequency sentence, then "Starting after your Jan 15,
+      2027 order:" with the changes kept.
+    - `conflict=always`: after the 409 and its reload, the dialog and the page keep both changes (002 R11).
+    - Discard by keyboard: focus on the heading, "Changes discarded.", the controls back to "(current)", and the
+      next Tab goes to the frequency group.
+    - Setting the frequency back clears its line and Discard.
+    - With changes pending: axe WCAG 2.2 A/AA and no horizontal scroll at 375px and 1200px, 44px radio rows and
+      select, and at 320px the selects fit inside `main`.
+  - `SPECS/003-a-plan-changes/spec.md`: Known limitations said hiding while not active (R7) "is not tested". T2 and
+    T3 test it in the reducer and the views, so it now says it isn't tested end to end.
+- **Decisions:**
+  - The changes in the skip, 409 and axe tests are made with the mouse (`check`, `selectOption`). Keyboard input
+    has its own test, so the others stay short.
+  - The added "setting back" test (R5) isn't in the plan's list. It's the one R5 path the other flows don't touch,
+    and it costs 3s.
+- **Verified:**
+  - `--repeat-each=5` on both projects: 65 passed, 5 skipped (the 320px test on desktop), no flakes.
+  - Mutations, mobile project:
+    - `refresh/succeeded` dropping `local` fails the 409 test.
+    - Discard focus going to the skip button fails the Discard test.
+    - `pendingIntervalDays={null}` fails the skip and 409 tests.
+  - `npm run check` green: 266 unit and component tests, e2e 66 passed, 10 skipped (9 before, plus the new 320px
+    test on desktop).
+
+## 2026-11-03: 003-a-plan-changes / T5: plan changes with the skip flow
+
+- **Changed:**
+  - `src/part-a/SubscriptionCard.tsx`: `SkipDialog` gets `pendingOf(server, local).intervalDays` instead of `null`.
+  - `src/part-a/SkipDialog.tsx`: the prop's doc comment no longer says "Null until 003".
+  - `src/part-a/PlanChanges.test.tsx`: 8 component tests (36 in all) through `SubscriptionCard`. They cover the
+    dialog sentence with a pending frequency and without one, the status region cleared on open, "starting after"
+    moving to Jan 15, 2027 after a skip, and changes kept through a 409 and its reload and through a failed reload.
+    A fresh server that now has the picked value, or has dropped a product, stops showing that change.
+  - `SPECS/002-a-skip-shipment/spec.md`: ticked R11, and Known limitations now says 003 T5 ticked it. 002 R3 was
+    already ticked from hand-built data, and is now also covered through the real wiring.
+  - `SPECS/003-a-plan-changes/spec.md`: ticked the R3 skip criterion, so all five 003 criteria are ticked.
+- **Decisions:** none new. No reducer change was needed: `local` already survives `skip/*` and `refresh/*` (T2),
+  and `pendingOf` does the R7 comparison at render time.
+- **Verified:**
+  - Mutation: passing `null` to the dialog again fails the 002 R3 and R11 tests. Passing the raw
+    `local.intervalDays` survives, but it is an equivalent mutant: `SkipDialog` already hides the sentence when the
+    value equals the server's.
+  - `npm run check` green: 266 unit and component tests, e2e 53 passed, 9 skipped.
+
+## 2026-11-03: 003-a-plan-changes / T4: pending changes, "After that" and Discard
+
+- **Changed:**
+  - `src/part-a/PlanChanges.tsx`: a `PendingChanges` block, shown only while `hasPending`. It has one "Starting
+    after your Dec 16 order:" intro, a list (frequency first, then products in server order), "After that: {total}
+    per order" while a quantity is pending, and a secondary "Discard changes" button.
+  - `src/part-a/SubscriptionCard.module.css`: the pending block on the muted surface.
+  - `src/part-a/PlanChanges.test.tsx`: 12 more component tests (28 in all) for the lines, the total, the date
+    (next year, no date), setting back, Discard by click and keyboard, and every announcement.
+  - `SPECS/003-a-plan-changes/spec.md`: ticked the R1/R3, R2/R4, R5 and R6 criteria. The R3 skip criterion is T5.
+- **Decisions:**
+  - The arrow is `aria-hidden` and followed by a visually hidden "to", as the plan says. The test asserts both, so
+    a screen reader gets "2 to 1".
+  - The intro capitalizes `startingAfter(...)` at render time rather than adding a second helper, so there is one
+    source for the text.
+- **Verified:**
+  - Mutations: detaching the heading ref fails both Discard focus tests. Dropping `aria-hidden` on the arrow fails
+    the quantity-line test.
+  - Screenshot at 320px with both changes pending: the lines and the total wrap inside the block.
+  - `npm run check` green: 258 unit and component tests, e2e 53 passed, 9 skipped.
+
+## 2026-11-03: 003-a-plan-changes / T3: the "Change your plan" controls
+
+- **Changed:**
+  - New `src/part-a/PlanChanges.tsx`: an `<h2 tabIndex={-1}>` section with the "How often" fieldset (3 radios,
+    one `useId()` name) and a labelled 1–10 `<select>` per item. The server's value says "(current)". Both are
+    controlled from `pendingOf(...)`, falling back to the server's values.
+  - `src/part-a/views.tsx`: `ActiveView` renders it after the products and takes a `plan` prop to pass through.
+  - `src/part-a/SubscriptionCard.tsx`: builds `plan` (the `local` slice, the heading ref, the three dispatches) and
+    passes it through `StatusView`.
+  - `src/part-a/SubscriptionCard.module.css`: fieldset, 44px radio rows, a full-width select (20rem max from
+    48rem), and focus outlines for the heading, the radios and the select.
+  - New `src/part-a/PlanChanges.test.tsx`: 16 component tests for roles, names, options, order, and no form,
+    number input or stepper.
+  - `src/part-a/SubscriptionCard.test.tsx`: the heading list now includes "Change your plan".
+  - `e2e/a-overview.spec.ts`: the 001 test's "Every 30 days" locator is scoped to the "Next order" section.
+    It also matched the new radio label "Every 30 days (current)" (strict mode violation), so the page wasn't
+    wrong.
+- **Decisions:** `ActiveView` takes one `plan` prop of type `Omit<PlanChangesProps, "subscription">` rather than
+  six separate props, so `StatusView` passes it on without listing them.
+- **Verified:**
+  - Screenshot of the section at 320px and 375px: the long Multivitamin label wraps above its select, and
+    "2 (current)" fits.
+  - `npm run check` green: 244 unit and component tests, e2e 53 passed, 9 skipped. The overview test's axe and
+    no-horizontal-scroll check now covers the section.
+
+## 2026-11-03: 003-a-plan-changes / T2: reducer plan layer
+
+- **Changed:**
+  - `src/part-a/subscriptionReducer.ts`: `State.local`, the `plan/frequency`, `plan/quantity` and
+    `plan/discarded` actions with their announcements, and the `plan-heading` focus target.
+  - `src/part-a/SubscriptionCard.tsx`: `planHeadingRef` in the focus effect's targets, so the map stays complete.
+    T3 attaches it to the heading.
+  - New `src/part-a/planReducer.test.ts`: 46 unit tests, one describe per action, as in `skipReducer.test.ts`.
+- **Decisions:**
+  - Plan changes are accepted only for a loaded, active server. `plan/discarded` only needs a loaded server and
+    something pending, as the plan table says.
+  - A quantity set back to the server's value deletes the key, so `local` never stores a non-change.
+  - The "After that" total in the quantity announcement covers every pending quantity, not only the one that
+    changed, because it is the same figure the page shows.
+  - `plan/discarded` is ignored when the stored values all equal a fresh server's (R7), because nothing is pending
+    and there is no button to discard with.
+- **Verified:**
+  - Mutations: dropping Discard's "something pending" guard fails 2 tests. Taking "from" from the previous pick
+    instead of the server fails 3.
+  - `npm run check` green (unit, plus e2e 53 passed, 9 skipped as before).
+
 ## 2026-11-03: 003-a-plan-changes / T1: plan rules
 
 - **Changed:**

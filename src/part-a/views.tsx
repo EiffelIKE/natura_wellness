@@ -4,6 +4,7 @@ import type { Subscription, SubscriptionItem, SubscriptionStatus } from "../api/
 import { SUPPORT_MAILTO } from "./constants";
 import { formatDate, formatFrequency, formatMoney } from "./format";
 import { ItemList } from "./ItemList";
+import { PlanChanges, type PlanChangesProps } from "./PlanChanges";
 import { canSkip } from "./skip";
 import styles from "./SubscriptionCard.module.css";
 
@@ -96,10 +97,12 @@ interface ActiveViewProps {
   onSkip: () => void;
   /** 002 R6: focus comes back here when the dialog closes. */
   skipButtonRef: Ref<HTMLButtonElement>;
+  /** 003: passed through to "Change your plan". */
+  plan: Omit<PlanChangesProps, "subscription">;
 }
 
 /** R3, R4: in the order the spec lists, and every date and amount is the server's. */
-export function ActiveView({ subscription, onSkip, skipButtonRef }: ActiveViewProps) {
+export function ActiveView({ subscription, onSkip, skipButtonRef, plan }: ActiveViewProps) {
   const { nextChargeAt, nextChargeTotalCents, discountPercent, intervalDays, items } = subscription;
   return (
     <div className={styles.panel}>
@@ -136,6 +139,8 @@ export function ActiveView({ subscription, onSkip, skipButtonRef }: ActiveViewPr
         )}
       </section>
       <Products items={items} />
+      {/* 003 R8: after the products, so the sections above stay read-only server data. */}
+      <PlanChanges subscription={subscription} {...plan} />
     </div>
   );
 }

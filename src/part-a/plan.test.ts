@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixtures } from "../api/fixtures";
-import { FREQUENCIES, hasPending, type Local, pendingOf, QUANTITIES, startingAfter, totalAfter } from "./plan";
+import {
+  frequencyOptions,
+  FREQUENCIES,
+  hasPending,
+  type Local,
+  pendingOf,
+  QUANTITIES,
+  quantityOptions,
+  startingAfter,
+  totalAfter,
+} from "./plan";
 
 const none: Local = { intervalDays: null, quantities: {} };
 
@@ -15,6 +25,32 @@ describe("FREQUENCIES and QUANTITIES (R1, R2)", () => {
 
   it("offers quantities 1 to 10", () => {
     expect(QUANTITIES).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+});
+
+describe("frequencyOptions and quantityOptions (R1, R2 edge-case round)", () => {
+  it.each([
+    ["inside", 60, [30, 60, 90]],
+    ["below", 15, [15, 30, 60, 90]],
+    ["between", 45, [30, 45, 60, 90]],
+    ["above", 120, [30, 60, 90, 120]],
+  ])("adds a server interval %s the three only when it's missing, in numeric order", (_, intervalDays, expected) => {
+    expect(frequencyOptions({ ...server, intervalDays })).toEqual(expected);
+  });
+
+  it.each([
+    ["inside", 2, QUANTITIES],
+    ["below", 0, [0, ...QUANTITIES]],
+    ["above", 12, [...QUANTITIES, 12]],
+  ])("adds a server quantity %s 1 to 10 only when it's missing, in numeric order", (_, quantity, expected) => {
+    expect(quantityOptions({ ...multivitamin, quantity })).toEqual(expected);
+  });
+
+  it("never changes FREQUENCIES or QUANTITIES", () => {
+    frequencyOptions({ ...server, intervalDays: 45 });
+    quantityOptions({ ...multivitamin, quantity: 12 });
+    expect(FREQUENCIES).toEqual([30, 60, 90]);
+    expect(QUANTITIES).toHaveLength(10);
   });
 });
 

@@ -223,7 +223,86 @@
   text-underline-offset: 0.15em;
 }
 
+/* 003: "Change your plan". Native controls, each row or box at least 44px tall for touch (R8). */
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend,
+.field__label {
+  padding: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.choice input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* A long product name wraps above its select instead of pushing it off screen. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-muted);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+/* R3, R4: the pending changes, set apart from the controls that made them. */
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: var(--color-surface-muted);
+}
+
+.pending__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pending__total {
+  font-weight: 600;
+}
+
 .title:focus-visible,
+.heading:focus-visible,
+.choice input:focus-visible,
+.select:focus-visible,
 .button:focus-visible,
 .link:focus-visible {
   outline: 2px solid var(--color-focus);
@@ -409,5 +488,9 @@
 
   .dialog__actions .button {
     flex: 1;
+  }
+
+  .select {
+    max-width: 20rem;
   }
 }

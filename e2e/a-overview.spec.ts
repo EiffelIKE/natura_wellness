@@ -92,7 +92,8 @@ test("R3, R4, R8: the active subscription shows the server's next order and both
   // totalAfterDiscount: (29.95 + 2 × 44.95) × 0.85, rounded once, as the mock does.
   await expect(page.getByText("$101.87", { exact: true })).toBeVisible();
   await expect(page.getByText("Includes your 15% subscription discount")).toBeVisible();
-  await expect(page.getByText("Every 30 days")).toBeVisible();
+  // Scoped, because 003's "Change your plan" radios say "Every 30 days (current)" too.
+  await expect(page.locator("section").filter({ has: nextOrder }).getByText("Every 30 days")).toBeVisible();
 
   const rows = page.getByRole("listitem");
   await expect(rows).toHaveCount(2);

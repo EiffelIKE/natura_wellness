@@ -1,6 +1,15 @@
 // 001: the load lifecycle. 002–004 add their own layers to `State` without reshaping `load` (plan.md).
-import { ApiError, type Subscription, type SubscriptionStatus } from "../api/types";
-import { formatDate } from "./format";
+import { ApiError, type Subscription, type SubscriptionItem, type SubscriptionStatus } from "../api/types";
+import { formatDate, formatMoney } from "./format";
+import {
+  frequencyOptions,
+  hasPending,
+  type Local,
+  pendingOf,
+  quantityOptions,
+  startingAfter,
+  totalAfter,
+} from "./plan";
 import { canSkip, type Cause, skipErrorCause } from "./skip";
 
 export type Load =
@@ -25,8 +34,11 @@ export type Skip =
   | { kind: "stale"; failedSkips: number } // R9: the reload failed
   | { kind: "rechecking"; failedSkips: number }; // R9: "Check again" pending
 
-/** `heading-if-lost`: the h1, but only if focus fell to `<body>` (R10). The reducer can't see DOM focus. */
-export type Focus = "keep" | "check-again" | "skip-button" | "heading" | "heading-if-lost";
+/**
+ * `heading-if-lost`: the h1, but only if focus fell to `<body>` (R10). The reducer can't see DOM focus.
+ * `plan-heading`: "Change your plan", after "Discard changes" removes itself (003 R5).
+ */
+export type Focus = "keep" | "check-again" | "skip-button" | "heading" | "heading-if-lost" | "plan-heading";
 
 export interface State {
   /** The latest request sent. A response to any other request is stale and dropped, whatever `load` is. */
@@ -35,7 +47,9 @@ export interface State {
   skip: Skip;
   /** 002 R9: the last reload failed, so `server` may be out of date. Survives closing the dialog. */
   stale: { attempted: string; cause: Cause } | null;
-  /** Text for the page's status region (002 R6). Cleared by `load/started` and `skip/opened`. */
+  /** 003 R7: what the customer picked. Only the `plan/*` actions change it, and it is never merged into `server`. */
+  local: Local;
+  /** Text for the page's status region (002 R6, 003 R6). Cleared by `load/started` and `skip/opened`. */
   announcement: string;
   /** Where focus goes after this transition, or null to leave it. SubscriptionCard applies it and doesn't decide it. */
   focus: Focus | null;
@@ -52,7 +66,10 @@ export type Action =
   | { type: "skip/failed"; requestId: number; error: unknown }
   | { type: "refresh/started"; requestId: number }
   | { type: "refresh/succeeded"; requestId: number; subscription: Subscription }
-  | { type: "refresh/failed"; requestId: number; error: unknown };
+  | { type: "refresh/failed"; requestId: number; error: unknown }
+  | { type: "plan/frequency"; days: number }
+  | { type: "plan/quantity"; sku: string; quantity: number }
+  | { type: "plan/discarded" };
 
 /** Loading from the first render, so the skeleton shows before the load effect runs (R1). */
 export const initialState: State = {
@@ -60,6 +77,7 @@ export const initialState: State = {
   load: { kind: "loading" },
   skip: { kind: "closed" },
   stale: null,
+  local: { intervalDays: null, quantities: {} },
   announcement: "",
   focus: null,
 };
@@ -75,6 +93,19 @@ const closed: Skip = { kind: "closed" };
 function noticeFor(cause: Cause, attempted: string, fresh: Subscription): Notice {
   const moved = fresh.nextChargeAt === null || formatDate(attempted) !== formatDate(fresh.nextChargeAt);
   return { cause, movedFrom: moved ? attempted : null };
+}
+
+/** 003: plan changes are only taken for an active subscription the page has loaded (R7). */
+function activeServer(state: State): Subscription | null {
+  return state.load.kind === "ready" && state.load.server.status === "active" ? state.load.server : null;
+}
+
+/** 003 R6: "From 2" is always the server's quantity, so the text says what changes compared to the real plan. */
+function quantityAnnouncement(server: Subscription, local: Local, item: SubscriptionItem, quantity: number): string {
+  if (quantity === item.quantity) return `${item.name} quantity back to ${quantity}, no change pending.`;
+  const total = totalAfter(server, pendingOf(server, local));
+  const after = total === null ? "" : ` After that: ${formatMoney(total)} per order.`;
+  return `${item.name} quantity changed from ${item.quantity} to ${quantity}, ${startingAfter(server.nextChargeAt)}.${after}`;
 }
 
 export function subscriptionReducer(state: State, action: Action): State {
@@ -200,6 +231,43 @@ export function subscriptionReducer(state: State, action: Action): State {
       // Closed during "Check again": `stale` is already set, so reopening shows R9 again.
       return state;
     }
+
+    // 003: no request is sent, so these carry no `requestId`. Focus stays on the control that changed (R8).
+    case "plan/frequency": {
+      const server = activeServer(state);
+      // R1: the server's own value counts even outside 30/60/90, so it can be picked back (R5).
+      if (!server || !frequencyOptions(server).includes(action.days)) return state;
+      // R5: picking the server's value clears the change instead of storing it.
+      const back = action.days === server.intervalDays;
+      return {
+        ...next,
+        local: { ...state.local, intervalDays: back ? null : action.days },
+        announcement: back
+          ? `Frequency back to every ${action.days} days, no change pending.`
+          : `Frequency changed to every ${action.days} days, ${startingAfter(server.nextChargeAt)}.`,
+      };
+    }
+
+    case "plan/quantity": {
+      const server = activeServer(state);
+      const item = server?.items.find((candidate) => candidate.sku === action.sku);
+      if (!server || !item || !quantityOptions(item).includes(action.quantity)) return state;
+      // R5: the server's quantity removes the key, so only real changes are stored.
+      const quantities = { ...state.local.quantities, [action.sku]: action.quantity };
+      if (action.quantity === item.quantity) delete quantities[action.sku];
+      const local = { ...state.local, quantities };
+      return { ...next, local, announcement: quantityAnnouncement(server, local, item, action.quantity) };
+    }
+
+    case "plan/discarded":
+      // R5: the button only exists while something is pending, and leaves with the changes.
+      if (state.load.kind !== "ready" || !hasPending(pendingOf(state.load.server, state.local))) return state;
+      return {
+        ...next,
+        local: initialState.local,
+        announcement: "Changes discarded.",
+        focus: "plan-heading",
+      };
   }
 }
 

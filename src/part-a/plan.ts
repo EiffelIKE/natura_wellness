@@ -10,6 +10,21 @@ export const FREQUENCIES = [30, 60, 90] as const;
 /** R2: the quantities the customer can pick. The options set the limits, so there is nothing to clamp. */
 export const QUANTITIES: readonly number[] = Array.from({ length: 10 }, (_, index) => index + 1);
 
+/** `choices` plus the server's own value, in numeric order, so the server's value always has a control. */
+function withServers(choices: readonly number[], servers: number): number[] {
+  return choices.includes(servers) ? [...choices] : [...choices, servers].sort((a, b) => a - b);
+}
+
+/** R1: 30, 60 and 90, plus an interval the server sends outside them ("Every 45 days (current)"). */
+export function frequencyOptions(server: Subscription): number[] {
+  return withServers(FREQUENCIES, server.intervalDays);
+}
+
+/** R2: 1 to 10, plus a quantity the server sends outside them, so the select never shows one it didn't send. */
+export function quantityOptions(item: SubscriptionItem): number[] {
+  return withServers(QUANTITIES, item.quantity);
+}
+
 /** R7: what the customer picked. Never merged into `server`. */
 export interface Local {
   /** R1: the frequency picked, or null when it is the server's. */

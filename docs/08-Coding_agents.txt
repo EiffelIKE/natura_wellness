@@ -1,0 +1,208 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/003-a-plan-changes/spec.md in the
+  IDE. This may or may not be related to the current task.</ide_opened_file>
+
+❯ Lets change 003 plan to approved, and start working on T1
+
+  Read 1 file, listed 1 directory, ran 2 shell commands (ctrl+o to expand)
+
+● Adding the approved status to the plan, then writing plan.ts.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/003-a-plan-changes/plan.md'…)
+  ⎿  Updated SPECS/003-a-plan-changes/plan.md (+3 -1)
+      1  # 003: Plan
+      2  
+      3 +Status: Approved                                                
+      4 +                                                                
+      5  Spec: [spec.md](spec.md) (Approved)
+      6  
+      7  ## Approach
+     ...
+      106  
+      107  | File                                     | What             
+                                                                         
+                                     |
+      108  | ---------------------------------------- | -----------------
+           --------------------------------------------------------------
+           ------------------------- |
+      107 -| `src/part-a/plan.ts`                     | `FREQUENCIES`, `Q
+          -UANTITIES`, `pendingOf`, `hasPending`, `totalAfter`, `starting
+          -After`                    |                                   
+      109 +| `src/part-a/plan.ts`                     | `Local`, `FREQUEN
+          +CIES`, `QUANTITIES`, `pendingOf`, `hasPending`, `totalAfter`, 
+          +`startingAfter`           |                                   
+      110  | `src/part-a/subscriptionReducer.ts`      | the `local` slice
+           , the three `plan/*` actions and their announcements, focus ta
+           rget `plan-heading`       |
+      111  | `src/part-a/PlanChanges.tsx`             | the "Change your 
+           plan" section: fieldset, selects, pending lines, "After that",
+            "Discard changes"        |
+      112  | `src/part-a/views.tsx`                   | `ActiveView` rend
+           ers `PlanChanges` after the products and passes its props thro
+           ugh                       |
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/003-a-plan-changes/plan.md'…)
+  ⎿  Updated SPECS/003-a-plan-changes/plan.md (+1 -0)
+      35  
+      36  001's plan reserved `local.frequencyDays`. It is named `interva
+          lDays` here instead, to match the server field it
+      37  shadows.
+      38 +`Local` is declared in `plan.ts`, next to `pendingOf`, so `plan
+         +.ts` never imports the reducer.                                
+      39  
+      40  ## Actions and transitions
+      41  
+
+● Write(src/part-a/plan.ts)
+  ⎿  Wrote 59 lines to src/part-a/plan.ts
+       1 // 003: the rules behind "Change your plan". Pending changes are
+          compared with the server's data on every render,
+       2 // so nothing derived from the server (the date, the "(current)"
+          marks, the total) is ever stored.
+       3 import { totalAfterDiscount } from "../api/fixtures";
+       4 import type { Subscription, SubscriptionItem } from "../api/type
+         s";
+       5 import { formatDate } from "./format";
+       6
+       7 /** R1: the frequencies the customer can pick, in days. */
+     … +52 lines (ctrl+o to expand)
+
+● Write(src/part-a/plan.test.ts)
+  ⎿  Wrote 124 lines to src/part-a/plan.test.ts
+      1 import { afterEach, describe, expect, it, vi } from "vitest";
+      2 import { fixtures } from "../api/fixtures";
+      3 import { FREQUENCIES, hasPending, type Local, pendingOf, QUANTITI
+        ES, startingAfter, totalAfter } from "./plan";
+      4
+      5 const none: Local = { intervalDays: null, quantities: {} };
+      6
+      7 // Vitamin D × 1 at $29.95 and Multivitamin × 2 at $44.95, 15% of
+        f: $101.87.
+      8 const server = fixtures.active();
+     … +116 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● My arithmetic was off (8985 + 44950 = 53935, × 0.85 = 45844.75); fixing the
+  expectation.
+
+● Update(src/part-a/plan.test.ts)
+  ⎿  Added 2 lines, removed 2 lines
+      83    });
+      84  
+      85    it("applies every pending quantity", () => {
+      86 -    // (2995 × 3 + 4495 × 10) × 0.85 = 45845.75                
+      86 +    // (2995 × 3 + 4495 × 10) × 0.85 = 45844.75                
+      87      const quantities = { "NW-VITD-60": 3, "NW-MULTI-30": 10 };
+      88 -    expect(totalAfter(server, pendingOf(server, { ...none, quan
+         -tities }))).toBe(45846);                                       
+      88 +    expect(totalAfter(server, pendingOf(server, { ...none, quan
+         +tities }))).toBe(45845);                                       
+      89    });
+      90  
+      91    it("uses the server's discount", () => {
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● npm run check is green. Now ticking T1 and logging it.
+
+● Bash(python3 - <<'EOF'
+      p='SPECS/003-a-plan-changes/task.md'…)
+  ⎿  Updated SPECS/003-a-plan-changes/task.md (+1 -1)
+      1  # 003: Tasks
+      2  
+      3 -- [ ] T1 (R1–R5, R7): `plan.ts` with `FREQUENCIES`, `QUANTITIES`
+        -, `pendingOf`, `hasPending`, `totalAfter` and                   
+      3 +- [x] T1 (R1–R5, R7): `plan.ts` with `FREQUENCIES`, `QUANTITIES`
+        +, `pendingOf`, `hasPending`, `totalAfter` and                   
+      4        `startingAfter`, plus unit tests (the 6367 rounding, next 
+         year, no date, SKUs the server dropped)
+      5  - [ ] T2 (R5–R7): reducer `local` layer with `plan/frequency`, `
+         plan/quantity` and `plan/discarded`, the
+      6        announcements and the `plan-heading` focus target, plus un
+         it tests for every row and every ignored input
+  ⎿  Updated SPECS/CHANGELOG.md (+15 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 003-a-plan-changes / T1: plan rules             
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `SPECS/003-a-plan-changes/plan.md`: status `Approved` by th
+         +e human. `Local` is declared in `plan.ts`.                     
+       9 +  - New `src/part-a/plan.ts`: `Local`, `FREQUENCIES`, `QUANTITI
+         +ES`, `pendingOf`, `hasPending`, `totalAfter` and               
+      10 +    `startingAfter`.                                           
+      11 +  - New `src/part-a/plan.test.ts`: 21 unit tests.              
+      12 +- **Decisions:**                                               
+      13 +  - `Local` lives in `plan.ts` rather than the reducer, so `pla
+         +n.ts` never imports the reducer. T2 imports it.                
+      14 +  - `totalAfter` imports `totalAfterDiscount` from `src/api/fix
+         +tures.ts`, so the rounding is the mock's                       
+      15 +    (Multivitamin 2 → 1 is 6367, from 6366.5).                 
+      16 +  - `startingAfter` keeps the plan's one-argument signature and
+         + uses `formatDate`'s default `now`. The tests pin              
+      17 +    the clock with fake timers.                                
+      18 +- **Verified:** `npm run check` green (typecheck, lint, format,
+         + unit, e2e: 53 passed, 9 skipped as before).                   
+      19 +                                                               
+      20  ## 2026-11-03: 003-a-plan-changes / plan and tasks
+      21  
+      22  - **Changed:**
+
+● I've marked the 003 plan as approved and finished T1. npm run check passes:
+  typecheck, lint, format and unit tests, plus 53 e2e tests passed (9 skipped).
+
+  Plan approval: there was no existing way to mark a plan as approved, so I
+  added a Status: Approved line at the top of plan.md
+  (SPECS/003-a-plan-changes/plan.md), the same way specs do it. I also made one
+  small change to the plan: it says that Local (the type for the customer's
+  unsaved changes) lives in plan.ts. That way plan.ts doesn't depend on the
+  reducer, and the reducer will import the type from it in T2.
+
+  T1:
+  - plan.ts (src/part-a/plan.ts) has the 1–10 quantity options and the
+    30/60/90-day frequency options, plus four functions:
+    - pendingOf lists the customer's changes that still differ from the server's
+      data. It ignores any value the server now has, and any product the server
+      no longer has.
+    - hasPending says whether there is any change at all.
+    - totalAfter works out the per-order total for later orders. It reuses the
+      mock API's own total function, so the rounding is the same: Multivitamin
+      going from 2 to 1 gives 6367 cents (6366.5 rounded).
+    - startingAfter builds the "starting after your … order" text. It adds the
+      year when the order is next year, and says "next order" when there is no
+      date.
+  - plan.test.ts (src/part-a/plan.test.ts) has 21 unit tests covering the cases
+    the task lists. One of my own expected totals was miscalculated at first; I
+    fixed the test, not the code.
+  - T1 is ticked in task.md (SPECS/003-a-plan-changes/task.md), and there's a
+    new entry in CHANGELOG.md (SPECS/CHANGELOG.md).
+
+  Nothing is committed yet. The working tree also has your uncommitted 002
+  changes, so tell me whether to commit T1 on its own or together with those. T2
+  (the reducer changes) is next.
+
+❯ ok, commit all the working tree
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I committed everything on develop as 3f9081b ("002 T8–T11, 003 spec, plan and
+  T1: plan rules"), and the working tree is now clean. Nothing has been pushed.
+
+  The commit includes:
+  - 002 T8–T11: the skip button focus fix, the dialog on short screens, and the
+    two new e2e tests
+  - the 003 spec changes, plus its plan and tasks
+  - 003 T1 (plan.ts and its tests)
+  - the agent session transcripts docs/06, docs/07 and docs/08.
+    docs/08-Coding-agents.txt showed up after my last status check; I included
+    it because you asked for the whole working tree.
+
+  T2, the reducer changes, is next.

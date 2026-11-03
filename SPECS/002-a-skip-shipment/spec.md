@@ -93,7 +93,7 @@ rejects a skip with a 409, and the customer must always know what happened and w
 - [x] R9: Given the reload failed, when the dialog is closed and reopened, then it opens in the R9 state.
 - [x] R10: Given the dialog was closed during "Check again" with focus on the skip button, when the reload shows a
       paused subscription, then focus moves to the `h1`.
-- [ ] R11: Given a pending frequency change, when a 409 happens, then the change is still shown after the reload.
+- [x] R11: Given a pending frequency change, when a 409 happens, then the change is still shown after the reload.
 - [x] R12: Given a 640×320 viewport, when the dialog is open, then both buttons can be reached by Tab and are scrolled
       into view, the page behind doesn't scroll, and axe passes.
 
@@ -115,9 +115,9 @@ rejects a skip with a 409, and the customer must always know what happened and w
   component tests with a mocked API.
 - E2e can't count calls to the in-browser mock. "Only one request" (R5) is checked through what can be seen: one
   skip moves the date once. Exact call counts are checked in component tests.
-- The local cancel in R1 comes from 004, and the pending frequency in R3 and R11 comes from 003. Those features
-  come later. 002 builds the hooks and tests them with hand-built data, and the R1 local-cancel and R11 criteria are
-  ticked when 004 and 003 add those layers.
+- The local cancel in R1 comes from 004, and the pending frequency in R3 and R11 comes from 003. 002 built the
+  hooks and tested them with hand-built data. 003 T5 wired the real pending frequency and ticked R11 with component
+  tests through `SubscriptionCard`. The R1 local-cancel criterion is ticked when 004 adds that layer.
 
 ## Open questions
 

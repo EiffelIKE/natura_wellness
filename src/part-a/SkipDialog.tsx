@@ -11,7 +11,7 @@ interface SkipDialogProps {
   /** The subscription currently shown. The dates and the confirm label are always built from it (R4). */
   subscription: Subscription;
   skip: Skip;
-  /** R3: a local frequency change waiting to start. Null until 003. */
+  /** R3: a local frequency change waiting to start (003), or null. */
   pendingIntervalDays: number | null;
   dialogRef: Ref<HTMLDialogElement>;
   keepRef: Ref<HTMLButtonElement>;
