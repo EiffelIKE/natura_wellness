@@ -39,7 +39,7 @@ export function ChevronIcon() {
 export function MinusIcon() {
   return (
     <svg {...hidden} viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M3 8h10" strokeLinecap="round" />
+      <path d="M4 8h8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -47,7 +47,7 @@ export function MinusIcon() {
 export function PlusIcon() {
   return (
     <svg {...hidden} viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M3 8h10M8 3v10" strokeLinecap="round" />
+      <path d="M4 8h8M8 4v8" strokeLinecap="round" />
     </svg>
   );
 }

@@ -2,6 +2,57 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 005-b-buy-box / T6: responsive buy box and reflow coverage
+
+- **Changed:**
+  - `BuyBox.module.css`: below 480px, option headers use a grid to keep radios beside wrapping labels, badges below
+    labels and prices at the top-right. Below 1200px, the delivery row wraps and the cart button can grow beyond
+    its 56px minimum height when its text wraps.
+  - New `e2e/b-buy-box.spec.ts`: reflow at 1024, 768, 375 and 320px, plus 960 and 959px around the breakpoint, in
+    subscription and one-time states, before and after adding to cart. Checks page overflow, local clipping,
+    column geometry, square photo cards and price alignment. Quantity 10 at 320px covers $254.60 and $299.50, with
+    the cart button on its own full-width row.
+  - `plan.md`: responsive layout and coverage details updated before the CSS. `task.md`: T6 ticked.
+- **Decisions:** kept the existing two-column grid at 960px and wider, with the photo absorbing the shrink, and the
+  centred single column below it. Fixed-viewport tests run once in `mobile`; their `desktop` copies are skipped.
+- **Verified:**
+  - Before the CSS fix, the new tests caught prices falling below labels at 375 and 320px. All seven now pass.
+  - `npm run check`: green; 611 unit/component tests passed, 125 e2e tests passed and 21 viewport-specific copies
+    skipped. The protected baseline and 1200px geometry/pixel tests pass; the helper diff remains **0.775%**
+    (29,011 px), under the 1% tolerance.
+
+## 2026-11-03: 005-b-buy-box / T5: the design's CSS, geometry and pixel tests on
+
+- **Changed:**
+  - `BuyBox.module.css`: tokens, the grid, both cards, the radios, badge, select, perks, stepper, button, trust row and
+    fine print, to plan.md's measurements. Also the scoped body reset (`:global(body):has(.page)`, so Part A is
+    untouched) and the single-column rule below 960px (T6 tunes and tests the rest).
+  - `icons.tsx`: the minus and plus are 8px wide, as in the design (were 10).
+  - `playwright.config.ts`: the `visual` project launches Chromium with `--font-render-hinting=none
+--disable-lcd-text`, to match the macOS-rendered reference.
+  - `e2e/b-visual.spec.ts`: the geometry test (boxes within 1px, subtitle on two lines, zero-height status line) and the
+    pixel test are on. `TOLERANCE` is 0.01.
+  - `e2e/a11y.ts` and `e2e/smoke.spec.ts`: `expectAccessibleBuyBox` (R14's two axe runs) and the Part B smoke test
+    switched to it. This is T7's first item, done early: with the design's real colours, the old single axe run fails
+    on the four known contrast exceptions.
+  - `plan.md`: final type values, layout notes, the rendering flags. `task.md`: T5 ticked, T7 annotated.
+- **Decisions:**
+  - **Title weight is 500, not 600.** The plan's starting value was 600. The ink weight of the reference matches 500
+    (1556 vs 1555, against 1764 at 600), and the width needs −0.008em.
+  - **Inter sizes are about 6% below the starting values** (labels 16, delivered and perks 14, button 16, fine print 12).
+    The starting values came from cap heights. These match text widths to ±1.5px.
+  - **Rendering flags.** Without them the same CSS scores 1.7% (hinted glyphs, coloured fringes). With them 0.8%.
+  - **Half pixels.** The title's line height is 48px so the divider and cards land on x.5, like the reference.
+  - **Subtitle capped at 450px.** At 468 the word "day," misses the first line by about a pixel, which is too fragile
+    to leave to font metrics.
+  - Small optical lifts (−1px label, +0.5px price) are `translate`, so layout stays on the measured grid.
+- **Verified:**
+  - Geometry test: every box within 1px. The subtitle is on two lines.
+  - **Helper ratio: 0.775%** (29,011 of 3,744,000 px). **Playwright's own ratio at `maxDiffPixelRatio: 0`: 0.273%**
+    (10,211 px, one temporary run, removed). Both are under `TOLERANCE` (1%) and the 3% ceiling. What is left is text
+    anti-aliasing and small glyph shifts.
+  - `npm run check`: green.
+
 ## 2026-11-03: 005-b-buy-box / T4: visual project, protected baseline and diff helper
 
 - **Changed:**

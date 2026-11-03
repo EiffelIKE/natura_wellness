@@ -37,7 +37,14 @@ export default defineConfig<TestOptions>({
       name: "visual",
       testMatch: visualSpec,
       snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ext}",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1200, height: 780 }, deviceScaleFactor: 2 },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1200, height: 780 },
+        deviceScaleFactor: 2,
+        // The design was rendered on macOS: no font hinting and greyscale anti-aliasing. Without these two flags,
+        // Linux Chromium hints glyph shapes and draws coloured sub-pixel fringes, which the pixel diff counts.
+        launchOptions: { args: ["--font-render-hinting=none", "--disable-lcd-text"] },
+      },
     },
   ],
   webServer: {

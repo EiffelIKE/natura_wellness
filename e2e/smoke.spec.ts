@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { expectAccessibleBuyBox } from "./a11y";
 import { expect, test } from "./test";
 
 const pages = [
@@ -17,10 +18,15 @@ for (const { name, path } of pages) {
     await page.goto(path);
     await expect(page.locator("#root")).not.toBeEmpty();
 
-    const axe = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    expect(axe.violations).toEqual([]);
+    if (name === "Part B") {
+      // 005 R14: two axe runs, with the design's four known contrast failures excluded from the second.
+      await expectAccessibleBuyBox(page);
+    } else {
+      const axe = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+      expect(axe.violations).toEqual([]);
+    }
     expect(errors).toEqual([]);
   });
 }

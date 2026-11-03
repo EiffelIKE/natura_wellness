@@ -79,25 +79,44 @@ changes.
 
 "−" and "+" are both `#4a5550` in the reference, which confirms R8's rule: `aria-disabled` keeps the colour.
 
-### Type, as starting values
+### Type, final values (tuned in T5)
 
-These come from cap heights (Inter's cap height is 0.727 em). T5 tunes them against the diff, and the final values
-are recorded here.
+The starting values came from cap heights and were about 5–8% too large for Inter. T5 matched text widths and ink
+weight against the reference instead. All sizes are CSS px.
 
-| Text                    | Start                                                                  |
-| ----------------------- | ---------------------------------------------------------------------- |
-| Eyebrow                 | Inter 600, 12–13px, uppercase through CSS, letter-spacing ≈ 0.12em     |
-| "4.8" / reviews         | Inter 600 / 400, 14–15px                                               |
-| Title                   | Fraunces 600, ≈ 44px (cap 31), line-height 1.1, optical size automatic |
-| Subtitle                | Inter 400, 17px / 25.5px                                               |
-| Option labels           | Inter 600, 17px                                                        |
-| Option prices           | Inter 600–700, 18–19px                                                 |
-| Struck-through price    | Inter 400, 13px                                                        |
-| Badge                   | Inter 700, 11px, uppercase through CSS, letter-spacing ≈ 0.08em        |
-| Delivered every / perks | Inter 400, 14–15px, perk pitch 25                                      |
-| Quantity / button       | Inter 500 / 600, 16–17px                                               |
-| Trust                   | Inter 500, 13px                                                        |
-| Fine print              | Inter 400, 12–13px, line pitch ≈ 18.5                                  |
+| Text                    | Final                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| Eyebrow                 | Inter 600, 12px / 15px, uppercase through CSS, letter-spacing 0.135em                        |
+| "4.8" / reviews         | Inter 600 / 400, 14px / 22px. The link is underlined, offset 3px                             |
+| Title                   | Fraunces **500** (not 600: the ink weight matches 500), 44px / 48px, letter-spacing −0.008em |
+| Subtitle                | Inter 400, 16px / 25.5px, in a box capped at 450px so "day," can never fit the first line    |
+| Option labels           | Inter 600, 16px / 20px                                                                       |
+| Option prices           | Inter 600, 18px (22px lines in the subscription card)                                        |
+| Struck-through price    | Inter 400, 13px / 16px                                                                       |
+| Badge                   | Inter 700, 10px / 21px, uppercase through CSS, letter-spacing 0.14em, padding 0 11px         |
+| Delivered every / perks | Inter 400, 14px (perks 20px lines, 5px apart)                                                |
+| Select / quantity       | Inter 400, 15px / Inter 600, 16px                                                            |
+| Button                  | Inter 600, 16px. The "·" has 6px of margin each side and 60% opacity                         |
+| Trust                   | Inter 500, 13px / 20px, 25px between items, 7.5px between icon and text                      |
+| Fine print              | Inter 400, 12px / 18px                                                                       |
+
+Layout notes from the tuning:
+
+- **Everything sits on the half pixel.** The title's line height is 48px, not 1.1, so the divider and cards land on
+  y 251.5 / 276.5 / 348.5, as in the reference. A fraction of a pixel off turns every box edge into a blurred line in
+  the diff.
+- **Padding.** Both cards have 20px side padding and 19px top and bottom. The subscription card is 18px above and
+  16px below, because its header is 38px tall (two price lines).
+- **Optical lifts.** The design sets its option labels and "Delivered every" about 1px above the row's centre and its
+  prices 1px below. These are `translate` values of −1px, −0.5px and +0.5px, not layout changes.
+- **Radios.** 20px, 2px ring. Selected: a 2px brand ring, a 3px white gap and a 10px brand dot.
+- **Corners.** Cards 12px, select 8px, stepper and button 10px, badge a pill.
+
+### Rendering flags for the `visual` project
+
+The reference was rendered on macOS, with no font hinting and greyscale anti-aliasing. The `visual` project launches
+Chromium with `--font-render-hinting=none --disable-lcd-text`. Without them, Linux Chromium hints the glyphs and
+draws coloured fringes, and the same CSS scores 1.7% instead of 0.8%. The flags affect only that project.
 
 ## Files
 
@@ -254,13 +273,17 @@ main.page
   1024px the padding and gap are about 54.6 each, the box keeps 468 and the photo column is about 392. The photo
   scales inside its square card.
 - **Below 960px:** one column, `max-width: 560px`, centred, with a 16px side padding. The photo comes first.
-- **Option header:** a wrapping flex row. The badge drops to its own line when space runs out, and the price block
-  stays top-right.
+- **Option header:** a wrapping flex row, switching below 480px to a grid with columns for the radio, the wrapping
+  label and the price. The badge sits below the label, and the price block stays top-right.
+- **Frequency row:** wraps below 1200px, so the native select can move below its label instead of overflowing the
+  indented details at 320px.
 - **Quantity row:** wraps. The button is `flex: 1 1 180px`, so at 320px it goes under the stepper, full width. The
-  button's text can wrap as a last resort.
+  button's text can wrap as a last resort; below 1200px its height can grow from the design's 56px minimum.
 - **Trust row:** wraps, with a gap.
-- The e2e reflow check covers 1024, 768, 375 and 320, in the default and one-time states, plus a quantity of 10 at
-  320 (the longest total, $254.60).
+- The e2e reflow check covers 1024, 768, 375 and 320, plus both sides of the breakpoint (960 and 959), in the
+  default and one-time states, before and after adding to cart. It checks page overflow, local clipping, column
+  geometry and top-right prices. Quantity 10 at 320 covers both totals ($254.60 and $299.50) and the full-width
+  button below the stepper.
 
 ## Testing strategy
 
@@ -346,7 +369,7 @@ Settings: 1200×780, `deviceScaleFactor: 2`, `snapshotPathTemplate: "{testDir}/_
    - The gate is `expect(page).toHaveScreenshot("buy-box.png", { scale: "device", maxDiffPixelRatio: TOLERANCE })`
      against the committed copy, and the helper's ratio must also be within `TOLERANCE`.
 
-**Tolerance.** T5 sets it after tuning: the helper's measured ratio rounded up to the next 0.5%, with a ceiling of
+**Tolerance.** T5 set it after tuning (`TOLERANCE = 0.01`, from the helper's 0.77%): the helper's measured ratio rounded up to the next 0.5%, with a ceiling of
 3%. If the tuned layout is still above 3%, I stop and report to the human. I never raise the ceiling silently. The
 CHANGELOG records the helper's ratio and Playwright's own ratio, which comes from one run at `maxDiffPixelRatio: 0`.
 

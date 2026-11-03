@@ -8,10 +8,10 @@ const REFERENCE = new URL("../public/reference/buy-box.png", import.meta.url);
 const SIZE = { width: 2400, height: 1560 };
 
 /**
- * The largest diff ratio the gate accepts. T5 sets it after tuning: the helper's measured ratio rounded up to the next
- * 0.5%, with a ceiling of 3% (plan.md, Tolerance). Until then it is the ceiling, and the gate is `fixme`.
+ * The largest diff ratio the gate accepts: the helper's tuned ratio (0.77%) rounded up to the next 0.5%, under the
+ * 3% ceiling (plan.md, Tolerance). The rest is text anti-aliasing that differs between macOS and Linux.
  */
-const TOLERANCE = 0.03;
+const TOLERANCE = 0.01;
 
 /** Element boxes in CSS px, from plan.md's layout table. Each edge may be off by 1px. */
 const LAYOUT = {
@@ -84,7 +84,7 @@ test("captures the default state at 2400×1560 and attaches the diff and its rat
   expect(diff.totalPixels).toBe(SIZE.width * SIZE.height);
 });
 
-test.fixme("matches the reference's layout within 1px (T5)", async ({ page }) => {
+test("matches the reference's layout within 1px", async ({ page }) => {
   await openDefaultState(page);
   const photo = page.getByRole("img", { name: copy.photoAlt });
   const cardOf = (name: RegExp) => page.getByRole("radio", { name }).locator("xpath=../..");
@@ -125,7 +125,7 @@ test.fixme("matches the reference's layout within 1px (T5)", async ({ page }) =>
   expect((await page.getByRole("status").boundingBox())?.height).toBe(0);
 });
 
-test.fixme("matches the reference's pixels within the tolerance (T5)", async ({ page }) => {
+test("matches the reference's pixels within the tolerance", async ({ page }) => {
   await openDefaultState(page);
   const screenshot = await page.screenshot({ scale: "device", animations: "disabled", caret: "hide" });
   const diff = await diffImages(page, screenshot, readFileSync(REFERENCE));
