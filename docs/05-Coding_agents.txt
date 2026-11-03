@@ -1,0 +1,2107 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file /home/eiffelike/work/natura_wellnes
+  s/SPECS/001-a-subscription-overview/task.md in the IDE. This may or may not
+  be related to the current task.</ide_opened_file>
+
+❯ lets start with T3
+
+  Read 1 file, listed 1 directory, ran 3 shell commands (ctrl+o to expand)
+
+● I've spotted a flaw in the plan: having "Try again" restart loading would
+  unmount the error button, dropping focus to the body instead of keeping it in
+  place as intended. I'll need to address this before writing the code.
+
+● User answered Claude's questions:
+  ⎿  · When "Try again" is pressed, the error view (and its button) is replaced
+     by the skeleton, so focus can't stay on the button as plan.md says. Where
+     should focus go? → Move focus to the h1 (Recommended)
+
+● Going with focus to the h1. Spec-first: I'll update plan.md's UI decisions
+  before writing code. Checking tsconfig for CSS module types and the lib level
+  first.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Now the plan update (UI decisions and the files table):
+
+● Update(SPECS/001-a-subscription-overview/plan.md)
+  ⎿  Added 12 lines, removed 4 lines
+      64    amount, with the date as the largest text on the page, and an
+           `h2` "In your subscription" holds the products.
+      65  - **Status:** a text badge ("Active", "Paused", "Cancelled"). P
+          aused and cancelled cards use a muted surface and have
+      66    no "Next order" block, so the difference never relies on colo
+          r alone (R5, R6).
+      67 -- **Skeleton:** a `role="status"` wrapper with visually hidden 
+         -"Loading your subscription". The shapes are                    
+      68 -  `aria-hidden`, and the shimmer is off under `prefers-reduced-
+         -motion`.                                                       
+      69 -- **Load error:** a `role="alert"` message. "Try again" dispatc
+         -hes a new `load/started` and focus stays on the                
+      70 -  button.                                                      
+      67 +- **Landmark and heading:** the card is the page's `main`. The 
+         +`h1` stays mounted in every state, including loading           
+      68 +  and both errors, and has `tabIndex={-1}` so it can take focus
+         +.                                                              
+      69 +- **Skeleton:** a visually hidden `role="status"` region on the
+         + card root says "Loading your subscription" while              
+      70 +  loading and is empty otherwise. It stays mounted across state
+         +s, because a live region that mounts with its text             
+      71 +  already inside is not reliably announced, and a retry would o
+         +therwise be silent. The shapes are `aria-hidden`,              
+      72 +  and the shimmer is off under `prefers-reduced-motion`.       
+      73 +- **Load error:** a `role="alert"` message. "Try again" moves f
+         +ocus to the `h1` and dispatches a new                          
+      74 +  `load/started`. Focus can't stay on the button, because the s
+         +keleton replaces the error view and the button                 
+      75 +  unmounts. From the `h1`, the next Tab stop is "Try again" aga
+         +in if the retry fails (decided with the human in               
+      76 +  T3).                                                         
+      77 +- **Not found:** the 404 message is also `role="alert"`, so it 
+         +is announced when the load ends, followed by a                 
+      78 +  "Contact support" `mailto:` link (R11) and no retry.         
+      79  - **Units:** rem for spacing and type, and px for hairline bord
+          ers. CSS custom properties hold colors on the card
+      80    root. Thumbnails are 4rem, and the placeholder is a neutral r
+          ounded square with an `aria-hidden` icon (R8).
+      81  
+
+● Update(SPECS/001-a-subscription-overview/plan.md)
+  ⎿  Added 1 line, removed 1 line
+      49  | `src/part-a/format.ts`                   | `formatDate(iso, n
+          ow)`, `formatMoney(cents)`, `formatFrequency(days)` (R9) |
+      50  | `src/part-a/subscriptionReducer.ts`      | state, actions, re
+          ducer, `viewOf` selector                                 |
+      51  | `src/part-a/SubscriptionCard.tsx`        | container: reducer
+          , load effect, picks the view                            |
+      52 -| `src/part-a/views.tsx`                   | `LoadingCard`, `Lo
+         -adError`, `ActiveView`, `PausedView`, `CancelledView`    |     
+      52 +| `src/part-a/views.tsx`                   | `LoadingCard`, `Lo
+         +adError`, `NotFound`, `ActiveView`, `PausedView`, `CancelledVie
+         +w` |                                                           
+      53  | `src/part-a/ItemList.tsx`                | products with imag
+          e or placeholder, and quantity (R8)                      |
+      54  | `src/part-a/SubscriptionCard.module.css` | the block; `.eleme
+          nt` / `.element--modifier` inside (BEM-ish)              |
+      55  | `src/part-a/constants.ts`                | `SUPPORT_MAILTO` (
+          R11), locale and currency                                |
+
+● Now the code: the constant, views, CSS module and container.
+
+● Bash(cat >> src/part-a/constants.ts <<'EOF'…)
+  ⎿  Updated src/part-a/constants.ts (+3 -0)
+      1  // 001 R9: all formatting is en-US and USD.
+      2  export const LOCALE = "en-US";
+      3  export const CURRENCY = "USD";
+      4 +                                                                
+      5 +// 001 R11: the `.example` domain is reserved, so this can never
+        + reach anyone.                                                  
+      6 +export const SUPPORT_MAILTO = "mailto:support@naturawellness.exa
+        +mple";                                                          
+
+● Write(src/part-a/views.tsx)
+  ⎿  Wrote 60 lines to src/part-a/views.tsx
+       1 // Presentational views, one per state of the card. Subscription
+         Card picks which one renders (plan.md).
+       2 import { SUPPORT_MAILTO } from "./constants";
+       3 import styles from "./SubscriptionCard.module.css";
+       4
+       5 const bar = (modifier: string) => `${styles.skeleton} ${styles[`
+         skeleton--${modifier}`]}`;
+       6
+       7 /**
+       8  * R1: the shape of the active card, hidden from assistive tech.
+     … +52 lines (ctrl+o to expand)
+
+● Write(src/part-a/SubscriptionCard.module.css)
+  ⎿  Wrote 186 lines to src/part-a/SubscriptionCard.module.css
+       1 /*
+       2  * Part A card, mobile-first (R10): designed at 375px, widened w
+         ith min-width queries only.
+       3  * Everything is scoped to the card root. There is no global res
+         et, so nothing leaks into Part B.
+       4  */
+       5
+       6 .card {
+       7   --color-text: #1f2a24;
+       8   --color-muted: #56615b;
+     … +178 lines (ctrl+o to expand)
+
+● Write(src/part-a/SubscriptionCard.tsx)
+  ⎿  Added 43 lines, removed 4 lines
+       1 -// Part A: build the "Manage my subscription" page here.       
+       2 -// Data comes from getSubscription() and skipNextShipment() in 
+         -../api/mockApi.                                                
+       3 -// Anything beyond skipping can live in local state; other prod
+         -ucts are in `catalog` in ../api/fixtures.                      
+       1 +// Part A: "Manage my subscription" (001). This container owns 
+         +the state and the API calls; views.tsx renders it.             
+       2 +import { useCallback, useEffect, useReducer, useRef } from "rea
+         +ct";                                                           
+       3 +import { getSubscription } from "../api/mockApi";              
+       4 +import styles from "./SubscriptionCard.module.css";            
+       5 +import { initialState, subscriptionReducer } from "./subscripti
+         +onReducer";                                                    
+       6 +import { LoadError, LoadingCard, NotFound } from "./views";    
+       7  
+       8  export function SubscriptionCard() {
+       6 -  return <p>Start here.</p>;                                   
+       9 +  const [state, dispatch] = useReducer(subscriptionReducer, ini
+         +tialState);                                                    
+      10 +  const lastRequestId = useRef(0);                             
+      11 +  const headingRef = useRef<HTMLHeadingElement>(null);         
+      12 +                                                               
+      13 +  // R1, R2: every load gets a fresh id, and the reducer drops 
+         +any response that isn't the latest one. That covers            
+      14 +  // the StrictMode double effect, where the mock's random late
+         +ncy can resolve request 2 before request 1.                    
+      15 +  const load = useCallback(() => {                             
+      16 +    const requestId = ++lastRequestId.current;                 
+      17 +    dispatch({ type: "load/started", requestId });             
+      18 +    getSubscription().then(                                    
+      19 +      (subscription) => dispatch({ type: "load/succeeded", requ
+         +estId, subscription }),                                        
+      20 +      (error: unknown) => dispatch({ type: "load/failed", reque
+         +stId, error }),                                                
+      21 +    );                                                         
+      22 +  }, []);                                                      
+      23 +                                                               
+      24 +  useEffect(load, [load]);                                     
+      25 +                                                               
+      26 +  // The skeleton replaces the error view, so the button unmoun
+         +ts. Focus moves to the h1 rather than to <body>.               
+      27 +  const retry = () => {                                        
+      28 +    headingRef.current?.focus();                               
+      29 +    load();                                                    
+      30 +  };                                                           
+      31 +                                                               
+      32 +  return (                                                     
+      33 +    <main className={styles.card}>                             
+      34 +      <h1 ref={headingRef} tabIndex={-1} className={styles.titl
+         +e}>                                                            
+      35 +        Manage my subscription                                 
+      36 +      </h1>                                                    
+      37 +      <p role="status" className={styles["visually-hidden"]}>  
+      38 +        {state.load.kind === "loading" ? "Loading your subscrip
+         +tion" : ""}                                                    
+      39 +      </p>                                                     
+      40 +      {state.load.kind === "loading" && <LoadingCard />}       
+      41 +      {state.load.kind === "failed" && <LoadError onRetry={retr
+         +y} />}                                                         
+      42 +      {state.load.kind === "not-found" && <NotFound />}        
+      43 +      {/* state.load.kind === "ready": the active, paused and c
+         +ancelled views come in T4 and T5. */}                          
+      44 +    </main>                                                    
+      45 +  );                                                           
+      46  }
+
+● Now the component tests.
+
+● Write(src/part-a/SubscriptionCard.test.tsx)
+  ⎿  Wrote 135 lines to src/part-a/SubscriptionCard.test.tsx
+       1 import { act, render, screen } from "@testing-library/react";
+       2 import userEvent from "@testing-library/user-event";
+       3 import { StrictMode } from "react";
+       4 import { beforeEach, describe, expect, it, vi } from "vitest";
+       5 import { getSubscription } from "../api/mockApi";
+       6 import { fixtures } from "../api/fixtures";
+       7 import { ApiError, type Subscription } from "../api/types";
+       8 import { SubscriptionCard } from "./SubscriptionCard";
+       9
+      10 vi.mock("../api/mockApi", () => ({ getSubscription: vi.fn(), ski
+     … +126 lines (~5 KB) (ctrl+o to expand)
+
+● Bash(npx prettier --write src/part-a SPECS >/dev/null && npm run typecheck
+      2>&1 | tail -20 && npm run lint 2>&1 | tail -30 && npx vitest run
+      src/part-a/SubscriptionC…)
+  ⎿  Updated SPECS/001-a-subscription-overview/plan.md (+8 -8)
+      44  
+      45  ## Files
+      46  
+      47 -| File                                     | What              
+         -                                                         |     
+      48 -| ---------------------------------------- | ------------------
+         --------------------------------------------------------- |     
+      49 -| `src/part-a/format.ts`                   | `formatDate(iso, n
+         -ow)`, `formatMoney(cents)`, `formatFrequency(days)` (R9) |     
+      50 -| `src/part-a/subscriptionReducer.ts`      | state, actions, re
+         -ducer, `viewOf` selector                                 |     
+      51 -| `src/part-a/SubscriptionCard.tsx`        | container: reducer
+         -, load effect, picks the view                            |     
+      47 +| File                                     | What              
+         +                                                               
+         +   |                                                           
+      48 +| ---------------------------------------- | ------------------
+         +---------------------------------------------------------------
+         +-- |                                                           
+      49 +| `src/part-a/format.ts`                   | `formatDate(iso, n
+         +ow)`, `formatMoney(cents)`, `formatFrequency(days)` (R9)       
+         +   |                                                           
+      50 +| `src/part-a/subscriptionReducer.ts`      | state, actions, re
+         +ducer, `viewOf` selector                                       
+         +   |                                                           
+      51 +| `src/part-a/SubscriptionCard.tsx`        | container: reducer
+         +, load effect, picks the view                                  
+         +   |                                                           
+      52  | `src/part-a/views.tsx`                   | `LoadingCard`, `Lo
+          adError`, `NotFound`, `ActiveView`, `PausedView`, `CancelledVie
+          w` |
+      53 -| `src/part-a/ItemList.tsx`                | products with imag
+         -e or placeholder, and quantity (R8)                      |     
+      54 -| `src/part-a/SubscriptionCard.module.css` | the block; `.eleme
+         -nt` / `.element--modifier` inside (BEM-ish)              |     
+      55 -| `src/part-a/constants.ts`                | `SUPPORT_MAILTO` (
+         -R11), locale and currency                                |     
+      53 +| `src/part-a/ItemList.tsx`                | products with imag
+         +e or placeholder, and quantity (R8)                            
+         +   |                                                           
+      54 +| `src/part-a/SubscriptionCard.module.css` | the block; `.eleme
+         +nt` / `.element--modifier` inside (BEM-ish)                    
+         +   |                                                           
+      55 +| `src/part-a/constants.ts`                | `SUPPORT_MAILTO` (
+         +R11), locale and currency                                      
+         +   |                                                           
+      56  
+      57  `App.tsx`, `main.tsx` and `index.html` are not touched, because
+           Part B shares them. There is no global reset. The
+      58  card sets `box-sizing` and its own font and colors for its subt
+          ree only, so nothing leaks into the Part B
+
+● Tests pass on the first run. Lint flags async act callbacks that have no
+  await, so I'll add a small settle helper:
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/SubscriptionCard.test.tsx'…)
+  ⎿  Updated src/part-a/SubscriptionCard.test.tsx (+10 -3)
+      21    return { promise, resolve, reject };
+      22  }
+      23  
+      24 +/** Settles a deferred inside act and lets the component's .the
+         +n handlers dispatch before asserting. */                       
+      25 +const settle = (fn: () => void) =>                             
+      26 +  act(async () => {                                            
+      27 +    fn();                                                      
+      28 +    await Promise.resolve();                                   
+      29 +  });                                                          
+      30 +                                                               
+      31  const serverError = () => new ApiError(500, "Internal server er
+          ror");
+      32  const notFound = () => new ApiError(404, "Subscription not foun
+          d");
+      33  const loadingStatus = () => screen.getByRole("status");
+     ...
+      87      expect(loadingStatus()).toHaveTextContent("Loading your sub
+          scription");
+      88      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+          ;
+      89  
+      83 -    await act(async () => retry.resolve(fixtures.active()));   
+      90 +    await settle(() => retry.resolve(fixtures.active()));      
+      91      expect(loadingStatus()).toBeEmptyDOMElement();
+      92      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+          ;
+      93    });
+     ...
+      133      );
+      134      expect(api).toHaveBeenCalledTimes(2);
+      135  
+      129 -    await act(async () => second.resolve(fixtures.active())); 
+      130 -    await act(async () => first.reject(serverError()));       
+      136 +    await settle(() => second.resolve(fixtures.active()));    
+      137 +    await settle(() => first.reject(serverError()));          
+      138  
+      139      expect(loadingStatus()).toBeEmptyDOMElement();
+      140      expect(screen.queryByRole("alert")).not.toBeInTheDocument(
+           );
+
+● Green. Next I'll check that the tests can actually fail by planting two bugs,
+  one at a time: (1) "Try again" without moving focus, (2) every load reusing
+  the same request id.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Each planted bug fails exactly the test meant to catch it, and the file is
+  restored. Now the full npm run check:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Smoke test passes, but it only covers the active fixture—error and 404 views
+  haven't been checked in-browser yet, and that's T6's job for permanent specs.
+  I'll run a quick throwaway Playwright spec now to verify axe compliance, real
+  focus behavior after "Try again," no horizontal scroll, and capture 375px
+  screenshots for review.
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+● All three states render cleanly at both breakpoints, axe shows no issues, and
+  focus/tab order work correctly in a real browser. I've removed the throwaway
+  spec and will now mark T3 complete and add the log entry.
+
+● Bash(sed -i 's/^- \[ \] T3 (R1, R2, R11)/- [x] T3 (R1, R2, R11)/'
+      SPECS/001-a-subscription-overview/task.md && python3 - <<'EOF'
+      p='SPECS/CHANGELOG.md'…)
+  ⎿  Updated SPECS/001-a-subscription-overview/task.md (+1 -1)
+      3  - [x] T1 (R4, R9): `format.ts` with `formatDate`, `formatMoney`,
+          `formatFrequency`, plus unit tests
+      4  - [x] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load li
+         fecycle, `requestId`, error mapping and `viewOf`,
+      5        plus unit tests
+      6 -- [ ] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleton
+        -, load error with "Try again", and the 404 view                 
+      6 +- [x] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleton
+        +, load error with "Try again", and the 404 view                 
+      7        with the contact link, plus component tests
+      8  - [ ] T4 (R3, R4, R8, R10): active view, `ItemList` and the CSS 
+         module (mobile-first), plus component tests
+      9  - [ ] T5 (R5, R6, R11): paused and cancelled views, plus compone
+         nt tests
+  ⎿  Updated SPECS/CHANGELOG.md (+33 -0)
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001-a-subscription-overview / T3: load effect, s
+         +keleton and load errors                                        
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-a/SubscriptionCard.tsx` is now the container. It 
+         +holds the reducer, runs the load effect with a fresh           
+       9 +    `requestId` per load, and renders the `main`, the `h1`, a s
+         +tatus region and the view for the current state. The           
+      10 +    `ready` state renders nothing yet, because T4 and T5 add th
+         +ose views.                                                     
+      11 +  - New `src/part-a/views.tsx` with `LoadingCard`, `LoadError` 
+         +and `NotFound`.                                                
+      12 +  - New `src/part-a/SubscriptionCard.module.css` (mobile-first)
+         +, covering the card root, the panel, the button, the           
+      13 +    link, the skeleton and `visually-hidden`. T4 adds the activ
+         +e view's styles to it.                                         
+      14 +  - `constants.ts` gains `SUPPORT_MAILTO` (R11).               
+      15 +  - New `src/part-a/SubscriptionCard.test.tsx` with 8 component
+         + tests.                                                        
+      16 +  - `plan.md`: UI decisions (landmark and heading, skeleton, lo
+         +ad error, not found) and the files table                       
+      17 +    (`NotFound`) now match the code.                           
+      18 +- **Decisions:**                                               
+      19 +  - **Retry focus (asked the human):** the plan said focus stay
+         +s on "Try again", but the skeleton replaces the error          
+      20 +    view, so the button unmounts and focus would fall to `<body
+         +>`. "Try again" now moves focus to the `h1`                    
+      21 +    (`tabIndex={-1}`). The human chose this over keeping the er
+         +ror on screen with a "retrying" state, which would             
+      22 +    have reshaped the T2 reducer.                              
+      23 +  - The `role="status"` region lives on the card root and stays
+         + mounted, with its text switched between "Loading              
+      24 +    your subscription" and empty. The plan's version, a status 
+         +wrapper inside the skeleton, would mount with its              
+      25 +    text already inside, which screen readers don't reliably an
+         +nounce, so a retry would be silent.                            
+      26 +  - The 404 message is `role="alert"`, like the 500, so the end
+         + of a load is announced either way.                            
+      27 +  - The request id comes from a ref and not from `state.request
+         +Id + 1`. Under StrictMode, both effect runs see the            
+      28 +    same state, so both would send id 1 and the stale check wou
+         +ld never fire.                                                 
+      29 +- **Verified:**                                                
+      30 +  - Planted bugs, each one reverted: dropping the focus move fa
+         +iled the retry test, and a constant request id failed          
+      31 +    the StrictMode stale-response test.                        
+      32 +  - A throwaway Playwright spec (deleted afterwards), run on mo
+         +bile and desktop against `fixture=error` and an                
+      33 +    unknown fixture, checked the loading, error and 404 states.
+         + axe found no violations, there was no horizontal              
+      34 +    scroll, focus landed on the `h1` after "Try again" in a rea
+         +l browser, and Tab went back to the button.                    
+      35 +    Screenshots were reviewed at both widths.                  
+      36 +  - `npm run check` is green.                                  
+      37 +                                                               
+      38  ## 2026-11-03: 001-a-subscription-overview / T2: subscription r
+          educer
+      39  
+      40  - **Changed:**
+  ⎿  (timeout 5m)
+
+● T3 is finished and npm run check passes: typecheck, lint, format, 37
+  unit/component tests and the e2e suite. I haven't committed yet.
+
+  What changed
+  - SubscriptionCard.tsx (src/part-a/SubscriptionCard.tsx) now loads the
+    subscription when the page opens. Each load gets a new request number, and
+    only the latest response is used.
+  - views.tsx (src/part-a/views.tsx) has three views:
+    - Loading: a skeleton in the shape of the card.
+    - 500: "We couldn't load your subscription" with "Try again".
+    - 404: "We couldn't find a subscription on your account" with a "Contact
+      support" email link and no retry.
+  - SubscriptionCard.module.css (src/part-a/SubscriptionCard.module.css) is
+    mobile-first, and the shimmer turns off for users who prefer reduced motion.
+    T4 adds the active view's styles to the same file.
+  - I added 8 component tests in SubscriptionCard.test.tsx
+    (src/part-a/SubscriptionCard.test.tsx).
+  - I updated plan.md (SPECS/001-a-subscription-overview/plan.md) before writing
+    the code, ticked T3 and added a CHANGELOG entry.
+
+  Decisions
+  - Focus after "Try again": as you chose, focus moves to the h1. The plan's
+    "focus stays on the button" couldn't work, because the skeleton replaces the
+    error view and the button disappears with it.
+  - Loading announcement: "Loading your subscription" comes from a status region
+    on the card that stays on the page in every state. The plan put it inside
+    the skeleton, but screen readers don't reliably announce a region that
+    appears with its text already in it, so a retry would have been silent.
+  - 404 announcement: the 404 message is announced like the 500 one, so the end
+    of a load is always announced.
+  - Request numbers: they come from a counter that lives outside the state.
+    React's development mode runs the load effect twice, and if both runs
+    counted from the state they would send the same number, so a late response
+    could no longer be ignored.
+
+  How I checked it
+  - Planted bugs: I broke the code twice, one change at a time: once by dropping
+    the focus move, once by giving every load the same request number. Each
+    broke exactly the test meant to catch it, and I reverted both.
+  - Real browser: a throwaway Playwright spec (deleted afterwards) ran the error
+    and 404 cases on mobile and desktop:
+    - axe found no violations.
+    - Nothing scrolls sideways.
+    - After "Try again", focus is on the h1 and Tab goes back to the button.
+    - I looked at screenshots of the skeleton, error and 404 at 375px and
+      1200px.
+
+  Not done yet: a loaded subscription shows nothing below the heading for now,
+  because the active, paused and cancelled views are T4 and T5. The permanent
+  e2e tests are T6.
+
+  Should I commit T3 to develop, or go straight on to T4?
+
+● T3 is finished and npm run check passes: typecheck, lint, format, 37
+  unit/component tests and the e2e suite. I haven't committed yet.
+
+  What changed
+  - SubscriptionCard.tsx (src/part-a/SubscriptionCard.tsx) now loads the
+    subscription when the page opens. Each load gets a new request number, and
+    only the latest response is used.
+  - views.tsx (src/part-a/views.tsx) has three views:
+    - Loading: a skeleton in the shape of the card.
+    - 500: "We couldn't load your subscription" with "Try again".
+    - 404: "We couldn't find a subscription on your account" with a "Contact
+      support" email link and no retry.
+  - SubscriptionCard.module.css (src/part-a/SubscriptionCard.module.css) is
+    mobile-first, and the shimmer turns off for users who prefer reduced motion.
+    T4 adds the active view's styles to the same file.
+  - I added 8 component tests in SubscriptionCard.test.tsx
+    (src/part-a/SubscriptionCard.test.tsx).
+  - I updated plan.md (SPECS/001-a-subscription-overview/plan.md) before writing
+    the code, ticked T3 and added a CHANGELOG entry.
+
+  Decisions
+  - Focus after "Try again": as you chose, focus moves to the h1. The plan's
+    "focus stays on the button" couldn't work, because the skeleton replaces the
+    error view and the button disappears with it.
+  - Loading announcement: "Loading your subscription" comes from a status region
+    on the card that stays on the page in every state. The plan put it inside
+    the skeleton, but screen readers don't reliably announce a region that
+    appears with its text already in it, so a retry would have been silent.
+  - 404 announcement: the 404 message is announced like the 500 one, so the end
+    of a load is always announced.
+  - Request numbers: they come from a counter that lives outside the state.
+    React's development mode runs the load effect twice, and if both runs
+    counted from the state they would send the same number, so a late response
+    could no longer be ignored.
+
+  How I checked it
+  - Planted bugs: I broke the code twice, one change at a time: once by dropping
+    the focus move, once by giving every load the same request number. Each
+    broke exactly the test meant to catch it, and I reverted both.
+  - Real browser: a throwaway Playwright spec (deleted afterwards) ran the error
+    and 404 cases on mobile and desktop:
+    - axe found no violations.
+    - Nothing scrolls sideways.
+    - After "Try again", focus is on the h1 and Tab goes back to the button.
+    - I looked at screenshots of the skeleton, error and 404 at 375px and
+      1200px.
+
+  Not done yet: a loaded subscription shows nothing below the heading for now,
+  because the active, paused and cancelled views are T4 and T5. The permanent
+  e2e tests are T6.
+
+  Should I commit T3 to develop, or go straight on to T4?
+
+❯ /compact
+  ⎿  Compacted
+  ⎿  Read src/part-a/SubscriptionCard.tsx (47 lines)
+  ⎿  Read src/part-a/SubscriptionCard.test.tsx (143 lines)
+  ⎿  Read SPECS/001-a-subscription-overview/plan.md (105 lines)
+  ⎿  Read src/part-a/SubscriptionCard.module.css (187 lines)
+  ⎿  Read src/part-a/views.tsx (61 lines)
+
+❯ since this T's are dependants, lets work on all of them
+
+● I'll start by reading the remaining tasks and the spec, so T4 through T7 come
+  from the spec and not from memory.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Next I'll look at the data the views render: the types, the fixtures and what
+  the API calls do, plus the formatters and selector from T1 and T2.
+
+  Read 1 file (ctrl+o to expand)
+
+● Now the e2e setup, the README's notes on e2e dates, and the later specs, so
+  the views leave room for the skip button and the plan changes.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● I'll check whether there's a reference design for Part A and what the brief
+  says about the views.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Spec 003 and 004 later add controls to the active view. I'll skim their
+  requirements so the T4 structure has a place for them.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I have the full requirements. Before designing I'll check two things: the
+  memory note on committing, and whether Vitest pins a time zone, since T4's
+  date tests depend on it.
+
+  Read 1 file (ctrl+o to expand)
+
+● The views need dates, so I'll check how the T1 tests kept dates stable across
+  time zones and reuse that approach.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'll reuse T1's date-construction approach with vi.useFakeTimers({ toFake:
+  ["Date"] }) for the component tests. Before coding, I'll pin down the
+  unresolved T4/T5 details in the plan: badge text with a hidden "Status:"
+  prefix, <time> elements for dates, conditional discount display, paused-view
+  contact copy, and the ItemList markup.
+
+● Update(SPECS/001-a-subscription-overview/plan.md)
+  ⎿  Added 13 lines, removed 2 lines
+      62  
+      63  - **Headings:** an `h1` "Manage my subscription". In the active
+           view, an `h2` "Next order" holds the date and
+      64    amount, with the date as the largest text on the page, and an
+           `h2` "In your subscription" holds the products.
+      65 -- **Status:** a text badge ("Active", "Paused", "Cancelled"). P
+         -aused and cancelled cards use a muted surface and have         
+      66 -  no "Next order" block, so the difference never relies on colo
+         -r alone (R5, R6).                                              
+      65 +- **Status:** a text badge ("Active", "Paused", "Cancelled"), w
+         +ith a visually hidden "Status: " prefix so a screen            
+      66 +  reader hears what the word means. Paused and cancelled cards 
+         +use a muted surface and have no "Next order" block,            
+      67 +  so the difference never relies on color alone (R5, R6).      
+      68 +- **Active view (R3):** badge, then the "Next order" section: t
+         +he date in a `<time>`, the amount, "Includes your              
+      69 +  {n}% subscription discount" (only when `discountPercent > 0`,
+         + because "your 0% discount" says nothing), and the             
+      70 +  frequency. Then "In your subscription". Each of these lines r
+         +enders only when its server field is non-null.                 
+      71 +- **Paused view (R5):** badge, "Paused until {date}", then "Wan
+         +t to resume sooner? Contact support" (R11), because            
+      72 +  resuming is out of scope and support is the way to do it. The
+         +n "In your subscription".                                      
+      73 +- **Cancelled view (R6):** badge, "Cancelled on {date}", then "
+         +In your subscription". No contact line, because R11            
+      74 +  doesn't list R6.                                             
+      75 +- **Products (R8):** a `ul`. Each `li` has a 4rem thumbnail (an
+         + `img` with `alt=""` and `width`/`height` set, so              
+      76 +  there is no layout shift, or the placeholder), the name, and 
+         +"Quantity: {n}". Long names wrap rather than                   
+      77 +  overflow.                                                    
+      78  - **Landmark and heading:** the card is the page's `main`. The 
+          `h1` stays mounted in every state, including loading
+      79    and both errors, and has `tabIndex={-1}` so it can take focus
+          .
+      80  - **Skeleton:** a visually hidden `role="status"` region on the
+           card root says "Loading your subscription" while
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● The plan's files table already matches. Next is ItemList (R8).
+
+● Write(src/part-a/ItemList.tsx)
+  ⎿  Wrote 37 lines to src/part-a/ItemList.tsx
+       1 // R8: the products in a subscription. Images are decorative (al
+         t=""), because the name is right next to them.
+       2 import type { SubscriptionItem } from "../api/types";
+       3 import styles from "./SubscriptionCard.module.css";
+       4
+       5 /** A capsule, for products without an image. Same box as a real
+          thumbnail, so the rows line up. */
+       6 function Placeholder() {
+       7   return (
+       8     <span className={`${styles.thumb} ${styles["thumb--placehold
+     … +30 lines (ctrl+o to expand)
+
+● Now the three status views in views.tsx (src/part-a/views.tsx):
+
+● Bash(python3 - <<'EOF'
+      p = "src/part-a/views.tsx"…)
+  ⎿  Updated src/part-a/views.tsx (+91 -0)
+      1  // Presentational views, one per state of the card. Subscription
+         Card picks which one renders (plan.md).
+      2 +import type { Subscription, SubscriptionItem, SubscriptionStatus
+        + } from "../api/types";                                         
+      3  import { SUPPORT_MAILTO } from "./constants";
+      4 +import { formatDate, formatFrequency, formatMoney } from "./form
+        +at";                                                            
+      5 +import { ItemList } from "./ItemList";                          
+      6  import styles from "./SubscriptionCard.module.css";
+      7  
+      8  const bar = (modifier: string) => `${styles.skeleton} ${styles[`
+         skeleton--${modifier}`]}`;
+     ...
+       61      </div>
+       62    );
+       63  }
+       64 +                                                              
+       65 +const statusLabel: Record<SubscriptionStatus, string> = { acti
+          +ve: "Active", paused: "Paused", cancelled: "Cancelled" };     
+       66 +                                                              
+       67 +/** R5, R6: the status is always spelled out, so paused and ca
+          +ncelled never rely on color alone. */                         
+       68 +function StatusBadge({ status }: { status: SubscriptionStatus 
+          +}) {                                                          
+       69 +  return (                                                    
+       70 +    <p className={`${styles.badge} ${styles[`badge--${status}`
+          +]}`}>                                                         
+       71 +      <span className={styles["visually-hidden"]}>Status: </sp
+          +an>                                                           
+       72 +      {statusLabel[status]}                                   
+       73 +    </p>                                                      
+       74 +  );                                                          
+       75 +}                                                             
+       76 +                                                              
+       77 +/** R4, R9: a server date, formatted for display only. */     
+       78 +function ServerDate({ iso }: { iso: string }) {               
+       79 +  return <time dateTime={iso}>{formatDate(iso)}</time>;       
+       80 +}                                                             
+       81 +                                                              
+       82 +function Products({ items }: { items: SubscriptionItem[] }) { 
+       83 +  return (                                                    
+       84 +    <section className={styles.section}>                      
+       85 +      <h2 className={styles.heading}>In your subscription</h2>
+       86 +      <ItemList items={items} />                              
+       87 +    </section>                                                
+       88 +  );                                                          
+       89 +}                                                             
+       90 +                                                              
+       91 +/** R3, R4: in the order the spec lists, and every date and am
+          +ount is the server's. */                                      
+       92 +export function ActiveView({ subscription }: { subscription: S
+          +ubscription }) {                                              
+     … 59 more lines (ctrl+o to expand)
+● Now the container picks a view by viewOf:
+
+● Bash(python3 - <<'EOF'
+      p = "src/part-a/SubscriptionCard.tsx"…)
+  ⎿  Updated src/part-a/SubscriptionCard.tsx (+16 -3)
+       1  // Part A: "Manage my subscription" (001). This container owns 
+          the state and the API calls; views.tsx renders it.
+       2  import { useCallback, useEffect, useReducer, useRef } from "rea
+          ct";
+       3  import { getSubscription } from "../api/mockApi";
+       4 +import type { Subscription } from "../api/types";              
+       5  import styles from "./SubscriptionCard.module.css";
+       5 -import { initialState, subscriptionReducer } from "./subscripti
+         -onReducer";                                                    
+       6 -import { LoadError, LoadingCard, NotFound } from "./views";    
+       6 +import { initialState, subscriptionReducer, viewOf } from "./su
+         +bscriptionReducer";                                            
+       7 +import { ActiveView, CancelledView, LoadError, LoadingCard, Not
+         +Found, PausedView } from "./views";                            
+       8  
+       9 +/** R7: the view follows the server's status, through `viewOf`.
+         + */                                                            
+      10 +function StatusView({ subscription }: { subscription: Subscript
+         +ion }) {                                                       
+      11 +  switch (viewOf(subscription)) {                              
+      12 +    case "active":                                             
+      13 +      return <ActiveView subscription={subscription} />;       
+      14 +    case "paused":                                             
+      15 +      return <PausedView subscription={subscription} />;       
+      16 +    case "cancelled":                                          
+      17 +      return <CancelledView subscription={subscription} />;    
+      18 +  }                                                            
+      19 +}                                                              
+      20 +                                                               
+      21  export function SubscriptionCard() {
+      22    const [state, dispatch] = useReducer(subscriptionReducer, ini
+          tialState);
+      23    const lastRequestId = useRef(0);
+     ...
+      53        {state.load.kind === "loading" && <LoadingCard />}
+      54        {state.load.kind === "failed" && <LoadError onRetry={retr
+          y} />}
+      55        {state.load.kind === "not-found" && <NotFound />}
+      43 -      {/* state.load.kind === "ready": the active, paused and c
+         -ancelled views come in T4 and T5. */}                          
+      56 +      {state.load.kind === "ready" && <StatusView subscription=
+         +{state.load.server} />}                                        
+      57      </main>
+      58    );
+      59  }
+
+● Then the CSS. The new colors go on the card root as tokens, and every text and
+  background pair has to pass AA. I'll compute the contrast ratios first
+  instead of guessing:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All pairs are above 4.5:1. Now the styles:
+
+● Bash(python3 - <<'EOF'
+      p = "src/part-a/SubscriptionCard.module.css"…)
+  ⎿  Updated src/part-a/SubscriptionCard.module.css (+119 -0)
+       7    --color-text: #1f2a24;
+       8    --color-muted: #56615b;
+       9    --color-surface: #ffffff;
+      10 +  --color-surface-muted: #f3f5f4;                              
+      11    --color-border: #dce2de;
+      12    --color-accent: #2f6b4f;
+      13    --color-accent-hover: #24543e;
+      14    --color-focus: #1d4ed8;
+      15    --color-skeleton: #e6ebe8;
+      16    --color-skeleton-shine: #f3f5f4;
+      17 +  --color-badge-active-bg: #e1f0e7;                            
+      18 +  --color-badge-active-text: #1e5a3d;                          
+      19 +  --color-badge-paused-bg: #fbefd2;                            
+      20 +  --color-badge-paused-text: #6a4b00;                          
+      21 +  --color-badge-cancelled-bg: #e3e8e5;                         
+      22 +  --color-badge-cancelled-text: #46504b;                       
+      23  
+      24    box-sizing: border-box;
+      25    max-width: 40rem;
+     ...
+       57    background: var(--color-surface);
+       58  }
+       59  
+       60 +/* R5, R6: paused and cancelled sit on a muted surface. The ba
+          +dge text carries the difference too. */                       
+       61 +.panel--muted {                                               
+       62 +  background: var(--color-surface-muted);                     
+       63 +}                                                             
+       64 +                                                              
+       65  .message {
+       66    font-weight: 600;
+       67  }
+       68  
+       69 +.lead {                                                       
+       70 +  font-size: 1.25rem;                                         
+       71 +  font-weight: 600;                                           
+       72 +  line-height: 1.3;                                           
+       73 +}                                                             
+       74 +                                                              
+       75 +.muted {                                                      
+       76 +  color: var(--color-muted);                                  
+       77 +  font-size: 0.875rem;                                        
+     … 105 more lines (ctrl+o to expand)
+
+● I'll locate the elements by their visible text and verify the full content
+  with toHaveTextContent, since getByText only matches an element's own text
+  nodes and the status/date text lives in nested spans.
+
+● Bash(grep -n "noUnchecked\|strict" tsconfig*.json; python3 - <<'EOF'
+      p = "src/part-a/SubscriptionCard.test.tsx"…)
+  ⎿  Updated src/part-a/SubscriptionCard.test.tsx (+155 -2)
+      1 -import { act, render, screen } from "@testing-library/react";   
+      1 +import { act, render, screen, within } from "@testing-library/re
+        +act";                                                           
+      2  import userEvent from "@testing-library/user-event";
+      3  import { StrictMode } from "react";
+      4 -import { beforeEach, describe, expect, it, vi } from "vitest";  
+      4 +import { afterEach, beforeEach, describe, expect, it, vi } from 
+        +"vitest";                                                       
+      5  import { getSubscription } from "../api/mockApi";
+      6  import { fixtures } from "../api/fixtures";
+      7  import { ApiError, type Subscription } from "../api/types";
+     ...
+      140      expect(screen.queryByRole("alert")).not.toBeInTheDocument(
+           );
+      141    });
+      142  });
+      143 +                                                              
+      144 +// Local-time constructors keep the dates independent of the m
+          +achine's time zone (as in format.test.ts).                    
+      145 +const local = (year: number, monthIndex: number, day: number) 
+          +=> new Date(year, monthIndex, day, 12);                       
+      146 +const iso = (...args: Parameters<typeof local>) => local(...ar
+          +gs).toISOString();                                            
+      147 +                                                              
+      148 +/** Loads `subscription` and waits for its view. Every view en
+          +ds with the products. */                                      
+      149 +async function renderLoaded(subscription: Subscription) {     
+      150 +  api.mockResolvedValue(subscription);                        
+      151 +  render(<SubscriptionCard />);                               
+      152 +  await screen.findByRole("heading", { level: 2, name: "In you
+          +r subscription" });                                           
+      153 +}                                                             
+      154 +                                                              
+      155 +/** Fails unless the elements appear in this order in the docu
+          +ment. */                                                      
+      156 +function expectInDocumentOrder(...elements: HTMLElement[]) {  
+      157 +  const all = Array.from(document.body.querySelectorAll("*"));
+      158 +  const positions = elements.map((element) => all.indexOf(elem
+          +ent));                                                        
+      159 +  expect(positions).not.toContain(-1);                        
+      160 +  expect(positions).toEqual([...positions].sort((a, b) => a - 
+          +b));                                                          
+      161 +}                                                             
+      162 +                                                              
+      163 +const headings = () => screen.getAllByRole("heading").map((hea
+          +ding) => `${heading.tagName} ${heading.textContent}`);        
+      164 +                                                              
+      165 +describe("SubscriptionCard: loaded views", () => {            
+      166 +  beforeEach(() => {                                          
+      167 +    // Only Date is faked, so the year rule (R9) sees Dec 10, 
+          +2026 while promises and timers stay real.                     
+      168 +    vi.useFakeTimers({ now: local(2026, 11, 10), toFake: ["Dat
+          +e"] });                                                       
+      169 +  });                                                         
+      170 +                                                              
+     … 125 more lines (ctrl+o to expand)
+
+● All 48 tests pass. Since a test that's only passed proves little, I'll now
+  plant three bugs one at a time (client-side total calculation, swapped field
+  order, wrong image alt text) to confirm the corresponding tests catch each
+  one.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The bug-catching tests and file integrity checks pass. For T6, since the
+  skeleton's brief display window could slip past toHaveText's polling, I'll use
+  waitForFunction({ polling: "raf" }) instead, and re-export Page from
+  e2e/test.ts to satisfy ESLint's import restrictions.
+
+● Bash(sed -i 's|^export { expect } from "@playwright/test";$|export { expect,
+      type Page } from "@playwright/test";|' e2e/test.ts && tail -1 e2e/test.ts
+      && cat > e2e/a…)
+  ⎿  Updated e2e/test.ts (+1 -1)
+      19    },
+      20  });
+      21  
+      22 -export { expect } from "@playwright/test";                     
+      22 +export { expect, type Page } from "@playwright/test";          
+  ⎿  Created e2e/a-overview.spec.ts (+128 -0)
+        1 +import AxeBuilder from "@axe-core/playwright";                
+        2 +import { expect, test, type Page } from "./test";             
+        3 +                                                              
+        4 +// 001: every fixture and the 404, on both projects (375px and
+          + 1200px). The clock and time zone are pinned in               
+        5 +// playwright.config.ts, so the dates are literals: now is Dec
+          + 10, 2026, noon in New York.                                  
+        6 +                                                              
+        7 +const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wca
+          +g22aa"];                                                      
+        8 +                                                              
+        9 +/** R10: no WCAG 2.2 A/AA violations and no horizontal scroll,
+          + in whatever state the page is in. */                         
+       10 +async function expectAccessibleLayout(page: Page) {           
+       11 +  const axe = await new AxeBuilder({ page }).withTags(WCAG).an
+          +alyze();                                                      
+       12 +  expect(axe.violations).toEqual([]);                         
+       13 +  const { scrollWidth, clientWidth } = await page.evaluate(() 
+          +=> document.documentElement);                                 
+       14 +  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);       
+       15 +}                                                             
+       16 +                                                              
+       17 +/**                                                           
+       18 + * R1: the loading state lasts 400–2500ms, which `toHaveText`'
+          +s widening poll intervals can miss.                           
+       19 + * This polls every animation frame in the page instead.      
+       20 + */                                                           
+       21 +async function waitForLoadingAnnouncement(page: Page) {       
+       22 +  await page.waitForFunction(                                 
+       23 +    () => document.querySelector('[role="status"]')?.textConte
+          +nt === "Loading your subscription",                           
+       24 +    null,                                                     
+       25 +    { polling: "raf" },                                       
+       26 +  );                                                          
+       27 +}                                                             
+       28 +                                                              
+       29 +const status = (page: Page) => page.getByRole("status");      
+       30 +const badge = (page: Page) => page.getByText("Status:", { exac
+          +t: false });                                                  
+       31 +                                                              
+       32 +test("R1: announces loading, then clears the announcement once
+          + loaded", async ({ page }) => {                               
+       33 +  await page.goto("/?part=a&fixture=active", { waitUntil: "com
+          +mit" });                                                      
+       34 +  await waitForLoadingAnnouncement(page);                     
+       35 +                                                              
+       36 +  await expect(page.getByRole("heading", { name: "In your subs
+          +cription" })).toBeVisible();                                  
+       37 +  await expect(status(page)).toBeEmpty();                     
+       38 +});                                                           
+       39 +                                                              
+       40 +test("R2: a 500 shows the error, and Try again loads again fro
+          +m the heading", async ({ page }) => {                         
+     … 88 more lines (ctrl+o to expand)
+
+● I spotted three bugs before running the test: the scroll check doesn't return
+  serializable numbers, the badge locator targets the wrong element, and the
+  alignment assertion is overly convoluted. I'll fix the scroll evaluate to
+  return numeric values, locate the badge by its "Status: " prefix text, and
+  simplify alignment to direct x/width/height comparisons.
+
+● Bash(python3 - <<'EOF'
+      p = "e2e/a-overview.spec.ts"…)
+  ⎿  Updated e2e/a-overview.spec.ts (+21 -8)
+      10  async function expectAccessibleLayout(page: Page) {
+      11    const axe = await new AxeBuilder({ page }).withTags(WCAG).ana
+          lyze();
+      12    expect(axe.violations).toEqual([]);
+      13 -  const { scrollWidth, clientWidth } = await page.evaluate(() =
+         -> document.documentElement);                                   
+      13 +  const { scrollWidth, clientWidth } = await page.evaluate(() =
+         +> {                                                            
+      14 +    const { scrollWidth, clientWidth } = document.documentEleme
+         +nt;                                                            
+      15 +    return { scrollWidth, clientWidth };                       
+      16 +  });                                                          
+      17    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+      18  }
+      19  
+     ...
+      30  }
+      31  
+      32  const status = (page: Page) => page.getByRole("status");
+      30 -const badge = (page: Page) => page.getByText("Status:", { exact
+         -: false });                                                    
+      33 +// getByText would resolve to the innermost match, the visually
+         + hidden "Status:" span, so match the whole badge.              
+      34 +const badge = (page: Page) => page.locator("main p", { hasText:
+         + /^Status: / });                                               
+      35  
+      36  test("R1: announces loading, then clears the announcement once 
+          loaded", async ({ page }) => {
+      37    await page.goto("/?part=a&fixture=active", { waitUntil: "comm
+          it" });
+     ...
+       90  
+       91    // R8: the image really loaded, and the placeholder row line
+           s up with it.
+       92    const image = rows.nth(0).locator("img");
+       89 -  await expect.poll(() => image.evaluate((img: HTMLImageElemen
+          -t) => img.complete && img.naturalWidth)).toBeGreaterThan(0);  
+       90 -  const thumbs = await Promise.all([0, 1].map((i) => rows.nth(
+          -i).locator(":scope > :first-child").boundingBox()));          
+       91 -  const names = await Promise.all([0, 1].map((i) => rows.nth(i
+          -).locator("p").first().boundingBox()));                       
+       92 -  expect(thumbs[1]).toEqual(thumbs[1] && { ...thumbs[1], ...{ 
+          -x: thumbs[0]?.x, width: thumbs[0]?.width, height: thumbs[0]?.h
+          -eight } });                                                   
+       93 -  expect(names[1]?.x).toBe(names[0]?.x);                      
+       93 +  await expect                                                
+       94 +    .poll(() => image.evaluate((img: HTMLImageElement) => (img
+          +.complete ? img.naturalWidth : 0)))                           
+       95 +    .toBeGreaterThan(0);                                      
+       96 +  const box = (i: number, selector: string) => rows.nth(i).loc
+          +ator(selector).first().boundingBox();                         
+       97 +  const [imageBox, placeholderBox] = await Promise.all([      
+       98 +    box(0, ":scope > :first-child"),                          
+       99 +    box(1, ":scope > :first-child"),                          
+      100 +  ]);                                                         
+      101 +  expect(placeholderBox).toMatchObject({ x: imageBox?.x, width
+          +: imageBox?.width, height: imageBox?.height });               
+      102 +  const [vitaminDName, multivitaminName] = await Promise.all([
+          +box(0, "p"), box(1, "p")]);                                   
+      103 +  expect(multivitaminName?.x).toBe(vitaminDName?.x);          
+      104  
+     … 10 more lines (ctrl+o to expand)
+  ⎿  Updated src/part-a/views.tsx (+1 -3)
+      102            </p>
+      103          )}
+      104          {nextChargeTotalCents !== null && <p className={styles
+           .amount}>{formatMoney(nextChargeTotalCents)}</p>}
+      105 -        {discountPercent > 0 && (                             
+      106 -          <p className={styles.muted}>Includes your {discountP
+          -ercent}% subscription discount</p>                            
+      107 -        )}                                                    
+      105 +        {discountPercent > 0 && <p className={styles.muted}>In
+          +cludes your {discountPercent}% subscription discount</p>}     
+      106          <p>{formatFrequency(intervalDays)}</p>
+      107        </section>
+      108        <Products items={items} />
+
+● 10 of 12 pass. The cancelled test finds a link on the page, even though
+  CancelledView renders none. I'll check where it comes from before changing
+  anything:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● That was a test bug, not an app issue—App.tsx's nav is shared with Part B so I
+  can't modify it. I'll scope the "no actions" assertions to main instead.
+
+● Bash(sed -i 's|await expect(page.getByRole("button")).toHaveCount(0);|await
+      expect(page.getByRole("main").getByRole("button")).toHaveCount(0);|;
+      s|await expect(page.…)
+  ⎿  Updated e2e/a-overview.spec.ts (+3 -3)
+      124    );
+      125    await expect(page.getByRole("listitem")).toHaveCount(2);
+      126    await expect(page.getByRole("heading", { name: "Next order" 
+           })).toHaveCount(0);
+      127 -  await expect(page.getByRole("button")).toHaveCount(0);      
+      127 +  await expect(page.getByRole("main").getByRole("button")).toH
+          +aveCount(0);                                                  
+      128    await expectAccessibleLayout(page);
+      129  });
+      130  
+     ...
+      135    await expect(badge(page)).toHaveText("Status: Cancelled");
+      136    await expect(page.getByRole("listitem")).toHaveCount(2);
+      137    await expect(page.getByRole("heading", { name: "Next order" 
+           })).toHaveCount(0);
+      138 -  await expect(page.getByRole("button")).toHaveCount(0);      
+      139 -  await expect(page.getByRole("link")).toHaveCount(0);        
+      138 +  await expect(page.getByRole("main").getByRole("button")).toH
+          +aveCount(0);                                                  
+      139 +  await expect(page.getByRole("main").getByRole("link")).toHav
+          +eCount(0);                                                    
+      140    await expectAccessibleLayout(page);
+      141  });
+
+● All 12 pass. Timing-based tests can pass once and still be flaky, so I'll run
+  the spec 5 more times on both projects.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All 60 tests passed. I'll now intentionally introduce two bugs—a placeholder
+  slightly narrower than its image and a card causing horizontal scroll at
+  375px—to verify the e2e checks correctly catch them.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both bugs were caught, with the overflow bug failing only at 375px as
+  expected. Since tests can't verify visual appearance, I'll now take
+  screenshots of the three loaded states at both widths using a throwaway spec
+  I'll delete afterward.
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+● The layout checks out at both widths, but I noticed the active card's product
+  photo blends into its white background, making it look smaller than the
+  placeholder. I'll add a hairline border to every thumbnail using box-sizing:
+  border-box so sizing and alignment stay intact.
+
+● Bash(python3 - <<'EOF'
+      p="src/part-a/SubscriptionCard.module.css"…)
+  ⎿  Updated src/part-a/SubscriptionCard.module.css (+2 -0)
+      158    flex: none;
+      159    width: 4rem;
+      160    height: 4rem;
+      161 +  border: 1px solid var(--color-border);                      
+      162    border-radius: 0.5rem;
+      163 +  background: var(--color-surface);                           
+      164    object-fit: cover;
+      165  }
+      166  
+  ⎿  (timeout 6m 40s)
+
+● All checks pass—typecheck, lint, format, 48 unit tests, and 16 e2e tests, with
+  the smoke test rendering cleanly. The e2e spec covers more than the plan's
+  Testing section documents, so I'll update the plan to match, then mark T4–T6
+  complete and log them.
+
+● Update(SPECS/001-a-subscription-overview/plan.md)
+  ⎿  Added 8 lines, removed 2 lines
+      104    - axe WCAG 2.2 A/AA
+      105    - no horizontal scroll (`scrollWidth <= clientWidth`)
+      106  
+      107 -  The real mock's latency is kept, and expectations wait up to
+          - the default 5s. Dates are asserted as literals               
+      108 -  because the clock is pinned (see Risks).                    
+      107 +  On top of that: the R1 announcement appears and then clears,
+          + "Try again" moves focus to the `h1` and Tab returns          
+      108 +  to the button, the product image really loads, the placehold
+          +er row lines up with the image row (R8), and the date         
+      109 +  is larger than the `h1` (R3). "No actions" checks are scoped
+          + to `main`, because the starter's `App.tsx` nav has           
+      110 +  links of its own.                                           
+      111  
+      112 +  The real mock's latency is kept, and expectations wait up to
+          + the default 5s. The loading state can be as short as         
+      113 +  400ms, which `toHaveText`'s widening poll intervals can miss
+          +, so it is detected with                                      
+      114 +  `waitForFunction(..., { polling: "raf" })`. Dates are assert
+          +ed as literals because the clock is pinned (see Risks).       
+      115 +                                                              
+      116  ## Risks
+      117  
+      118  - **Relative dates and time zones:** fixture dates are relativ
+           e to now and shown in the browser's time zone. In e2e
+
+● Bash(sed -i 's/^- \[ \] T4 /- [x] T4 /; s/^- \[ \] T5 /- [x] T5 /; s/^- \[ \]
+      T6 /- [x] T6 /' SPECS/001-a-subscription-overview/task.md && grep -n "^-
+      \[" SPECS/001-…)
+  ⎿  Updated SPECS/001-a-subscription-overview/task.md (+3 -3)
+       5        plus unit tests
+       6  - [x] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleto
+          n, load error with "Try again", and the 404 view
+       7        with the contact link, plus component tests
+       8 -- [ ] T4 (R3, R4, R8, R10): active view, `ItemList` and the CSS
+         - module (mobile-first), plus component tests                   
+       9 -- [ ] T5 (R5, R6, R11): paused and cancelled views, plus compon
+         -ent tests                                                      
+      10 -- [ ] T6 (R1–R11): `e2e/a-overview.spec.ts`, covering every fix
+         -ture and the 404 on both viewports, axe, and no                
+       8 +- [x] T4 (R3, R4, R8, R10): active view, `ItemList` and the CSS
+         + module (mobile-first), plus component tests                   
+       9 +- [x] T5 (R5, R6, R11): paused and cancelled views, plus compon
+         +ent tests                                                      
+      10 +- [x] T6 (R1–R11): `e2e/a-overview.spec.ts`, covering every fix
+         +ture and the 404 on both viewports, axe, and no                
+      11        horizontal scroll
+      12  - [ ] T7: ask the human which edge cases and e2e flows to cover
+          , and add them as tasks
+
+● Now the changelog entries for T4 to T6, newest first. They were built in one
+  pass, and the entries say so.
+
+● Update(SPECS/CHANGELOG.md)  ⎿  Added 54 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001-a-subscription-overview / T6: overview e2e s
+         +pec                                                            
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - New `e2e/a-overview.spec.ts`, 6 tests × 2 projects. Every f
+         +ixture and the 404 have their key text, axe WCAG               
+       9 +    2.2 A/AA and no horizontal scroll. It also covers:         
+      10 +    - R1: the announcement appears and then clears.            
+      11 +    - R2: "Try again" focuses the `h1`, and Tab returns to the 
+         +button.                                                        
+      12 +    - R8: the image loads, and the placeholder row lines up wit
+         +h it.                                                          
+      13 +    - R3: the date is larger than the `h1`.                    
+      14 +  - `e2e/test.ts` re-exports the `Page` type, because ESLint bl
+         +ocks every import from `@playwright/test` in specs.            
+      15 +  - `plan.md` Testing lists the extra checks and the loading-st
+         +ate polling.                                                   
+      16 +- **Decisions:**                                               
+      17 +  - The loading state can be as short as 400ms, and `toHaveText
+         +`'s poll intervals widen to 1s, so it could be                 
+      18 +    missed. It is detected with `waitForFunction` polling every
+         + animation frame.                                              
+      19 +  - "No buttons" and "no links" are scoped to `main`. The first
+         + run failed on the starter's `App.tsx` nav links,              
+      20 +    which are a test bug, not an app bug. `App.tsx` stays untou
+         +ched (Part B shares it).                                       
+      21 +- **Verified:**                                                
+      22 +  - 60/60 with `--repeat-each=5` on both projects.             
+      23 +  - Planted CSS bugs, each one reverted: a 3.5rem placeholder f
+         +ailed the alignment check on both projects, and a              
+      24 +    30rem `min-width` failed the scroll check on mobile only, a
+         +s expected.                                                    
+      25 +  - `npm run check` green: 48 unit, 16 e2e.                    
+      26 +                                                               
+      27 +## 2026-11-03: 001-a-subscription-overview / T5: paused and can
+         +celled views                                                   
+      28 +                                                               
+      29 +- **Changed:** `PausedView` ("Paused until {date}", "Want to re
+         +sume sooner? Contact support", products) and                   
+      30 +  `CancelledView` ("Cancelled on {date}", products) in `views.t
+         +sx`, on a muted surface with a text badge. Five                
+      31 +  component tests, including no buttons and no "Next order" in 
+         +either view, and a paused subscription that still              
+      32 +  carries next-order fields showing the paused view (R7, throug
+         +h `viewOf`).                                                   
+      33 +- **Decisions:** built in the same pass as T4, because the view
+         +s share the badge, the date and the products                   
+      34 +  section. The cancelled view has no contact line, because R11 
+         +lists only R2, R5 and 002 R8.                                  
+      35 +- **Verified:** covered by the T4 and T6 runs.                 
+      36 +                                                               
+      37 +## 2026-11-03: 001-a-subscription-overview / T4: active view an
+         +d products                                                     
+      38 +                                                               
+      39 +- **Changed:**                                                 
+      40 +  - `ActiveView` in `views.tsx`: badge, then "Next order" (date
+         +, amount, discount line, frequency), then "In your             
+      41 +    subscription". `SubscriptionCard` picks the view with `view
+         +Of` (R7).                                                      
+      42 +  - New `src/part-a/ItemList.tsx` (R8): `img alt=""` with `widt
+         +h`/`height`, or an `aria-hidden` capsule                       
+      43 +    placeholder in the same 4rem box, with a hairline border on
+         + both.                                                         
+      44 +  - CSS module: badge, section, date, amount, item and thumbnai
+         +l styles. New colors are tokens on the card root, and          
+      45 +    every text pair was computed at ≥ 5.75:1.                  
+      46 +  - Six component tests for the active view. Only `Date` is fak
+         +ed, and dates are built in local time.                         
+      47 +  - `plan.md` UI decisions: the badge's hidden "Status: " prefi
+         +x, the `<time>` dates, the order of the views, the             
+      48 +    paused contact copy, and the products markup.              
+      49 +- **Decisions:**                                               
+      50 +  - The discount line is hidden at 0%. Each server field render
+         +s only when non-null, which is the type's contract.            
+      51 +    What to show for an active subscription with a null date or
+         + total is a T7 question.                                       
+      52 +  - The `h2`s are small muted labels and the date is the bigges
+         +t text (2rem, 2.5rem from 48rem), so R3's "date at             
+      53 +    a glance" holds at both widths.                            
+      54 +- **Verified:**                                                
+      55 +  - Planted bugs, each one reverted: computing the total with `
+         +totalAfterDiscount`, moving the frequency above the            
+      56 +    amount, and `alt={item.name}` each failed exactly their own
+         + test.                                                         
+      57 +  - Screenshots of all three views at 375px and 1200px reviewed
+         +.                                                              
+      58 +                                                               
+      59  ## 2026-11-03: 001-a-subscription-overview / T3: load effect, s
+          keleton and load errors
+      60  
+      61  - **Changed:**
+
+● T4 to T6 are done and logged. T7 is your decision: which edge cases and e2e
+  flows to add. These are the gaps I found while building:
+
+● User answered Claude's questions:
+  ⎿  · T7, edge cases for the Part A overview (T4–T6 are done, check is green).
+     Which of these should become tasks? Each gets a spec/plan note, the code
+     and component tests. → Broken product image (Recommended), Active but null
+     date/total (Recommended), Long names, many items, Empty items list
+     · T7, extra e2e flows on top of a-overview.spec.ts (which already covers
+     every fixture, the 404, axe, scroll, retry focus and R8 alignment). Which
+     should be added? → 320px reflow (Recommended), Keyboard-only retry
+     (Recommended), No console errors in every state
+
+● Adding the edge cases and e2e flows to spec.md and task.md now, with reduced
+  motion excluded. I resolved two open questions along the way: the
+  missing-total message will drop the amount/discount copy since it's a
+  placeholder-only date message, and the broken-image case will be a real e2e
+  test via route abortion while the other three layout cases stay
+  component-tested (noted under Known limitations).
+
+● Bash(python3 - <<'EOF'
+      p="SPECS/001-a-subscription-overview/spec.md"…)
+  ⎿  Updated SPECS/001-a-subscription-overview/spec.md (+21 -4)
+      22      `discountPercent`
+      23    - the frequency ("Every 30 days", from `intervalDays`)
+      24    - the products with their quantities
+      25 +                                                               
+      26 +  If the server sends an active subscription without `nextCharg
+         +eAt`, the date is replaced by "We'll confirm your              
+      27 +  next order date soon." Without `nextChargeTotalCents`, the am
+         +ount and the discount line are left out. The page              
+      28 +  never fills either gap itself (R4).                          
+      29  - R4 Dates and amounts come only from the server. The page neve
+          r calculates its own charge date or charge total for
+      30    display, except where a later spec explicitly allows it:
+      31    - 002 R2: the predicted skip date, `nextChargeAt + intervalDa
+          ys`
+     ...
+      42    distinct, as in R5.
+      43  - R7 The page follows the server's status. Any local state, fro
+          m 003 and 004, is shown only on top of an active
+      44    server subscription.
+      41 -- R8 Product images use `alt=""`, because the product name is r
+         -ight next to them. Items with a null `imageUrl` get            
+      42 -  a neutral placeholder of the same size, so rows line up.     
+      45 +- R8 Product images use `alt=""`, because the product name is r
+         +ight next to them. Items with a null `imageUrl`, or an         
+      46 +  image that fails to load, get a neutral placeholder of the sa
+         +me size, so rows line up. Long names wrap. A                   
+      47 +  subscription with no items shows "There are no products in th
+         +is subscription." instead of an empty list.                    
+      48  - R9 Formatting uses `Intl` with `en-US` and `USD`. Dates look 
+          like "Nov 8", and the year is added only when it
+      49    differs from the current year.
+      45 -- R10 The layout is mobile-first: designed at 375px with no hor
+         -izontal scroll, and still good at 1200px. There is             
+      46 -  one `h1`, and the sections have headings.                    
+      50 +- R10 The layout is mobile-first: designed at 375px with no hor
+         +izontal scroll, and still good at 1200px. It also              
+      51 +  reflows at 320px without horizontal scroll (WCAG 1.4.10), in 
+         +every state and with long names or many items. There           
+      52 +  is one `h1`, and the sections have headings.                 
+      53  - R11 Contact support is a `mailto:support@naturawellness.examp
+          le` link. The `.example` domain is reserved and can
+      54    never reach anyone, which fits a fictional brand. It is used 
+          by R2 (404), R5 (paused) and 002 R8.
+      55  
+     ...
+      64  - [ ] R5, R11: Given `?fixture=paused`, then "Paused until …" a
+          nd the contact link show and there is no skip button.
+      65  - [ ] R6: Given `?fixture=cancelled`, then "Cancelled on …" sho
+          ws and there is no skip button.
+      66  - [ ] R8: The Multivitamin row, which has no image, lines up wi
+          th the Vitamin D row.
+      67 +- [ ] R3: Given an active subscription without `nextChargeAt`, 
+         +then "We'll confirm your next order date soon." shows,         
+      68 +      and without `nextChargeTotalCents`, no amount or discount
+         + line shows.                                                   
+      69 +- [ ] R8: Given an image that fails to load, then the placehold
+         +er shows in its place and the rows still line up.              
+      70 +- [ ] R8: Given no items, then "There are no products in this s
+         +ubscription." shows.                                           
+      71  - [ ] R10: At 375px and 1200px, axe reports no WCAG 2.2 A/AA vi
+          olations and the page has no horizontal scroll.
+      72 +- [ ] R10: At 320px, every state, and an active card with long 
+         +names and many items, has no horizontal scroll.                
+      73 +- [ ] R2: "Try again" works by keyboard alone, with Enter and w
+         +ith Space.                                                     
+      74 +- [ ] Every state (active, paused, cancelled, error, 404) loads
+         + with no console errors.                                       
+      75  
+     … 12 more lines (ctrl+o to expand)
+  ⎿  Updated SPECS/001-a-subscription-overview/task.md (+9 -1)
+       9  - [x] T5 (R5, R6, R11): paused and cancelled views, plus compon
+          ent tests
+      10  - [x] T6 (R1–R11): `e2e/a-overview.spec.ts`, covering every fix
+          ture and the 404 on both viewports, axe, and no
+      11        horizontal scroll
+      12 -- [ ] T7: ask the human which edge cases and e2e flows to cover
+         -, and add them as tasks                                        
+      12 +- [x] T7: ask the human which edge cases and e2e flows to cover
+         +, and add them as tasks                                        
+      13 +- [ ] T8 (R8): an image that fails to load falls back to the pl
+         +aceholder, plus a component test and an e2e test               
+      14 +      that aborts the image request                            
+      15 +- [ ] T9 (R3, R4): an active subscription without `nextChargeAt
+         +` or `nextChargeTotalCents`, plus component tests              
+      16 +- [ ] T10 (R8, R10): long names wrap and many items stay in the
+         + layout, plus a component test and an e2e check at             
+      17 +      375px and 320px                                          
+      18 +- [ ] T11 (R8): the empty item list message, plus a component t
+         +est                                                            
+      19 +- [ ] T12 (R2, R10): e2e for 320px reflow in every state, keybo
+         +ard-only retry with Enter and Space, and no console            
+      20 +      errors in every state                                    
+
+● Then the plan, so the UI decisions describe the new behavior:
+
+● Bash(python3 - <<'EOF'
+      p="SPECS/001-a-subscription-overview/plan.md"…)
+  ⎿  Updated SPECS/001-a-subscription-overview/plan.md (+6 -2)
+      67    so the difference never relies on color alone (R5, R6).
+      68  - **Active view (R3):** badge, then the "Next order" section: t
+          he date in a `<time>`, the amount, "Includes your
+      69    {n}% subscription discount" (only when `discountPercent > 0`,
+           because "your 0% discount" says nothing), and the
+      70 -  frequency. Then "In your subscription". Each of these lines r
+         -enders only when its server field is non-null.                 
+      70 +  frequency. Then "In your subscription". A null `nextChargeAt`
+         + shows "We'll confirm your next order date soon."              
+      71 +  in the date's place, as plain text rather than an alert, beca
+         +use nothing failed. A null `nextChargeTotalCents`              
+      72 +  leaves out the amount and the discount line, since the discou
+         +nt describes the amount (R3, decided in T7).                   
+      73  - **Paused view (R5):** badge, "Paused until {date}", then "Wan
+          t to resume sooner? Contact support" (R11), because
+      74    resuming is out of scope and support is the way to do it. The
+          n "In your subscription".
+      75  - **Cancelled view (R6):** badge, "Cancelled on {date}", then "
+          In your subscription". No contact line, because R11
+      76    doesn't list R6.
+      77  - **Products (R8):** a `ul`. Each `li` has a 4rem thumbnail (an
+           `img` with `alt=""` and `width`/`height` set, so
+      78    there is no layout shift, or the placeholder), the name, and 
+          "Quantity: {n}". Long names wrap rather than
+      77 -  overflow.                                                    
+      79 +  overflow. An `img` that fires `error` is swapped for the plac
+         +eholder, with a per-row `failed` flag keyed by the             
+      80 +  row, so a reload with the same URL doesn't retry a known brok
+         +en image. No items: the "In your subscription"                 
+      81 +  heading stays, followed by "There are no products in this sub
+         +scription." (T7).                                              
+      82  - **Landmark and heading:** the card is the page's `main`. The 
+          `h1` stays mounted in every state, including loading
+      83    and both errors, and has `tabIndex={-1}` so it can take focus
+          .
+      84  - **Skeleton:** a visually hidden `role="status"` region on the
+           card root says "Loading your subscription" while
+
+● I'm refining the T8 design: the fallback flag will be keyed by imageUrl in the
+  Thumbnail component, so a reload with the same URL stays on the placeholder
+  while a new URL triggers a fresh attempt.
+
+● Bash(python3 - <<'EOF'
+      p="SPECS/001-a-subscription-overview/plan.md"…)
+  ⎿  Updated SPECS/001-a-subscription-overview/plan.md (+2 -2)
+      76    doesn't list R6.
+      77  - **Products (R8):** a `ul`. Each `li` has a 4rem thumbnail (an
+           `img` with `alt=""` and `width`/`height` set, so
+      78    there is no layout shift, or the placeholder), the name, and 
+          "Quantity: {n}". Long names wrap rather than
+      79 -  overflow. An `img` that fires `error` is swapped for the plac
+         -eholder, with a per-row `failed` flag keyed by the             
+      80 -  row, so a reload with the same URL doesn't retry a known brok
+         -en image. No items: the "In your subscription"                 
+      79 +  overflow. An `img` that fires `error` is swapped for the plac
+         +eholder. The `failed` flag lives in a `Thumbnail`              
+      80 +  keyed by `imageUrl`, so a reload with the same URL keeps the 
+         +placeholder and a new URL gets a fresh try. No items: the "In y
+         +our subscription"                                              
+      81    heading stays, followed by "There are no products in this sub
+          scription." (T7).
+      82  - **Landmark and heading:** the card is the page's `main`. The 
+          `h1` stays mounted in every state, including loading
+      83    and both errors, and has `tabIndex={-1}` so it can take focus
+          .
+
+● Now T8 and T11 in ItemList.tsx (src/part-a/ItemList.tsx):
+
+● Write(src/part-a/ItemList.tsx)
+  ⎿  Added 10 lines, removed 5 lines
+      1  // R8: the products in a subscription. Images are decorative (al
+         t=""), because the name is right next to them.
+      2 +import { useState } from "react";                               
+      3  import type { SubscriptionItem } from "../api/types";
+      4  import styles from "./SubscriptionCard.module.css";
+      5  
+     ...
+      17    );
+      18  }
+      19  
+      20 +/** Falls back to the placeholder when the image fails to load.
+         + Keyed by URL, so a new URL gets a fresh try. */               
+      21 +function Thumbnail({ src }: { src: string }) {                 
+      22 +  const [failed, setFailed] = useState(false);                 
+      23 +  if (failed) return <Placeholder />;                          
+      24 +  return <img className={styles.thumb} src={src} alt="" width={
+         +64} height={64} onError={() => setFailed(true)} />;            
+      25 +}                                                              
+      26 +                                                               
+      27  export function ItemList({ items }: { items: SubscriptionItem[]
+           }) {
+      28 +  if (items.length === 0) return <p>There are no products in th
+         +is subscription.</p>;                                          
+      29    return (
+      30      <ul className={styles.items}>
+      31        {items.map((item) => (
+      32          <li key={item.sku} className={styles.item}>
+      24 -          {item.imageUrl ? (                                   
+      25 -            <img className={styles.thumb} src={item.imageUrl} a
+         -lt="" width={64} height={64} />                                
+      26 -          ) : (                                                
+      27 -            <Placeholder />                                    
+      28 -          )}                                                   
+      33 +          {item.imageUrl ? <Thumbnail key={item.imageUrl} src={
+         +item.imageUrl} /> : <Placeholder />}                           
+      34            <div className={styles.item__text}>
+      35              <p className={styles.item__name}>{item.name}</p>
+      36              <p className={styles.muted}>Quantity: {item.quantit
+          y}</p>
+
+● Then T9 in ActiveView. views.tsx was restored from a backup after the planted
+  bugs, so I'll read it again before editing:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src/part-a/views.tsx)
+  ⎿  Added 12 lines, removed 3 lines
+       96        <StatusBadge status="active" />
+       97        <section className={styles.section}>
+       98          <h2 className={styles.heading}>Next order</h2>
+       99 -        {nextChargeAt !== null && (                           
+       99 +        {/* R3: the page never fills a missing date or total i
+          +tself (R4). */}                                               
+      100 +        {nextChargeAt !== null ? (                            
+      101            <p className={styles.date}>
+      102              <ServerDate iso={nextChargeAt} />
+      103            </p>
+      104 +        ) : (                                                 
+      105 +          <p className={styles.lead}>We&apos;ll confirm your n
+          +ext order date soon.</p>                                      
+      106          )}
+      104 -        {nextChargeTotalCents !== null && <p className={styles
+          -.amount}>{formatMoney(nextChargeTotalCents)}</p>}             
+      105 -        {discountPercent > 0 && <p className={styles.muted}>In
+          -cludes your {discountPercent}% subscription discount</p>}     
+      107 +        {nextChargeTotalCents !== null && (                   
+      108 +          <>                                                  
+      109 +            <p className={styles.amount}>{formatMoney(nextChar
+          +geTotalCents)}</p>                                            
+      110 +            {discountPercent > 0 && (                         
+      111 +              <p className={styles.muted}>Includes your {disco
+          +untPercent}% subscription discount</p>                        
+      112 +            )}                                                
+      113 +          </>                                                 
+      114 +        )}                                                    
+      115          <p>{formatFrequency(intervalDays)}</p>
+      116        </section>
+      117        <Products items={items} />
+
+● The T3 copy uses a plain apostrophe ("We couldn't"), and no lint rule asks for
+  escaping, so I'll match it:
+
+● Update(src/part-a/views.tsx)
+  ⎿  Added 1 line, removed 1 line
+      102              <ServerDate iso={nextChargeAt} />
+      103            </p>
+      104          ) : (
+      105 -          <p className={styles.lead}>We&apos;ll confirm your n
+          -ext order date soon.</p>                                      
+      105 +          <p className={styles.lead}>We'll confirm your next o
+          +rder date soon.</p>                                           
+      106          )}
+      107          {nextChargeTotalCents !== null && (
+      108            <>
+
+● Writing component tests for T8-T11; since jsdom can't measure layout, T10's
+  test will just verify each row renders fully with the correct thumbnail,
+  leaving wrapping behavior to the e2e test.
+
+● Bash(python3 - <<'EOF'
+      p="src/part-a/SubscriptionCard.test.tsx"…)
+  ⎿  Updated src/part-a/SubscriptionCard.test.tsx (+51 -2)
+      1 -import { act, render, screen, within } from "@testing-library/re
+        -act";                                                           
+      1 +import { act, fireEvent, render, screen, within } from "@testing
+        +-library/react";                                                
+      2  import userEvent from "@testing-library/user-event";
+      3  import { StrictMode } from "react";
+      4  import { afterEach, beforeEach, describe, expect, it, vi } from 
+         "vitest";
+      5  import { getSubscription } from "../api/mockApi";
+      6 -import { fixtures } from "../api/fixtures";                     
+      6 +import { catalog, fixtures } from "../api/fixtures";            
+      7  import { ApiError, type Subscription } from "../api/types";
+      8  import { SubscriptionCard } from "./SubscriptionCard";
+      9  
+     ...
+      239  
+      240        expect(headings()).toEqual(["H1 Manage my subscription",
+            "H2 Next order", "H2 In your subscription"]);
+      241      });
+      242 +                                                              
+      243 +    it("swaps an image that fails to load for the placeholder 
+          +(T8)", async () => {                                          
+      244 +      await renderLoaded(active());                           
+      245 +      const [vitaminD] = within(screen.getByRole("list")).getA
+          +llByRole("listitem");                                         
+      246 +      const image = vitaminD.querySelector("img");            
+      247 +      expect(image).toBeInTheDocument();                      
+      248 +                                                              
+      249 +      fireEvent.error(image!);                                
+      250 +                                                              
+      251 +      expect(vitaminD.querySelector("img")).not.toBeInTheDocum
+          +ent();                                                        
+      252 +      expect(vitaminD.querySelector('[aria-hidden="true"]')).t
+          +oBeInTheDocument();                                           
+      253 +      expect(within(vitaminD).getByText("Vitamin D, 60 softgel
+          +s")).toBeInTheDocument();                                     
+      254 +    });                                                       
+      255 +                                                              
+      256 +    it("says the date will be confirmed when the server sends 
+          +none, and still shows the total (T9)", async () => {          
+      257 +      await renderLoaded(active({ nextChargeAt: null }));     
+      258 +                                                              
+      259 +      expect(screen.getByText("We'll confirm your next order d
+          +ate soon.")).toBeInTheDocument();                             
+      260 +      expect(document.querySelector("time")).not.toBeInTheDocu
+          +ment();                                                       
+      261 +      expect(screen.getByText("$101.87")).toBeInTheDocument();
+      262 +    });                                                       
+      263 +                                                              
+      264 +    it("leaves out the amount and the discount line when the s
+          +erver sends no total (T9)", async () => {                     
+      265 +      await renderLoaded(active({ nextChargeTotalCents: null }
+          +));                                                           
+      266 +                                                              
+      267 +      expect(screen.getByText("Dec 16")).toBeInTheDocument(); 
+     … 26 more lines (ctrl+o to expand)
+
+● 53 pass. Now I'll plant a bug for each new behavior, one at a time, and
+  restore after each:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Each planted bug failed only its own test, and files were restored correctly.
+  Now I'll add the remaining e2e tests (T8, T10, T12), rereading the spec file
+  to reuse its helpers and factor the row-alignment check into one shared
+  helper.
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      p="e2e/a-overview.spec.ts"…)
+  ⎿  Updated e2e/a-overview.spec.ts (+124 -8)
+      1  import AxeBuilder from "@axe-core/playwright";
+      2 +import { catalog } from "../src/api/fixtures";                  
+      3  import { expect, test, type Page } from "./test";
+      4  
+      5  // 001: every fixture and the 404, on both projects (375px and 1
+         200px). The clock and time zone are pinned in
+     ...
+      30    );
+      31  }
+      32  
+      33 +/** R8: every row's thumbnail has the first row's x and size, a
+         +nd every name starts at the same x. */                         
+      34 +async function expectRowsAligned(page: Page) {                 
+      35 +  const rows = await page.getByRole("listitem").all();         
+      36 +  const boxes = await Promise.all(                             
+      37 +    rows.map(async (row) => ({                                 
+      38 +      thumb: await row.locator(":scope > :first-child").boundin
+         +gBox(),                                                        
+      39 +      name: await row.locator("p").first().boundingBox(),      
+      40 +    })),                                                       
+      41 +  );                                                           
+      42 +  const [first] = boxes;                                       
+      43 +  for (const { thumb, name } of boxes) {                       
+      44 +    expect(thumb).toMatchObject({ x: first?.thumb?.x, width: fi
+         +rst?.thumb?.width, height: first?.thumb?.height });            
+      45 +    expect(name?.x).toBe(first?.name?.x);                      
+      46 +  }                                                            
+      47 +}                                                              
+      48 +                                                               
+      49  const status = (page: Page) => page.getByRole("status");
+      50  // getByText would resolve to the innermost match, the visually
+           hidden "Status:" span, so match the whole badge.
+      51  const badge = (page: Page) => page.locator("main p", { hasText:
+           /^Status: / });
+     ...
+      110    await expect
+      111      .poll(() => image.evaluate((img: HTMLImageElement) => (img
+           .complete ? img.naturalWidth : 0)))
+      112      .toBeGreaterThan(0);
+       96 -  const box = (i: number, selector: string) => rows.nth(i).loc
+          -ator(selector).first().boundingBox();                         
+       97 -  const [imageBox, placeholderBox] = await Promise.all([      
+       98 -    box(0, ":scope > :first-child"),                          
+       99 -    box(1, ":scope > :first-child"),                          
+      100 -  ]);                                                         
+      101 -  expect(placeholderBox).toMatchObject({ x: imageBox?.x, width
+          -: imageBox?.width, height: imageBox?.height });               
+      102 -  const [vitaminDName, multivitaminName] = await Promise.all([
+          -box(0, "p"), box(1, "p")]);                                   
+      103 -  expect(multivitaminName?.x).toBe(vitaminDName?.x);          
+      113 +  await expectRowsAligned(page);                              
+      114  
+     … 111 more lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● 33 tests pass, with the 7 skips being desktop viewport-specific runs. Now I'll
+  introduce three intentional bugs to verify the new e2e tests catch them:
+  missing onError (T8), non-wrapping product names (T10), and a 336px-wide card
+  that overflows at 320px (T12).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All three test cases confirmed failures as expected, with the 336px card and
+  320px-specific checks revealing issues the 375px tests miss. Since passing
+  tests only prove no overflow rather than correct appearance, I'll now visually
+  inspect the many-names layout at 320px and the broken-image row myself.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● The layout holds up at 320px — the broken image falls back to the placeholder,
+  thumbnails stay aligned at 4rem, and text wraps cleanly without overflow.
+  Running the full check now.
+
+● Bash(npx prettier --write SPECS >/dev/null; npm run check 2>&1 | grep -E
+      "error|✘|Tests |passed|failed|skipped|warn|All matched|Code style" | head
+      -20)
+  ⎿  Updated SPECS/001-a-subscription-overview/spec.md (+1 -0)
+      26    If the server sends an active subscription without `nextCharg
+          eAt`, the date is replaced by "We'll confirm your
+      27    next order date soon." Without `nextChargeTotalCents`, the am
+          ount and the discount line are left out. The page
+      28    never fills either gap itself (R4).
+      29 +                                                               
+      30  - R4 Dates and amounts come only from the server. The page neve
+          r calculates its own charge date or charge total for
+      31    display, except where a later spec explicitly allows it:
+      32    - 002 R2: the predicted skip date, `nextChargeAt + intervalDa
+          ys`
+  ⎿  (timeout 6m 40s)
+
+  Ran 1 shell command (ctrl+o to expand)
+● All checks pass (53 unit/component, 37 e2e with 7 intentionally skipped), but
+  reviewing acceptance criteria revealed R1's skeleton requirement isn't
+  actually tested. I'll add a check for it in the R1 e2e test, alongside the
+  existing animation-frame check for the announcement since both only appear
+  briefly.
+
+● Bash(python3 - <<'EOF'
+      p="e2e/a-overview.spec.ts"…)
+  ⎿  Updated e2e/a-overview.spec.ts (+11 -2)
+      50  // getByText would resolve to the innermost match, the visually
+           hidden "Status:" span, so match the whole badge.
+      51  const badge = (page: Page) => page.locator("main p", { hasText:
+           /^Status: / });
+      52  
+      53 -test("R1: announces loading, then clears the announcement once 
+         -loaded", async ({ page }) => {                                 
+      53 +test("R1: shows the skeleton and announces loading, then clears
+         + both once loaded", async ({ page }) => {                      
+      54    await page.goto("/?part=a&fixture=active", { waitUntil: "comm
+          it" });
+      55 -  await waitForLoadingAnnouncement(page);                      
+      55 +  // Same frame as the announcement: the skeleton is in main, h
+         +idden from assistive tech, and has its shapes.                 
+      56 +  await page.waitForFunction(                                  
+      57 +    () =>                                                      
+      58 +      document.querySelector('[role="status"]')?.textContent ==
+         += "Loading your subscription" &&                               
+      59 +      (document.querySelector('main [aria-hidden="true"]')?.chi
+         +ldElementCount ?? 0) > 0,                                      
+      60 +    null,                                                      
+      61 +    { polling: "raf" },                                        
+      62 +  );                                                           
+      63  
+      64    await expect(page.getByRole("heading", { name: "In your subsc
+          ription" })).toBeVisible();
+      65    await expect(status(page)).toBeEmpty();
+      66 +  // The only aria-hidden elements left are the product placeho
+         +lders, inside the list.                                        
+      67 +  await expect(page.locator('main > div > [aria-hidden="true"]'
+         +)).toHaveCount(0);                                             
+      68  });
+      69  
+      70  test("R2: a 500 shows the error, and Try again loads again from
+           the heading", async ({ page }) => {
+
+● I found that the skeleton loader is a direct child of main, not nested under a
+  div as my locator assumed. I'll fix both checks to use the correct
+  direct-child selector, which also excludes the product placeholders.
+
+● Bash(python3 - <<'EOF'
+      p="e2e/a-overview.spec.ts"…)
+  ⎿  Updated e2e/a-overview.spec.ts (+4 -4)
+      52  
+      53  test("R1: shows the skeleton and announces loading, then clears
+           both once loaded", async ({ page }) => {
+      54    await page.goto("/?part=a&fixture=active", { waitUntil: "comm
+          it" });
+      55 -  // Same frame as the announcement: the skeleton is in main, h
+         -idden from assistive tech, and has its shapes.                 
+      55 +  // Same frame as the announcement: the skeleton is a direct c
+         +hild of main, hidden from assistive tech, with shapes.         
+      56    await page.waitForFunction(
+      57      () =>
+      58        document.querySelector('[role="status"]')?.textContent ==
+          = "Loading your subscription" &&
+      59 -      (document.querySelector('main [aria-hidden="true"]')?.chi
+         -ldElementCount ?? 0) > 0,                                      
+      59 +      (document.querySelector('main > [aria-hidden="true"]')?.c
+         +hildElementCount ?? 0) > 0,                                    
+      60      null,
+      61      { polling: "raf" },
+      62    );
+      63  
+      64    await expect(page.getByRole("heading", { name: "In your subsc
+          ription" })).toBeVisible();
+      65    await expect(status(page)).toBeEmpty();
+      66 -  // The only aria-hidden elements left are the product placeho
+         -lders, inside the list.                                        
+      67 -  await expect(page.locator('main > div > [aria-hidden="true"]'
+         -)).toHaveCount(0);                                             
+      66 +  // Product placeholders are aria-hidden too, but they sit ins
+         +ide the list, not directly in main.                            
+      67 +  await expect(page.locator('main > [aria-hidden="true"]')).toH
+         +aveCount(0);                                                   
+      68  });
+      69  
+      70  test("R2: a 500 shows the error, and Try again loads again from
+           the heading", async ({ page }) => {
+  ⎿  (timeout 3m 20s)
+
+● The "R1" filter was broader than intended, matching R10/R11 too, but all 65
+  runs passed across 5 repeats, confirming the stuck-skeleton bug fails
+  appropriately. Now I'll tick T8–T12 and the acceptance criteria, mark the spec
+  as Implemented, and add changelog entries for T7–T12.
+
+● Bash(sed -i -E 's/^- \[ \] (T(8|9|10|11|12) )/- [x] \1/'
+      SPECS/001-a-subscription-overview/task.md && sed -i 's/^- \[ \] R/- [x]
+      R/; s/^- \[ \] Every state/- [x] Eve…)
+  ⎿  Updated SPECS/001-a-subscription-overview/task.md (+5 -5)
+      10  - [x] T6 (R1–R11): `e2e/a-overview.spec.ts`, covering every fix
+          ture and the 404 on both viewports, axe, and no
+      11        horizontal scroll
+      12  - [x] T7: ask the human which edge cases and e2e flows to cover
+          , and add them as tasks
+      13 -- [ ] T8 (R8): an image that fails to load falls back to the pl
+         -aceholder, plus a component test and an e2e test               
+      13 +- [x] T8 (R8): an image that fails to load falls back to the pl
+         +aceholder, plus a component test and an e2e test               
+      14        that aborts the image request
+      15 -- [ ] T9 (R3, R4): an active subscription without `nextChargeAt
+         -` or `nextChargeTotalCents`, plus component tests              
+      16 -- [ ] T10 (R8, R10): long names wrap and many items stay in the
+         - layout, plus a component test and an e2e check at             
+      15 +- [x] T9 (R3, R4): an active subscription without `nextChargeAt
+         +` or `nextChargeTotalCents`, plus component tests              
+      16 +- [x] T10 (R8, R10): long names wrap and many items stay in the
+         + layout, plus a component test and an e2e check at             
+      17        375px and 320px
+      18 -- [ ] T11 (R8): the empty item list message, plus a component t
+         -est                                                            
+      19 -- [ ] T12 (R2, R10): e2e for 320px reflow in every state, keybo
+         -ard-only retry with Enter and Space, and no console            
+      18 +- [x] T11 (R8): the empty item list message, plus a component t
+         +est                                                            
+      19 +- [x] T12 (R2, R10): e2e for 320px reflow in every state, keybo
+         +ard-only retry with Enter and Space, and no console            
+      20        errors in every state
+  ⎿  Updated SPECS/001-a-subscription-overview/spec.md (+14 -14)
+      1  # 001: Subscription overview
+      2  
+      3 -Status: Approved                                                
+      3 +Status: Implemented                                             
+      4  
+      5  ## Problem
+      6  
+     ...
+      56  
+      57  ## Acceptance criteria
+      58  
+      59 -- [ ] R1: Given a slow API, when the page opens, then a skeleto
+         -n shows and a screen reader hears "Loading your                
+      59 +- [x] R1: Given a slow API, when the page opens, then a skeleto
+         +n shows and a screen reader hears "Loading your                
+      60        subscription".
+      61 -- [ ] R2: Given `?fixture=error`, when loading fails, then the 
+         -error and "Try again" show, and "Try again" calls              
+      61 +- [x] R2: Given `?fixture=error`, when loading fails, then the 
+         +error and "Try again" show, and "Try again" calls              
+      62        the API again.
+      63 -- [ ] R3, R4: Given `?fixture=active`, then the date, total, di
+         -scount line, frequency and both products with                  
+      63 +- [x] R3, R4: Given `?fixture=active`, then the date, total, di
+         +scount line, frequency and both products with                  
+      64        their quantities show, matching the server data.
+      65 -- [ ] R5, R11: Given `?fixture=paused`, then "Paused until …" a
+         -nd the contact link show and there is no skip button.          
+      66 -- [ ] R6: Given `?fixture=cancelled`, then "Cancelled on …" sho
+         -ws and there is no skip button.                                
+      67 -- [ ] R8: The Multivitamin row, which has no image, lines up wi
+         -th the Vitamin D row.                                          
+      68 -- [ ] R3: Given an active subscription without `nextChargeAt`, 
+         -then "We'll confirm your next order date soon." shows,         
+      65 +- [x] R5, R11: Given `?fixture=paused`, then "Paused until …" a
+         +nd the contact link show and there is no skip button.          
+      66 +- [x] R6: Given `?fixture=cancelled`, then "Cancelled on …" sho
+         +ws and there is no skip button.                                
+      67 +- [x] R8: The Multivitamin row, which has no image, lines up wi
+         +th the Vitamin D row.                                          
+      68 +- [x] R3: Given an active subscription without `nextChargeAt`, 
+         +then "We'll confirm your next order date soon." shows,         
+      69        and without `nextChargeTotalCents`, no amount or discount
+           line shows.
+      70 -- [ ] R8: Given an image that fails to load, then the placehold
+         -er shows in its place and the rows still line up.              
+      71 -- [ ] R8: Given no items, then "There are no products in this s
+         -ubscription." shows.                                           
+      72 -- [ ] R10: At 375px and 1200px, axe reports no WCAG 2.2 A/AA vi
+         -olations and the page has no horizontal scroll.                
+      73 -- [ ] R10: At 320px, every state, and an active card with long 
+         -names and many items, has no horizontal scroll.                
+      74 -- [ ] R2: "Try again" works by keyboard alone, with Enter and w
+         -ith Space.                                                     
+      75 -- [ ] Every state (active, paused, cancelled, error, 404) loads
+         - with no console errors.                                       
+      70 +- [x] R8: Given an image that fails to load, then the placehold
+         +er shows in its place and the rows still line up.              
+      71 +- [x] R8: Given no items, then "There are no products in this s
+         +ubscription." shows.                                           
+      72 +- [x] R10: At 375px and 1200px, axe reports no WCAG 2.2 A/AA vi
+         +olations and the page has no horizontal scroll.                
+      73 +- [x] R10: At 320px, every state, and an active card with long 
+         +names and many items, has no horizontal scroll.                
+      74 +- [x] R2: "Try again" works by keyboard alone, with Enter and w
+         +ith Space.                                                     
+      75 +- [x] Every state (active, paused, cancelled, error, 404) loads
+         + with no console errors.                                       
+     … 3 more lines (ctrl+o to expand)
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 67 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 001-a-subscription-overview / T12: reflow, keybo
+         +ard retry and console e2e                                      
+       6 +                                                               
+       7 +- **Changed:** `e2e/a-overview.spec.ts` gains:                 
+       8 +  - every state at 320px (no horizontal scroll, axe)           
+       9 +  - "Try again" by keyboard alone, with Enter and then Space, w
+         +ith focus on the `h1` each time and Tab back to                
+      10 +    the button                                                 
+      11 +  - no console errors in each of the five states               
+      12 +  - The R1 test now also asserts the skeleton is in `main` duri
+         +ng loading and gone after. Until now only                      
+      13 +    screenshots had shown it.                                  
+      14 +- **Decisions:**                                               
+      15 +  - The 320px tests skip the desktop project, because they set 
+         +their own viewport.                                            
+      16 +  - The keyboard test tabs until "Try again" has focus, rather 
+         +than counting stops, because the starter's nav                 
+      17 +    links come first.                                          
+      18 +- **Verified:**                                                
+      19 +  - Planted bugs, each one reverted. A 21rem card failed all fi
+         +ve 320px tests and the T10 320px test, while R6 at             
+      20 +    375px and 1200px still passed. A skeleton that never unmoun
+         +ts failed R1 on both projects.                                 
+      21 +  - `npm run check` green.                                     
+      22 +  - Spec 001 is now `Implemented`, with every acceptance criter
+         +ion ticked.                                                    
+      23 +                                                               
+      24 +## 2026-11-03: 001-a-subscription-overview / T11: empty item li
+         +st                                                             
+      25 +                                                               
+      26 +- **Changed:** `ItemList` renders "There are no products in thi
+         +s subscription." in place of an empty `ul`. The                
+      27 +  "In your subscription" heading stays. Spec R8 and the plan we
+         +re updated first. One component test.                          
+      28 +- **Verified:** removing the check failed that test.           
+      29 +                                                               
+      30 +## 2026-11-03: 001-a-subscription-overview / T10: long names an
+         +d many items                                                   
+      31 +                                                               
+      32 +- **Changed:**                                                 
+      33 +  - A component test renders all four catalog products, with fu
+         +ll names and the right thumbnail for each.                     
+      34 +  - An e2e test at 375px and 320px copies rows in the rendered 
+         +DOM and gives them the catalog's names, then                   
+      35 +    checks row alignment, that every name stays inside `main`, 
+         +no horizontal scroll, and axe.                                 
+      36 +  - Spec R10 and Known limitations say the mock can't send this
+         + data, so the e2e check edits the DOM.                         
+      37 +- **Decisions:** no CSS change was needed. `min-width: 0` and `
+         +overflow-wrap: anywhere` from T4 already held.                 
+      38 +  The 320px screenshot was reviewed: the six-line bundle name w
+         +raps inside the card.                                          
+      39 +- **Verified:** a planted `white-space: nowrap` on names failed
+         + both widths.                                                  
+      40 +                                                               
+      41 +## 2026-11-03: 001-a-subscription-overview / T9: active subscri
+         +ption without a date or total                                  
+      42 +                                                               
+      43 +- **Changed:**                                                 
+      44 +  - A null `nextChargeAt` shows "We'll confirm your next order 
+         +date soon." in the date's place.                               
+      45 +  - A null `nextChargeTotalCents` leaves out the amount and the
+         + discount line.                                                
+      46 +  - Spec R3, a new acceptance criterion and the plan were updat
+         +ed first. Two component tests.                                 
+      47 +- **Decisions:** the human picked the copy for a missing date. 
+         +A missing total keeps the date and drops the                   
+      48 +  discount line too, because "Includes your 15% discount" means
+         + nothing with no amount next to it. It is plain                
+      49 +  text, not an alert, because nothing failed.                  
+      50 +- **Verified:** removing the fallback line, and showing the dis
+         +count without a total, each failed their own test.             
+      51 +                                                               
+      52 +## 2026-11-03: 001-a-subscription-overview / T8: broken product
+         + image                                                         
+      53 +                                                               
+      54 +- **Changed:**                                                 
+      55 +  - New `Thumbnail` in `ItemList.tsx` swaps to the placeholder 
+         +on `error`. It is keyed by `imageUrl`, so a new URL            
+      56 +    gets a fresh try.                                          
+      57 +  - A component test fires `error`. An e2e test aborts `product
+         +.jpg` with `page.route`, a real network failure,               
+      58 +    and checks the placeholder, row alignment and axe.         
+      59 +  - Spec R8 was updated first.                                 
+      60 +- **Verified:** removing `onError` failed both the component te
+         +st and the e2e test on both projects.                          
+      61 +                                                               
+      62 +## 2026-11-03: 001-a-subscription-overview / T7: edge cases and
+         + e2e flows                                                     
+      63 +                                                               
+      64 +- **Decisions (asked the human):**                             
+      65 +  - The human picked all four edge cases: a broken image, an ac
+         +tive subscription without a date or total, long                
+      66 +    names and many items, and an empty item list.              
+      67 +  - They picked three of the four e2e flows: 320px reflow, keyb
+         +oard-only retry, and no console errors in every                
+      68 +    state. They left out reduced motion.                       
+      69 +  - These became T8–T12. Spec R3, R8 and R10, the acceptance cr
+         +iteria and Known limitations were extended before              
+      70 +    any code.                                                  
+      71 +                                                               
+      72  ## 2026-11-03: 001-a-subscription-overview / T6: overview e2e s
+          pec
+      73  
+      74  - **Changed:**
+
+● Last, a final npm run check covering the R1 change and the doc edits:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Spec 001 is finished. T4 to T12 are done, and the spec is now marked
+  Implemented. The last npm run check passed with 53 unit/component tests and 37
+  e2e tests. 7 e2e tests were skipped on purpose: they set their own phone
+  width, so running them in the desktop project would only repeat them. Nothing
+  is committed yet.
+
+  T4 to T6: the subscription views and their e2e tests
+  - Active view: a status badge, then "Next order" with the date as the largest
+    text on the page, the amount, the discount line and the frequency. Below
+    that, the products, with an image or a placeholder of the same size
+    (ItemList.tsx (src/part-a/ItemList.tsx)).
+  - Paused view: "Paused until Jan 3, 2027" and "Want to resume sooner? Contact
+    support". Cancelled view: "Cancelled on Nov 30". Both use a greyer
+    background and the badge spells out the status, so the difference doesn't
+    rely on color. Neither has any buttons.
+  - E2e tests: a-overview.spec.ts (e2e/a-overview.spec.ts) covers every fixture
+    and the 404 at both widths, with the accessibility checker (axe) and a
+    no-sideways-scroll check. It also checks the loading announcement, focus
+    after "Try again", and that the product rows line up.
+
+  T7: your choices became T8 to T12
+  - T8, broken image: the placeholder replaces it. The e2e test breaks the image
+    for real by blocking its request.
+  - T9, missing date or total: "We'll confirm your next order date soon."
+    replaces a missing date. A missing total drops the amount and also the
+    discount line, which means nothing without an amount.
+  - T10, long names and many items: checked at 375px and 320px. The mock can't
+    send this data and src/api is read-only, so the e2e test copies and renames
+    rows on the page. The spec says so under Known limitations.
+  - T11, no items: "There are no products in this subscription." shows.
+  - T12, extra e2e flows: every state at 320px; "Try again" with only the
+    keyboard, using Enter and then Space; and no console errors in any state.
+
+  Things I caught along the way
+  - Unexpected links: the first e2e run found links on the cancelled page. They
+    come from the nav in the starter's App.tsx, so the "no links or buttons"
+    checks now look only inside main.
+  - Skeleton not tested: the spec says "a skeleton shows", but no test checked
+    it, so I added it to the loading test.
+  - Three test bugs of my own, found by re-reading before running: a scroll
+    check that read nothing, a badge locator that matched the wrong element, and
+    a selector that would have passed even if the skeleton never went away.
+
+  How I checked it
+  - Planted bugs: I broke 13 behaviors one at a time, including a computed
+    total, the wrong order, a filled-in image alt, a placeholder that doesn't
+    line up, a page that scrolls sideways, missing image fallback and a skeleton
+    that never goes away. Each one failed the test meant to catch it, and I
+    reverted each.
+  - Flakiness: the timing-sensitive e2e tests passed 60 of 60 runs, and again 65
+    of 65 after the last change.
+  - Screenshots: I looked at every state at 375px and 1200px, plus a 320px page
+    with long names and a broken image.
+
+  Should I commit this to develop? The files overlap across tasks, so I'd make
+  one commit, "001 T3–T12: subscription overview views, edge cases and e2e". It
+  would leave out the untracked docs/03 and docs/04, which were already there
+  before this session.
+
+❯ commit all the working tree to develop
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I committed the whole working tree to develop as c613df2 "001 T3–T12:
+  subscription overview views, edge cases and e2e", and nothing is left
+  uncommitted.
+
+  The commit has 14 files. Since you said all of it, that includes
+  docs/03-Coding_agent.txt and docs/04-Coding_agent.txt, the two untracked files
+  I'd suggested leaving out. The commit message lists the work task by task and
+  ends with the co-author line. I haven't pushed it.
+
+  Spec 001 is finished. When you're ready, next up is spec 002 (skip next
+  shipment).
