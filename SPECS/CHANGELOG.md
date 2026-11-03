@@ -2,6 +2,184 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 002-a-skip-shipment / T7: edge cases and e2e flows chosen
+
+- **Changed:**
+  - `spec.md` went back to `Draft` for re-approval. R10 gains the lost-focus case, and there is a new R12 (short
+    screens), with one acceptance criterion each. The human approved the wording, so the spec is `Approved` again.
+  - `task.md`: T7 is ticked, and T8–T11 are added.
+  - `plan.md`: a "Follow-up" section with the approach for T8–T11.
+- **Decisions:**
+  - Human decisions: the edge cases are the lost-focus fallback and short screens. The e2e flows are two skips in a
+    row, the default random mode, and short-height reflow (folded into T9). Backdrop click to close was not chosen.
+  - Agent proposals, approved by the human: the `heading-if-lost` focus target (T8), CSS-only scroll locking (T9),
+    T11's limit of 6 attempts, and the smaller choices made during T2–T6 and recorded in the plan.
+- **Verified:** Prettier on `SPECS/`.
+
+## 2026-11-03: 002-a-skip-shipment / T6: e2e, and two Esc races fixed
+
+- **Changed:**
+  - New `e2e/a-skip.spec.ts`:
+    - success with Esc first
+    - R5 with a double click and two Esc presses
+    - `conflict=always` through Contact us and a reopen, with axe
+    - keyboard only
+    - axe and no horizontal scroll with the dialog open at 375px, 1200px and 320px
+  - `expectAccessibleLayout` moves from `a-overview.spec.ts` to `e2e/a11y.ts`, so both specs share it.
+  - `SkipDialog.tsx`: `cancel` dispatches `skip/closed` itself, and `close` dispatches it only if the dialog is
+    really closed. Two component tests cover them.
+  - The spec's acceptance criteria are ticked, except the two the spec leaves to 004 (local cancel in R1) and 003
+    (R11).
+- **Decisions:**
+  - R5's pending state is held with `page.clock.pauseAt()`, which stops the mock's `setTimeout`. That's still the
+    real mock (spec, Known limitations), without racing its 400ms minimum latency.
+  - The plan said the modal "traps" focus. In Chromium, Tab past the last button goes to the browser's UI and then
+    back to "Keep my order", never to the inert page, and WCAG 2.1.2 allows that. The plan's wording and the test
+    now say so.
+- **Bugs found by repeating the suite (`--repeat-each=5`), recorded in the plan's Risks:**
+  - Esc, then a quick Space on the skip button, sometimes did nothing. `close` is queued as a task and Chrome runs
+    input first, so the click reached a reducer that still said `confirm`. A probe showed 3 dead presses in 60
+    before the fix and 0 in 60 after. The fix closes from `cancel`, which fires inside the keydown.
+  - That fix exposed the reverse: the queued `close` arrived after the Space had reopened the dialog, and closed it.
+    The probe saw 1 in 120 together with one `close` event on an open dialog. The handler now ignores a `close`
+    while the dialog is open. The component test is deterministic, and the browser probe (0 in 160 after) is only
+    supporting evidence, because the event is rare.
+- **Verified:**
+  - Removing the Escape `keydown` guard makes the R5 e2e fail on both projects. That confirms the plan's Chrome
+    close-watcher risk.
+  - Each new component test fails without its fix.
+  - `npm run check` green (158 unit and component tests, 48 e2e). The skip spec passes `--repeat-each=5` three times
+    in a row (165 of 165), where it had failed about once in 55 before the fixes. The probe files are deleted.
+
+## 2026-11-03: 002-a-skip-shipment / T5: failure flow
+
+- **Changed:** `SubscriptionCard.tsx` gains `refresh` (the `refresh/*` reload) and `checkAgain`. A failed skip
+  starts the reload only if it is still the latest request. `SkipDialog.test.tsx` gains 19 tests: R7's pending
+  reload, both messages, the moved date and the rebuilt confirm label, R8's Contact us (shown, emptied during the
+  next attempt, gone after a reopen, not counted for a failed reload), R9's view, "Check again" (pending, success,
+  failure, reopening while stale), and R10 for paused, cancelled, a missing date and a 404, including after "Check
+  again".
+- **Decisions:** the R9 test checks that "Check again" stays escapable while pending, because a reload only reads
+  (spec R9).
+- **Verified:**
+  - The first run had 2 failures from a test bug of mine: I passed an async callback to `settle`, which doesn't
+    await it. Rewritten in sequence, with no change to the code.
+  - Removing the reload after a failure fails 19 tests, and showing the summary while stale fails 2.
+  - `npm run check` green.
+
+## 2026-11-03: 002-a-skip-shipment / T4: confirm flow
+
+- **Changed:** `SubscriptionCard.tsx` gains `confirmSkip`, which sends `skipNextShipment` with the shown
+  subscription's `id` and `updatedAt` and dispatches `skip/succeeded` or `skip/failed`. `SkipDialog.test.tsx` gains
+  5 tests: the request's arguments, R5's pending state with two clicks and two Esc presses, both Esc events
+  prevented, R6's success, and the next skip using the response's `updatedAt`.
+- **Decisions:** the success test answers with Jan 20, not the predicted Jan 15, so the announcement and the page
+  are shown to use the response (R6).
+- **Verified:**
+  - Removing the handler's guard fails the double-click test, and removing the Escape `keydown` guard fails the Esc
+    test.
+  - The `skipInFlight` ref on its own can't be told apart from the state check in jsdom, because React flushes
+    click updates synchronously. T6's double click covers the browser.
+  - `npm run check` green.
+
+## 2026-11-03: 002-a-skip-shipment / T3: skip dialog, opening and closing
+
+- **Changed:**
+  - New `src/part-a/SkipDialog.tsx`: the `<dialog>` and every phase's markup (summary, alert, Keep, confirm or
+    "Check again"). It only renders.
+  - `views.tsx`: "Skip next order" ends the Next order section when `canSkip`.
+  - `SubscriptionCard.tsx`: renders the dialog next to the view, a layout effect for `showModal()`/`close()`, a
+    focus effect that applies `state.focus`, and `state.announcement` in the status region.
+  - `SubscriptionCard.module.css`: the dialog, `::backdrop`, the secondary button, and the disabled and pending
+    states.
+  - New `src/part-a/SkipDialog.test.tsx` (15 tests). `deferred` and `settle` move to `src/test/deferred.ts` so both
+    component test files share them.
+- **Decisions:**
+  - The `<dialog>` stays mounted while the subscription is loaded, but its content renders only while open. A closed
+    dialog then exposes no buttons or headings, whatever jsdom's UA stylesheet does.
+  - Open and close run in a layout effect: no empty frame between the content unmounting and `close()`, and always
+    before the focus effect (the plan's "close first, focus second").
+  - The dialog's `aria-describedby` points at the summary, or at the alert in the R9 state, so a screen reader
+    reads what will happen when the dialog opens.
+  - The empty alert gets `margin-top: -1rem` instead of `display: none`, so it stays a live region without adding a
+    gap.
+  - The component tests replay a browser's Esc (keydown, then `cancel`, then `close()` unless prevented), so the R5
+    guards run in jsdom too.
+- **Verified:** two hand mutations (dropping the native `close` handler, focusing the wrong element on open) fail
+  the new tests. Screenshots at 375px and 1200px with the dialog open, with focus on "Keep my order" in Chromium.
+  `npm run check` green.
+
+## 2026-11-03: 002-a-skip-shipment / T2: reducer skip layer
+
+- **Changed:**
+  - `src/part-a/subscriptionReducer.ts` gains `skip`, `stale`, `announcement` and `focus`, and the `skip/*` and
+    `refresh/*` actions from the plan's transition table. `load/started` resets the whole layer.
+  - New `src/part-a/skipReducer.test.ts` (48 tests), one `describe` per action. The 001 "Try again" test now
+    compares against `initialState`, because `State` is wider.
+- **Decisions (added to plan.md before the code):**
+  - `focus` is one-shot: every accepted action sets it again, to `null` when it has no target.
+  - `skip/opened` also clears the announcement.
+  - A reload result that arrives in the `stale` phase (closed during "Check again", reopened before it returned) is
+    handled like `rechecking`.
+  - Not in the table, and R10-consistent: a skip response that leaves nothing to skip sends focus to the `h1`, and
+    announces just "Skipped.".
+- **Verified:**
+  - Three hand mutations (comparing ISO strings instead of calendar days, keeping `focus` between actions, ignoring
+    `state.stale` after "Check again") each fail the suite (1, 5 and 2 tests).
+  - `npm run check` green. Its first run failed `format:check` on my T1 log entry, fixed with Prettier.
+
+## 2026-11-03: 002-a-skip-shipment / T1: skip rules
+
+- **Changed:** new `src/part-a/skip.ts` with `canSkip` (R1, R10), `predictNextChargeAt` (R2) and `skipErrorCause`
+  (409 → `conflict`, anything else → `failed`, R7), and `skip.test.ts`.
+- **Decisions:** the prediction adds `intervalDays × 86 400 000` ms to `Date.parse`, the same arithmetic as the mock,
+  so it lands on the server's instant even across the Nov 1, 2026 daylight-saving change.
+- **Verified:** 16 unit tests, including the daylight-saving change, a 23:59:59.999 timestamp and two rolls into the
+  next year. One expected literal of mine was off by an hour (I'd applied the DST shift to a UTC sum). I fixed the
+  literal, the code was right. `npm run check` green.
+
+## 2026-11-03: 002-a-skip-shipment / plan and tasks
+
+- **Changed:**
+  - The spec is `Approved` again, after the human approved the edge-case wording.
+  - New R9 rule (human decision): closing a stale dialog and reopening it shows the R9 state again, until a reload
+    succeeds.
+  - Known limitations now say e2e always uses the real mock (human decision, rejecting a rewrite of the module Vite
+    serves). The earlier claim that `page.route` couldn't reach the mock was wrong: e2e runs on the dev server. It
+    also says R5's call count is checked through what can be seen, and that the R1 local-cancel and R11 criteria
+    move to 004 and 003.
+  - New `plan.md` and `task.md` (T1–T7).
+- **Decisions (in the plan, for review):**
+  - The reload after a failure has its own `refresh/*` actions, so the page doesn't drop to the skeleton behind
+    the dialog.
+  - The reducer chooses the focus target, so focus rules are unit-tested.
+  - The moved date is compared by calendar day.
+  - The alert region stays mounted and empties between attempts, so a repeated 409 is announced again.
+  - "Keep my order" looks like the primary button.
+  - The Escape `keydown` is prevented while pending, because Chrome's close watchers stop honoring a prevented
+    `cancel` on a repeated Esc.
+- **Verified:** Prettier on `SPECS/002-a-skip-shipment/`.
+
+## 2026-11-03: 002-a-skip-shipment / spec: edge cases settled
+
+- **Changed:** `SPECS/002-a-skip-shipment/spec.md` goes back to `Draft` for re-approval. R1–R5 and R7–R10 are
+  tightened, with 10 new acceptance criteria and two new known limitations.
+- **Decisions:**
+  - Human decisions:
+    - The skip button is hidden when `nextChargeAt` is null, not only when the subscription isn't active (R1).
+    - When a reload after a failure returns a different `nextChargeAt`, the dialog says "Your next order is now
+      {new} (it was {old}). It may already have been skipped." The confirm button's label is rebuilt from the
+      fresh data (R4, R7).
+    - Focus moves to "Keep my order" after a failure (R7).
+    - The R8 count covers failed skips only, and resets on success or when the dialog closes.
+  - Agent defaults, flagged for review:
+    - The pending state covers the reload, which shows "Checking…" (R5).
+    - In R9, the dates and confirm are hidden, and "Keep my order" and Esc stay available.
+    - R10 also covers a 404 and a missing date, with focus moving to the `h1`.
+    - The R3 sentence shows only when the pending frequency differs from the server's interval.
+    - The prediction uses millisecond arithmetic, the same as the server (R2).
+- **Verified:** Prettier check on the spec and this log.
+
 ## 2026-11-03: 001-a-subscription-overview / T12: reflow, keyboard retry and console e2e
 
 - **Changed:** `e2e/a-overview.spec.ts` gains:

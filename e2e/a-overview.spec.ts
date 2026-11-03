@@ -1,22 +1,9 @@
-import AxeBuilder from "@axe-core/playwright";
 import { catalog } from "../src/api/fixtures";
+import { expectAccessibleLayout } from "./a11y";
 import { expect, test, type Page } from "./test";
 
 // 001: every fixture and the 404, on both projects (375px and 1200px). The clock and time zone are pinned in
 // playwright.config.ts, so the dates are literals: now is Dec 10, 2026, noon in New York.
-
-const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-
-/** R10: no WCAG 2.2 A/AA violations and no horizontal scroll, in whatever state the page is in. */
-async function expectAccessibleLayout(page: Page) {
-  const axe = await new AxeBuilder({ page }).withTags(WCAG).analyze();
-  expect(axe.violations).toEqual([]);
-  const { scrollWidth, clientWidth } = await page.evaluate(() => {
-    const { scrollWidth, clientWidth } = document.documentElement;
-    return { scrollWidth, clientWidth };
-  });
-  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
-}
 
 /**
  * R1: the loading state lasts 400–2500ms, which `toHaveText`'s widening poll intervals can miss.

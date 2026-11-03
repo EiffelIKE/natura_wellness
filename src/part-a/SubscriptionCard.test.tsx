@@ -1,32 +1,15 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSubscription } from "../api/mockApi";
 import { catalog, fixtures } from "../api/fixtures";
 import { ApiError, type Subscription } from "../api/types";
+import { deferred, settle } from "../test/deferred";
 import { SubscriptionCard } from "./SubscriptionCard";
 
 vi.mock("../api/mockApi", () => ({ getSubscription: vi.fn(), skipNextShipment: vi.fn() }));
 const api = vi.mocked(getSubscription);
-
-/** A promise the test settles by hand, so it controls when (and in which order) responses arrive. */
-function deferred() {
-  let resolve!: (subscription: Subscription) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<Subscription>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
-/** Settles a deferred inside act and lets the component's .then handlers dispatch before asserting. */
-const settle = (fn: () => void) =>
-  act(async () => {
-    fn();
-    await Promise.resolve();
-  });
 
 const serverError = () => new ApiError(500, "Internal server error");
 const notFound = () => new ApiError(404, "Subscription not found");
@@ -76,7 +59,7 @@ describe("SubscriptionCard: load failure (R2)", () => {
 
   it("Try again calls the API again, moves focus to the heading and announces loading", async () => {
     const user = userEvent.setup();
-    const retry = deferred();
+    const retry = deferred<Subscription>();
     api.mockRejectedValueOnce(serverError()).mockReturnValueOnce(retry.promise);
     render(<SubscriptionCard />);
 
@@ -123,8 +106,8 @@ describe("SubscriptionCard: not found (R2, R11)", () => {
 
 describe("SubscriptionCard: stale responses", () => {
   it("under StrictMode, ignores the first request's late failure once the second has loaded", async () => {
-    const first = deferred();
-    const second = deferred();
+    const first = deferred<Subscription>();
+    const second = deferred<Subscription>();
     api.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
     render(
       <StrictMode>

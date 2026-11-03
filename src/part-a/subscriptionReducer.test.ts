@@ -44,7 +44,7 @@ describe("subscriptionReducer: load lifecycle (R1, R2)", () => {
 
   it("goes back to loading on Try again", () => {
     const state = run([started(1), failed(1), started(2)]);
-    expect(state).toEqual({ requestId: 2, load: { kind: "loading" } });
+    expect(state).toEqual({ ...initialState, requestId: 2 });
     expect(run([succeeded(2)], state).load.kind).toBe("ready");
   });
 });

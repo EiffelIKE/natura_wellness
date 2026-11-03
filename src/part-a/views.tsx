@@ -1,8 +1,10 @@
 // Presentational views, one per state of the card. SubscriptionCard picks which one renders (plan.md).
+import type { Ref } from "react";
 import type { Subscription, SubscriptionItem, SubscriptionStatus } from "../api/types";
 import { SUPPORT_MAILTO } from "./constants";
 import { formatDate, formatFrequency, formatMoney } from "./format";
 import { ItemList } from "./ItemList";
+import { canSkip } from "./skip";
 import styles from "./SubscriptionCard.module.css";
 
 const bar = (modifier: string) => `${styles.skeleton} ${styles[`skeleton--${modifier}`]}`;
@@ -88,8 +90,16 @@ function Products({ items }: { items: SubscriptionItem[] }) {
   );
 }
 
+interface ActiveViewProps {
+  subscription: Subscription;
+  /** 002 R1: opens the skip dialog. */
+  onSkip: () => void;
+  /** 002 R6: focus comes back here when the dialog closes. */
+  skipButtonRef: Ref<HTMLButtonElement>;
+}
+
 /** R3, R4: in the order the spec lists, and every date and amount is the server's. */
-export function ActiveView({ subscription }: { subscription: Subscription }) {
+export function ActiveView({ subscription, onSkip, skipButtonRef }: ActiveViewProps) {
   const { nextChargeAt, nextChargeTotalCents, discountPercent, intervalDays, items } = subscription;
   return (
     <div className={styles.panel}>
@@ -113,6 +123,17 @@ export function ActiveView({ subscription }: { subscription: Subscription }) {
           </>
         )}
         <p>{formatFrequency(intervalDays)}</p>
+        {/* 002 R1: the action belongs to the order it skips, so it ends this section. */}
+        {canSkip(subscription) && (
+          <button
+            ref={skipButtonRef}
+            type="button"
+            className={`${styles.button} ${styles["button--secondary"]} ${styles["section__action"]}`}
+            onClick={onSkip}
+          >
+            Skip next order
+          </button>
+        )}
       </section>
       <Products items={items} />
     </div>

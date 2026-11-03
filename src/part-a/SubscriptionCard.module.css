@@ -188,6 +188,35 @@
   background: var(--color-accent-hover);
 }
 
+/* 002: same size as the primary button, so both are easy to hit, but the safe action stands out (plan.md). */
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.button--secondary:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-accent-hover);
+}
+
+/* 002 R5: "Keep my order" is natively disabled while a request is pending. */
+.button:disabled,
+.button:disabled:hover {
+  background: var(--color-border);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+/* 002 R5: the pending confirm keeps focus, so it keeps its colors and only the cursor says to wait. */
+.button[aria-disabled="true"] {
+  cursor: progress;
+}
+
+.section__action {
+  margin-top: 0.75rem;
+}
+
 .link {
   color: var(--color-accent);
   font-weight: 600;
@@ -199,6 +228,63 @@
 .link:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* 002: the skip dialog. It is a child of the card, so it inherits the tokens and the font even in the top layer. */
+
+.dialog {
+  width: min(100% - 2rem, 28rem);
+  max-width: none;
+  max-height: calc(100% - 2rem);
+  padding: 1.5rem 1.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1rem 3rem rgb(31 42 36 / 0.25);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ::backdrop doesn't inherit custom properties in every browser, so its color is a literal (--color-text at 55%). */
+.dialog::backdrop {
+  background: rgb(31 42 36 / 0.55);
+}
+
+.dialog__title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.dialog__body,
+.dialog__alert {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dialog__alert {
+  font-weight: 600;
+}
+
+/* The alert stays mounted while empty (plan.md), so it mustn't add a gap of its own. */
+.dialog__alert:empty {
+  margin-top: -1rem;
+}
+
+.dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dialog__actions .button {
+  align-self: stretch;
 }
 
 /* R1: skeleton in the shape of the active card. */
@@ -303,5 +389,17 @@
 
   .date {
     font-size: 2.5rem;
+  }
+
+  .dialog {
+    padding: 1.75rem;
+  }
+
+  .dialog__actions {
+    flex-direction: row;
+  }
+
+  .dialog__actions .button {
+    flex: 1;
   }
 }
