@@ -118,10 +118,11 @@ below, which were settled with the human on 2026-11-03.
   came on blur just before the submit, for example when the shopper taps "Add to cart" while the field has focus.
   Normal steps aren't announced, because the field's value is already read.
 - R12 **Responsive.** At 1200px the two-column grid matches the design exactly: 64 / 540 / 64 / 468 / 64. Between
-  960px and 1200px the grid shrinks, the photo column first, so the box keeps its width as long as it can. Below
-  960px it becomes one column: the photo, then the box. There is no horizontal scroll at 1024px, 768px, 375px or
-  320px (WCAG 1.4.10), in any state. Everything below 1200px is our own layout, because the design shows only
-  1200px.
+  960px and 1200px the grid shrinks, the photo column first, so the box keeps its width as long as it can. Above
+  1200px the columns keep their 1200px sizes (540 / 64 / 468) and the layout is centred, so the side margins grow
+  equally instead of leaving the box pinned left. Below 960px it becomes one column: the photo, then the box. There
+  is no horizontal scroll at 1024px, 768px, 375px or 320px (WCAG 1.4.10), in any state. Everything except 1200px is
+  our own layout, because the design shows only 1200px.
 - R13 **Keyboard and focus.** Every control works by keyboard alone, in DOM order. Every focusable element has a
   visible `:focus-visible` indicator. The design shows none, so the default screenshot is unaffected. There is one
   `h1`, "Vitamin D". The photo has descriptive alt text from `copy.ts`.
@@ -189,6 +190,8 @@ below, which were settled with the human on 2026-11-03.
 - [x] R10: Enter on either radio, and on the frequency `select`, doesn't add to the cart.
 - [x] R12: At 1200px the columns are 64 / 540 / 64 / 468 / 64 (the geometry test). At 1024px the layout is still two
       columns, with the photo column narrower and the box at full width.
+- [x] R12: At 1440px and 1920px the columns stay 540 / 64 / 468, and from 960px up the left and right margins are
+      equal within 1px.
 - [x] R12: At 1024px and 768px there is no horizontal scroll. At 375px and 320px the layout is one column with no
       horizontal scroll. Each is checked in the default and one-time states.
 - [x] R13: A keyboard-only run reaches every control, picks one-time, the subscription, 60 days and a quantity of 2,
@@ -227,7 +230,7 @@ below, which were settled with the human on 2026-11-03.
 - **The totals may differ by 1¢ from Part A.** They use unit price × quantity, while Part A's mock rounds the
   discount on the total (`totalAfterDiscount`), so at a quantity of 3 or more a Part A subscription could differ by
   1¢ (3 × Vitamin D: $76.38 here, $76.37 there). The two parts are separate builds that share no cart.
-- **The layout below 1200px (R12) is not from the design.**
+- **The layout at any width other than 1200px (R12) is not from the design.**
 
 ## Open questions
 

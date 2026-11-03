@@ -2,6 +2,24 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 005-b-buy-box / T13: centre the layout above 1200px
+
+- **Changed:** the human found the buy box pinned to the left at 1920×1080, with about 790px of empty space on
+  the right. R12 only defined 1200px and narrower, so wider screens were unspecified. `spec.md`: R12 now says the
+  columns keep 540 / 64 / 468 above 1200px and the layout is centred; a new acceptance criterion; the known
+  limitation now says "any width other than 1200px". `plan.md`: an "Above 1200px" bullet. `task.md`: T13.
+  `BuyBox.module.css`: `.layout` gets `max-inline-size: 1072px; margin-inline: auto`.
+  `e2e/b-buy-box.spec.ts`: the reflow check also runs at 1920px and 1440px, asserts equal side margins from 960px
+  up, and asserts the 540 photo and 64 gap above 1200px.
+- **Decisions:** centre at the design's sizes instead of stretching the columns, so wide screens show the
+  approved design. 1072 = 540 + 64 + 468, the content box at 1200, so the design width is unchanged.
+- **Verified:** before the CSS change, the new check failed at 1920px (the margins differed by 720px) and at
+  1440px (by 240px), and passed below that. After it, all 8 widths pass. The visual diff moved from 0.775% to
+  **0.769%** (28,802 px), the same in two runs with and two without the fix. Measured at 1200×780: `5.333vw` is
+  63.996px, so the grid used to start at x = 63.984; centring puts it at x = 64.000, so this is a 0.016px subpixel
+  shift toward the design, not a layout change. `npm run check`: green; 611 unit/component tests and 166 e2e
+  tests passed, 24 intentional skips (the two new fixed widths run in one project only).
+
 ## 2026-11-03: 005-b-buy-box / T10: final acceptance review, spec Implemented
 
 - **Changed:** `spec.md`: all 27 acceptance criteria ticked, status `Implemented`. `task.md`: T10 ticked.

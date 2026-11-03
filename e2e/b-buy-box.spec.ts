@@ -60,6 +60,13 @@ async function expectReflow(page: Page, width: number) {
     expect(Math.abs(photo.y - box.y), "Both columns start on the same row").toBeLessThanOrEqual(1);
     expect(photo.x + photo.width).toBeLessThan(box.x);
     expect(Math.abs(box.width - 468), "The photo absorbs the shrink before the buy box").toBeLessThanOrEqual(1);
+    const viewport = await page.evaluate(() => document.documentElement.clientWidth);
+    const rightMargin = viewport - (box.x + box.width);
+    expect(Math.abs(photo.x - rightMargin), "The two columns are centred").toBeLessThanOrEqual(1);
+    if (width > 1200) {
+      expect(Math.abs(photo.width - 540), "Wider than the design, the photo keeps 540").toBeLessThanOrEqual(1);
+      expect(Math.abs(box.x - photo.x - photo.width - 64), "and the gap keeps 64").toBeLessThanOrEqual(1);
+    }
   } else {
     expect(photo.y + photo.height).toBeLessThan(box.y);
     expect(Math.abs(photo.x - box.x)).toBeLessThanOrEqual(1);
@@ -84,7 +91,7 @@ async function expectReflow(page: Page, width: number) {
 }
 
 // Fixed widths only need one project. Include both sides of the breakpoint to catch an off-by-one media query.
-for (const width of [1024, 960, 959, 768, 375, 320]) {
+for (const width of [1920, 1440, 1024, 960, 959, 768, 375, 320]) {
   test(`005 T6, R12: subscription and one-time reflow at ${width}px`, async ({ page }) => {
     test.skip(test.info().project.name === "desktop", "The viewport is set here, so one project is enough.");
     await page.setViewportSize({ width, height: 812 });

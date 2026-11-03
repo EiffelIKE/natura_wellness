@@ -60,13 +60,18 @@
   outline-offset: 2px;
 }
 
-/* R12: 64 / 540 / 64 / 468 / 64 at 1200. The photo column absorbs the shrink first. */
+/*
+ * R12: 64 / 540 / 64 / 468 / 64 at 1200. The photo column absorbs the shrink first.
+ * Wider than 1200, the 1072px grid (540 + 64 + 468) is centred; at 1200 the content box is already 1072.
+ */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 540px) minmax(420px, 468px);
   justify-content: start;
   column-gap: clamp(32px, 5.333vw, 64px);
   align-items: start;
+  max-inline-size: 1072px;
+  margin-inline: auto;
 }
 
 @media (max-width: 959px) {

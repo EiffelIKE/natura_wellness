@@ -272,6 +272,9 @@ main.page
   are `clamp(32px, 5.333vw, 64px)`, which is exactly 64 at 1200. The photo column absorbs the shrink first. At
   1024px the padding and gap are about 54.6 each, the box keeps 468 and the photo column is about 392. The photo
   scales inside its square card.
+- **Above 1200px:** the grid is capped at `max-inline-size: 1072px` (540 + 64 + 468) and centred with
+  `margin-inline: auto`. At 1200 the page's content box is already exactly 1072, so the design width is unchanged;
+  wider, the extra space splits equally on both sides.
 - **Below 960px:** one column, `max-width: 560px`, centred, with a 16px side padding. The photo comes first.
 - **Option header:** a wrapping flex row, switching below 480px to a grid with columns for the radio, the wrapping
   label and the price. The badge sits below the label, and the price block stays top-right.

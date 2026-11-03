@@ -44,3 +44,5 @@
 - [x] T12 (R3–R6, R8, R9): at 375px and 1200px, click "2,316 reviews" with a non-default quantity in each purchase
       option. Check that Part B stays open with `#reviews`, the option and quantity are preserved, the subscription
       frequency is preserved, every total agrees, and no console errors occur
+- [x] T13 (R12): centre the layout above 1200px (found by the human at 1920×1080). Add 1440px and 1920px to the
+      reflow check, assert the 540 / 468 columns there, and assert equal side margins from 960px up
