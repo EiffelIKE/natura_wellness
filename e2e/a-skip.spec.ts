@@ -95,6 +95,58 @@ test("R7, R8: a 409 reloads, explains, and keeps the order; Contact us shows aft
   await expect(nextOrder(page)).toContainText("Dec 16");
 });
 
+test("R6: two skips in a row, each announced, the second against the first one's result", async ({ page }) => {
+  await openDialog(page, "never");
+  await dialog(page).getByRole("button", { name: "Skip Dec 16 order" }).click();
+  await expect(page.getByRole("status")).toHaveText("Skipped. Your next order is Jan 15, 2027.", SLOW);
+  await expect(skipButton(page)).toBeFocused();
+
+  await skipButton(page).click();
+  // Cleared on open, so the second success is announced as new text.
+  await expect(page.getByRole("status")).toBeEmpty();
+  await expect(dialog(page)).toContainText(
+    "Your Jan 15, 2027 order will be skipped. Your next order moves to Feb 14, 2027, 30 days later on your current schedule.",
+  );
+  // The first skip gave the subscription a new `updatedAt`. The mock compares it even with conflict=never, so the
+  // second skip only succeeds if it sends the new one.
+  await dialog(page).getByRole("button", { name: "Skip Jan 15, 2027 order" }).click();
+  await expect(page.getByRole("status")).toHaveText("Skipped. Your next order is Feb 14, 2027.", SLOW);
+  await expect(dialog(page)).toBeHidden();
+  await expect(skipButton(page)).toBeFocused();
+  await expect(nextOrder(page)).toContainText("Feb 14, 2027");
+});
+
+test("R6, R7: in the mock's default random mode, confirming until it works skips exactly once", async ({ page }) => {
+  // About 1 in 3 skips gets a 409, so this is nondeterministic by design. Six 409s in a row is about a 0.1% chance.
+  const ATTEMPTS = 6;
+  await page.goto("/?part=a&fixture=active");
+  await skipButton(page).click();
+  const confirm = dialog(page).getByRole("button", { name: "Skip Dec 16 order" });
+  const alert = dialog(page).getByRole("alert");
+
+  let conflicts = 0;
+  for (; conflicts < ATTEMPTS; conflicts++) {
+    await confirm.click();
+    // Empty while the skip and any reload are pending; the conflict message only shows once both are done.
+    await expect(alert).toBeEmpty();
+    const outcome = async () =>
+      (await dialog(page).isHidden()) ? "skipped" : (await alert.textContent()) ? "conflict" : "pending";
+    await expect.poll(outcome, SLOW).not.toBe("pending");
+    if ((await outcome()) === "skipped") break;
+
+    // R7: the 409 left the order alone, and the customer can confirm again.
+    await expect(alert).toContainText(CONFLICT_MESSAGE);
+    await expect(keep(page)).toBeFocused();
+    await expect(nextOrder(page)).toContainText("Dec 16");
+  }
+  test.info().annotations.push({ type: "409s before the skip", description: String(conflicts) });
+  expect(conflicts, `${ATTEMPTS} skips in a row got a 409`).toBeLessThan(ATTEMPTS);
+
+  await expect(page.getByRole("status")).toHaveText("Skipped. Your next order is Jan 15, 2027.");
+  await expect(nextOrder(page)).toContainText("Jan 15, 2027");
+  await expect(skipButton(page)).toBeFocused();
+});
+
 test("R4, R6: the whole flow works by keyboard alone", async ({ page }) => {
   await page.goto("/?part=a&fixture=active&conflict=never");
   await expect(skipButton(page)).toBeVisible();
@@ -153,5 +205,52 @@ test.describe("at 320px (WCAG 1.4.10)", () => {
     const box = await dialog(page).boundingBox();
     expect(box?.x).toBeGreaterThanOrEqual(0);
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
+  });
+});
+
+test.describe("at 640×320, a landscape phone (R12)", () => {
+  test.use({ viewport: { width: 640, height: 320 } });
+
+  test("the dialog scrolls inside, Tab reaches both buttons, and the page behind doesn't scroll", async ({ page }) => {
+    test.skip(test.info().project.name === "desktop", "The viewport is set here, so one project is enough.");
+    await openDialog(page, "never");
+    const scrollY = () => page.evaluate(() => window.scrollY);
+    // The click scrolled the skip button into view, so the page isn't at the top.
+    const atOpen = await scrollY();
+    // Otherwise "doesn't scroll" would prove nothing.
+    expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(true);
+
+    const box = await dialog(page).boundingBox();
+    expect(box?.y).toBeGreaterThanOrEqual(0);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(320);
+    // The content is taller than the dialog, so the dialog is what scrolls.
+    expect(await dialog(page).evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+
+    await expect(keep(page)).toBeFocused();
+    await expect(keep(page)).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press("Tab");
+    const confirm = dialog(page).getByRole("button", { name: "Skip Dec 16 order" });
+    await expect(confirm).toBeFocused();
+    await expect(confirm).toBeInViewport({ ratio: 1 });
+
+    // The wheel over the backdrop, left of the centred dialog, and then over the dialog past its own end.
+    await page.mouse.move(8, 160);
+    await page.mouse.wheel(0, 400);
+    await page.mouse.move(320, 160);
+    await page.mouse.wheel(0, 2000);
+    // Wheel scrolling is applied asynchronously, so give it a moment to have moved anything.
+    await page.waitForTimeout(300);
+    expect(await scrollY()).toBe(atOpen);
+
+    await page.mouse.wheel(0, -2000);
+    await expect.poll(() => dialog(page).evaluate((element) => element.scrollTop)).toBe(0);
+    await expect(dialog(page).getByRole("heading", { name: "Skip your next order?" })).toBeInViewport();
+    await expectAccessibleLayout(page);
+
+    // The page scrolls again once the dialog is closed.
+    await page.keyboard.press("Escape");
+    await expect(dialog(page)).toBeHidden();
+    await page.mouse.wheel(0, 400);
+    await expect.poll(scrollY).toBeGreaterThan(atOpen);
   });
 });

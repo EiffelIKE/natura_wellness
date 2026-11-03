@@ -157,10 +157,13 @@ prediction is the one exception 001 R4 allows.
 - **T8, lost focus (R10):** the reducer can't see DOM focus. `refresh/succeeded` from `closed`, with nothing left to
   skip, sets a new focus target, `heading-if-lost`. The focus effect moves focus to the `h1` only if
   `document.activeElement` is `<body>`, which is where focus ends up when the focused skip button is removed. If the
-  customer was elsewhere on the page, focus stays there.
+  customer was elsewhere on the page, focus stays there. A 404 that arrives with the dialog closed uses the same
+  target, because the not-found view removes the skip button too.
 - **T9, short screens (R12):** `max-height` is already set. The dialog gets an explicit `overflow: auto`, and the page
-  stops scrolling while it's open, through `:has()` on the root, in CSS only.
-- **T10, T11:** test-only. T11 is nondeterministic by design (about 1 in 3 skips gets a 409), so it loops up to 6
+  stops scrolling while it's open, through `:has()` on the root, in CSS only. Chrome's UA style already gives a
+  modal dialog `overflow: auto`, so only the scroll lock was missing (the e2e test failed on it first).
+- **T10, T11:** test-only. T10 needs no request inspection to prove the second skip sends the fresh `updatedAt`:
+  every skip gives the mock a new one, and the mock compares it even with `conflict=never`. T11 is nondeterministic by design (about 1 in 3 skips gets a 409), so it loops up to 6
   attempts. The chance that all 6 fail is under 0.2%, and the test fails with a clear message if they do.
 
 ## Risks

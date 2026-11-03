@@ -1,0 +1,763 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/002-a-skip-shipment/spec.md in the
+  IDE. This may or may not be related to the current task.</ide_opened_file>
+
+❯ lets start with the spec 002, the spec is approved, but I think there's some
+  edge cases that we need to discuss here
+
+● I'll read the spec and the surrounding context first.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● The spec is clear. To ground the edge cases in what the API actually does,
+  I'll check the API and the current Part A state.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Now the reducer, since R7/R9/R11 depend on how local state survives a reload.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● I read spec 002 against the mock API (mockApi.ts (src/api/mockApi.ts)), spec
+  001, and the reducer. The spec handles the main paths well. I found these
+  gaps, where the spec says nothing or two of its rules point different ways:
+
+  Gaps that change behaviour (I'm asking about these):
+  1. Active but no nextChargeAt. 001 R3 allows this case. R1 would still show
+     the skip button, R2 can't name any dates, and the server would reject the
+     skip with a 400.
+  2. The order date moves between attempts. For example, the customer skipped on
+     another device, so a 409 reload changes "Nov 8" to "Dec 8". The generic
+     message is easy to miss, and confirming again would skip a second order
+     that can't be un-skipped.
+  3. Focus after a failure. Focus is on the confirm button while it's pending
+     (R5). If it stays there, one more Enter press sends a second skip against
+     the new dates.
+  4. What R8's "second failure in a row" counts, and when the count resets. With
+     conflict=always, closing and reopening the dialog could hide "Contact us"
+     for good.
+
+  Smaller gaps where I'll use these defaults unless you object:
+  - Reload pending state: the R5 pending state also covers the reload after a
+    failure. The confirm button reads "Checking…" during that reload, not
+    "Skipping…".
+  - R9 state: the stale dates and the confirm button are hidden. "Keep my order"
+    and Esc stay enabled during "Check again", because that only reloads.
+  - Wider R10: R10 also covers a reload that returns a 404, or active with no
+    date. The dialog closes, the page shows the server's state, and focus goes
+    to the h1, because the skip button no longer exists.
+  - R3 sentence: it shows only when the pending frequency differs from the
+    server's intervalDays. If the server already matches after a reload, "Every
+    60 days starts after that order" would be wrong.
+  - Predicted date: it uses the same millisecond arithmetic as the mock, so it
+    can't be off by a day around a daylight-saving change. If it falls in the
+    next year, the year is shown (001 R9).
+  - No total: if nextChargeTotalCents is null, the dialog leaves out the amount,
+    matching 001 R3.
+
+● User answered Claude's questions:
+  ⎿  · Spec 002: if the server sends an active subscription with no nextChargeAt
+     (allowed by 001 R3), what happens to "Skip next order"? The dialog can't
+     name the dates R2 requires, and the server would reject the skip with a
+     400. → Hide the SKip next Order button whenever nextChargeAt is null, not
+     only when status isnt active
+     · Spec 002: after a failed skip, the reload may show a different order date
+     than the one the customer saw (for example, they already skipped on
+     another device, so Nov 8 is now Dec 8). Confirming again would skip a
+     second order, and that can't be undone. How should the dialog handle a
+     changed date? → when the reloaded nextChargeAt is different from the date
+     the customer tried to skip, the dialog says : "Your next order is now Dec 8
+     (it was Nov 8). It may already have been skipped", also the confirm
+     buttons label is rebuild from fresh data
+     · Spec 002: where should keyboard focus go after a failed skip, once the
+     fresh data has loaded? Focus was on the confirm button while the request
+     was pending (R5). → "Keep my order" (Recommended)
+     · Spec 002 R8 shows "Still not working? Contact us" after the second
+     failure in a row. What counts toward that, and when does the count reset? →
+     Reset the counter on success and when the dialog closes
+
+● Three of the answers are clear. The R8 answer settles when the count resets
+  (on success, and when the dialog closes) but not what counts toward it, so I
+  need one more decision before I can write R8.
+
+● User answered Claude's questions:
+  ⎿  · Spec 002 R8: "Contact us" shows after the second failure in a row, and
+     the count resets on success or when the dialog closes. Does a failed "Check
+     again" reload (R9, the read-only reload offered when the reload after a
+     failed skip also fails) count toward the two? → Only reset the counter on
+     sucess and when the dialog closes, not count reload failures
+
+● That settles all four. I'll write the decisions into the spec. Changing an
+  approved spec means it needs your review again, so I'm setting it back to
+  Draft until you approve the new wording.
+
+  Read 1 file (ctrl+o to expand)
+
+● Write(SPECS/002-a-skip-shipment/spec.md)
+  ⎿  Added 56 lines, removed 23 lines
+      1  # 002: Skip next shipment
+      2  
+      3 -Status: Approved                                                
+      3 +Status: Draft                                                   
+      4  
+      5  ## Problem
+      6  
+     ...
+      10  
+      11  ## Requirements
+      12  
+      13 -- R1 "Skip next order" appears only when the server status is a
+         -ctive and there is no local cancel (004). It opens a           
+      14 -  confirmation `<dialog>`.                                     
+      13 +- R1 "Skip next order" appears only when the server status is a
+         +ctive, `nextChargeAt` is set, and there is no local            
+      14 +  cancel (004). Without `nextChargeAt` there is no order to nam
+         +e, and the card already says "We'll confirm your next          
+      15 +  order date soon." (001 R3). The button opens a confirmation `
+         +<dialog>`.                                                     
+      16  - R2 The dialog names both dates: the order being skipped (`nex
+          tChargeAt`) and the new next order date, predicted as
+      17    `nextChargeAt + intervalDays` from the server's values. It al
+          so shows the amount (`nextChargeTotalCents`).
+      18    Example: "Your Nov 8 order will be skipped. Your next order m
+          oves to Dec 8, 30 days later on your current
+      19    schedule."
+      19 -- R3 If a local frequency change is pending (003), the dialog a
+         -dds one plain sentence: "Every 60 days starts after            
+      20 -  that order." The server's interval still decides the new date
+         -, because the new frequency only starts after the              
+      21 -  next order.                                                  
+      20 +  - The prediction adds `intervalDays` × 24 hours in millisecon
+         +ds, the same arithmetic as the server, so it can't be          
+      21 +    a day off across a daylight-saving change. Dates follow 001
+         + R9, so the year shows when it differs.                        
+      22 +  - Without `nextChargeTotalCents`, the amount is left out, as 
+         +in 001 R3.                                                     
+      23 +- R3 If a local frequency change is pending (003) and differs f
+         +rom the server's `intervalDays`, the dialog adds one           
+      24 +  plain sentence: "Every 60 days starts after that order." The 
+         +server's interval still decides the new date, because          
+      25 +  the new frequency only starts after the next order.          
+      26  - R4 Initial focus goes to the safe action, "Keep my order". Th
+          e confirm button says what it does: "Skip Nov 8
+      23 -  order".                                                      
+      24 -- R5 While the request is pending:                             
+      27 +  order". Its label is always built from the subscription curre
+         +ntly shown, so it changes with fresh data (R7).                
+      28 +- R5 While the request is pending, and until the reload after a
+         + failure (R7) has finished:                                    
+      29    - "Keep my order" is natively `disabled`, so the customer can
+          't back out halfway through a request whose result
+      30      they would never see.
+      27 -  - The confirm button reads "Skipping…" and uses `aria-disable
+         -d="true"`, not `disabled`, and its click handler               
+      28 -    ignores clicks. Native `disabled` on the focused button wou
+         -ld drop focus to `<body>`. With `aria-disabled` focus          
+      29 -    stays on the button, and the request can't be sent twice.  
+      31 +  - The confirm button reads "Skipping…" (or "Checking…" during
+         + the reload) and uses `aria-disabled="true"`, not              
+      32 +    `disabled`, and its click handler ignores clicks. Native `d
+         +isabled` on the focused button would drop focus to             
+      33 +    `<body>`. With `aria-disabled` focus stays on the button, a
+         +nd the request can't be sent twice.                            
+      34    - Esc does nothing: the dialog's `cancel` event is prevented.
+      35  - R6 On success:
+      36    - the server's response replaces the subscription, including 
+          `updatedAt`
+     ...
+       40  - R7 Any failure (a 409, a 400, or anything else) is handled t
+           he same way:
+       41    - there is no automatic retry, because a skip is not idempot
+           ent
+       42    - the page reloads the subscription and keeps the dialog ope
+           n, showing the fresh dates
+       39 -  - the dialog explains what happened. For a 409: "Your subscr
+          -iption was changed somewhere else. We've loaded the           
+       40 -    latest details. Check the dates and confirm again." Other 
+          -failures say: "Your order wasn't skipped. We've loaded        
+       41 -    the latest details."                                      
+       43 +  - the dialog explains what happened in a `role="alert"` mess
+          +age. For a 409: "Your subscription was changed                
+       44 +    somewhere else. We've loaded the latest details. Check the
+          + dates and confirm again." Other failures say: "Your          
+       45 +    order wasn't skipped. We've loaded the latest details."   
+       46 +  - if the reloaded `nextChargeAt` differs from the date the c
+          +ustomer tried to skip, the message adds: "Your next           
+       47 +    order is now Dec 8 (it was Nov 8). It may already have bee
+          +n skipped." Confirming again would skip a second              
+       48 +    order, and that can't be undone.                          
+       49 +  - focus moves to "Keep my order", so a stray Enter can't sen
+          +d a skip against dates the customer hasn't read               
+       50    - the customer confirms again if they still want to skip
+       43 -- R8 After the second failure in a row, the dialog adds "Still
+          - not working? Contact us" (see 001's contact target).         
+       44 -  Confirming stays possible, because each attempt is the custo
+          -mer's own choice.                                             
+       51 +- R8 After the second failed skip in a row, the dialog adds "S
+          +till not working? Contact us" (001 R11). Only failed          
+       52 +  skip requests count, not failed reloads (R9). The count rese
+          +ts on success and when the dialog closes. Confirming          
+       53 +  stays possible, because each attempt is the customer's own c
+          +hoice.                                                        
+       54  - R9 If the reload after a failure also fails, the dialog says
+            "We couldn't check your subscription. Try again in a
+       46 -  moment." and offers "Check again", which reloads only. A ski
+          -p is never sent based on data we know is stale.               
+       47 -- R10 If the reload shows the subscription is no longer active
+          -, the dialog closes and the page shows the server's           
+       48 -  status (001 R7).                                            
+       55 +  moment." and offers "Check again", which reloads only. A ski
+          +p is never sent based on data we know is stale:               
+       56 +  - the dates and the confirm button are hidden until a reload
+          + succeeds                                                     
+       57 +  - "Keep my order" and Esc stay available, also while "Check 
+          +again" is pending, because a reload only reads                
+       58 +  - when "Check again" succeeds, the dialog shows the fresh da
+          +tes as in R7, and focus moves to "Keep my order"              
+       59 +- R10 If the reload shows the subscription is no longer active
+          +, has no `nextChargeAt`, or no longer exists (404),           
+       60 +  the dialog closes and the page shows the server's state (001
+          + R2, R3, R7). Focus moves to the `h1`, because the            
+       61 +  skip button is gone.                                        
+       62  - R11 Local plan changes (003) survive the reload in R7 and R9
+            unchanged.
+       63  
+       64  ## Acceptance criteria
+       65  
+       66  - [ ] R1: Given paused, cancelled or locally cancelled, then t
+           here is no skip button.
+       67 +- [ ] R1: Given active without `nextChargeAt`, then there is n
+          +o skip button.                                                
+       68  - [ ] R2: Given active with `nextChargeAt` N and an interval o
+           f 30, then the dialog shows N and N + 30 days.
+       69 +- [ ] R2: Given N + 30 days falls in the next year, then the n
+          +ew date shows the year.                                       
+       70 +- [ ] R2: Given no `nextChargeTotalCents`, then the dialog sho
+          +ws both dates and no amount.                                  
+       71  - [ ] R3: Given a pending "every 60 days", then the dialog sti
+           ll shows N + 30 and adds the sentence.
+       72 +- [ ] R3: Given a pending frequency equal to the server's `int
+          +ervalDays`, then the sentence doesn't show.                   
+       73  - [ ] R4: When the dialog opens, "Keep my order" has focus. Es
+           c closes the dialog without calling the API.
+       74  - [ ] R5: Given a slow API, when confirm is pressed twice, the
+           n only one request is sent, focus stays on the
+       75        confirm button, "Keep my order" is disabled and Esc does
+           n't close the dialog.
+       76  - [ ] R6: Given `?conflict=never`, when the customer confirms,
+            then the announced date equals the date the server
+       77        returned.
+       61 -- [ ] R7, R8: Given `?conflict=always`, when the customer conf
+          -irms, then the conflict message and fresh data show           
+       62 -      and no second skip request is sent automatically. After 
+          -a second confirm, "Contact us" appears.                       
+       78 +- [ ] R7, R8: Given `?conflict=always`, when the customer conf
+          +irms, then the conflict message and fresh data show,          
+       79 +      focus is on "Keep my order", and no second skip request 
+          +is sent automatically. After a second confirm,                
+       80 +      "Contact us" appears.                                   
+       81 +- [ ] R7: Given the reload returns a different `nextChargeAt`,
+          + then the message names both dates and the confirm            
+       82 +      button names the new one.                               
+       83 +- [ ] R8: Given "Contact us" is showing, when the dialog is cl
+          +osed and reopened, then it is gone.                           
+       84 +- [ ] R8: Given a failed skip followed by a failed reload, the
+          +n "Contact us" doesn't show.                                  
+       85 +- [ ] R9: Given the reload fails, then the dates and confirm a
+          +re hidden, "Check again" reloads without sending a            
+       86 +      skip, and on success the fresh dates show with focus on 
+          +"Keep my order".                                              
+       87  - [ ] R11: Given a pending frequency change, when a 409 happen
+           s, then the change is still shown after the reload.
+       88  
+       89  ## Out of scope
+       90  
+       67 -- Undoing a skip. There is no un-skip endpoint, which is why R
+          -2 and R4 guard so carefully against accidental skips.         
+       91 +- Undoing a skip. There is no un-skip endpoint, which is why R
+          +2, R4 and R7 guard so carefully against accidental            
+       92 +  skips.                                                      
+       93  - Skipping more than one order at once. The customer can skip 
+           again after a success.
+       94  
+       95  ## Known limitations
+       96  
+       72 -- R10 is in place for correctness but not tested. The mock nev
+          -er changes a subscription's status (see 001).                 
+       97 +- R10 is in place for correctness but not tested in e2e. The m
+          +ock never changes a subscription's status or removes          
+       98 +  it (see 001). A component test covers it with hand-built dat
+          +a.                                                            
+       99  - The mock's `conflict=always` sets `updatedAt` before compari
+           ng, so every attempt fails. R7 and R8 keep this
+      100    bounded by the customer's own choices.
+      101 +- The mock can't move `nextChargeAt` between opening the dialo
+          +g and a failure (R7), and can't fail a reload while           
+      102 +  the first load works (R9). Both run in the browser, so `page
+          +.route` can't reach them either. They are covered by          
+      103 +  component tests with a mocked API, not e2e.                 
+      104 +                                                              
+      105 +## Open questions                                             
+      106 +                                                              
+      107 +None.                                                         
+
+● Next, a changelog entry, then a format check on both files, because npm run
+  check includes Prettier.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 20 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 002-a-skip-shipment / spec: edge cases settled  
+       6 +                                                               
+       7 +- **Changed:** `SPECS/002-a-skip-shipment/spec.md` goes back to
+         + `Draft` for re-approval. R1–R5 and R7–R10 are                 
+       8 +  tightened, with 10 new acceptance criteria and two new known 
+         +limitations.                                                   
+       9 +- **Decisions:**                                               
+      10 +  - Human decisions:                                           
+      11 +    - The skip button is hidden when `nextChargeAt` is null, no
+         +t only when the subscription isn't active (R1).                
+      12 +    - When a reload after a failure returns a different `nextCh
+         +argeAt`, the dialog says "Your next order is now               
+      13 +      {new} (it was {old}). It may already have been skipped." 
+         +The confirm button's label is rebuilt from the                 
+      14 +      fresh data (R4, R7).                                     
+      15 +    - Focus moves to "Keep my order" after a failure (R7).     
+      16 +    - The R8 count covers failed skips only, and resets on succ
+         +ess or when the dialog closes.                                 
+      17 +  - Agent defaults, flagged for review:                        
+      18 +    - The pending state covers the reload, which shows "Checkin
+         +g…" (R5).                                                      
+      19 +    - In R9, the dates and confirm are hidden, and "Keep my ord
+         +er" and Esc stay available.                                    
+      20 +    - R10 also covers a 404 and a missing date, with focus movi
+         +ng to the `h1`.                                                
+      21 +    - The R3 sentence shows only when the pending frequency dif
+         +fers from the server's interval.                               
+      22 +    - The prediction uses millisecond arithmetic, the same as t
+         +he server (R2).                                                
+      23 +- **Verified:** Prettier check on the spec and this log.       
+      24 +                                                               
+      25  ## 2026-11-03: 001-a-subscription-overview / T12: reflow, keybo
+          ard retry and console e2e
+      26  
+      27  - **Changed:** `e2e/a-overview.spec.ts` gains:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I've updated spec.md (SPECS/002-a-skip-shipment/spec.md) with your four
+  decisions and set it back to Draft, because the approved wording changed. It
+  needs your approval again before I write plan.md.
+
+  Your decisions:
+  - R1: the skip button is hidden whenever nextChargeAt is null, not only when
+    the subscription isn't active.
+  - R7, date moved: if the reload shows a different date from the one the
+    customer tried to skip, the dialog says "Your next order is now Dec 8 (it
+    was Nov 8). It may already have been skipped." The confirm button's label is
+    rebuilt from the fresh data.
+  - R7, focus: after a failure, focus moves to "Keep my order", and the message
+    is announced to screen readers.
+  - R8: only failed skips count toward "Contact us", not failed reloads. The
+    count resets on success and when the dialog closes.
+
+  My defaults, also in the spec. You may not have seen these, because the
+  question dialog can cover earlier text. Please check them:
+  - R5: "Keep my order", the confirm button and Esc stay blocked until the
+    reload after a failure has finished. The confirm button reads "Checking…"
+    during that reload.
+  - R9: if that reload also fails, the old dates and the confirm button are
+    hidden until a reload works. "Keep my order" and Esc stay available, because
+    "Check again" only reads.
+  - R10: if the reload returns a 404 or a subscription without a date, the
+    dialog closes the same way it does for a status that isn't active, and focus
+    moves to the h1, because the skip button is gone.
+  - R3: the "Every 60 days starts after that order" sentence shows only when the
+    pending frequency differs from the server's.
+  - R2: the predicted date uses the same millisecond arithmetic as the mock, so
+    it can't be a day off around a daylight-saving change.
+
+  What the mock can't produce: a date that moves between opening the dialog and
+  a failure, or a reload that fails after the first load worked. The mock runs
+  in the browser, so Playwright can't intercept its requests either. Those two
+  cases will get component tests with a mocked API instead of e2e tests, and the
+  spec says so under Known limitations.
+
+  I added an entry to CHANGELOG.md (SPECS/CHANGELOG.md), and Prettier passes on
+  both files. I haven't run the full npm run check, because only Markdown
+  changed. Nothing is committed yet. Once you approve the spec, I'll set it to
+  Approved and move on to plan.md and task.md.
+
+❯ Approved, move to plan and task
+
+● I'll read 001's plan and task files for their format, and the current Part A
+  code the skip feature builds on.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Before planning the dialog, I need to know whether jsdom supports
+  <dialog>.showModal(). It shapes the component-test strategy. I'll also read
+  the e2e helper.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I'll check whether the e2e tests run against the Vite dev server or a
+  production build before writing the testing section, since jsdom lacks
+  showModal but the project already stubs it and relies on e2e for real dialog
+  behavior.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● I noticed my spec incorrectly claims page.route can't reach the in-browser
+  mock—since Vite serves mockApi.ts over HTTP, it's actually interceptable, so
+  that's a testing-strategy choice for you to decide. I also found one behaviour
+  gap while designing the state.
+
+● User answered Claude's questions:
+  ⎿  · Spec 002 e2e: the mock can't move the order date between attempts or fail
+     only the reload, and it can't count skip calls. Because e2e runs on the
+     Vite dev server, Playwright could intercept the served src/api/mockApi.ts
+     and wrap it in the browser (the file on disk is untouched) to inject those
+     failures and count calls. Should the e2e tests do that? → No, real mock
+     only (Recommended)
+     · Spec 002 R9: if the reload after a failed skip also fails, the customer
+     can still close the dialog. The card behind it then shows data we know may
+     be stale. If they reopen "Skip next order", what should the dialog show? →
+     Reopen in the R9 state (Recommended)
+
+● Both answers are in. The stale-reopen rule is new behaviour, so it goes into
+  the spec first. I'll also fix my wrong claim about page.route, then write the
+  plan.
+
+● Update(SPECS/002-a-skip-shipment/spec.md)
+  ⎿  Added 2 lines
+      56    - the dates and the confirm button are hidden until a reload 
+          succeeds
+      57    - "Keep my order" and Esc stay available, also while "Check a
+          gain" is pending, because a reload only reads
+      58    - when "Check again" succeeds, the dialog shows the fresh dat
+          es as in R7, and focus moves to "Keep my order"
+      59 +  - if the customer closes the dialog while the data is stale, 
+         +reopening "Skip next order" opens it in this state             
+      60 +    again, until a reload succeeds                             
+      61  - R10 If the reload shows the subscription is no longer active,
+           has no `nextChargeAt`, or no longer exists (404),
+      62    the dialog closes and the page shows the server's state (001 
+          R2, R3, R7). Focus moves to the `h1`, because the
+      63    skip button is gone.
+● Update(SPECS/002-a-skip-shipment/spec.md)
+  ⎿  Added 1 line
+      86  - [ ] R8: Given a failed skip followed by a failed reload, then
+           "Contact us" doesn't show.
+      87  - [ ] R9: Given the reload fails, then the dates and confirm ar
+          e hidden, "Check again" reloads without sending a
+      88        skip, and on success the fresh dates show with focus on "
+          Keep my order".
+      89 +- [ ] R9: Given the reload failed, when the dialog is closed an
+         +d reopened, then it opens in the R9 state.                     
+      90  - [ ] R11: Given a pending frequency change, when a 409 happens
+          , then the change is still shown after the reload.
+      91  
+      92  ## Out of scope
+
+● Update(SPECS/002-a-skip-shipment/spec.md)
+  ⎿  Added 8 lines, removed 2 lines
+      102  - The mock's `conflict=always` sets `updatedAt` before compari
+           ng, so every attempt fails. R7 and R8 keep this
+      103    bounded by the customer's own choices.
+      104  - The mock can't move `nextChargeAt` between opening the dialo
+           g and a failure (R7), and can't fail a reload while
+      105 -  the first load works (R9). Both run in the browser, so `page
+          -.route` can't reach them either. They are covered by          
+      106 -  component tests with a mocked API, not e2e.                 
+      105 +  the first load works (R9). It runs in the browser, with no n
+          +etwork requests to intercept. Rewriting the module            
+      106 +  Vite serves was considered and rejected, so e2e tests always
+          + use the real mock. These cases are covered by                
+      107 +  component tests with a mocked API.                          
+      108 +- E2e can't count calls to the in-browser mock. "Only one requ
+          +est" (R5) is checked through what can be seen: one            
+      109 +  skip moves the date once. Exact call counts are checked in c
+          +omponent tests.                                               
+      110 +- The local cancel in R1 comes from 004, and the pending frequ
+          +ency in R3 and R11 comes from 003. Those features             
+      111 +  come later. 002 builds the hooks and tests them with hand-bu
+          +ilt data, and the R1 local-cancel and R11 criteria are        
+      112 +  ticked when 004 and 003 add those layers.                   
+      113  
+      114  ## Open questions
+      115  
+
+● Bash(sed -i 's/^Status: Draft$/Status: Approved/'
+      SPECS/002-a-skip-shipment/spec.md && head -3
+      SPECS/002-a-skip-shipment/spec.md)
+  ⎿  Updated SPECS/002-a-skip-shipment/spec.md (+1 -1)
+      1  # 002: Skip next shipment
+      2  
+      3 -Status: Draft                                                   
+      3 +Status: Approved                                                
+      4  
+      5  ## Problem
+      6  
+
+● Now the plan.
+
+● Write(SPECS/002-a-skip-shipment/plan.md)
+  ⎿  Wrote 154 lines to SPECS/002-a-skip-shipment/plan.md
+       1 # 002: Plan
+       2
+       3 Spec: [spec.md](spec.md) (Approved)
+       4
+       5 ## Approach
+       6
+       7 The skip flow is a layer on 001's reducer, as 001's plan reserve
+         d. `load` is not reshaped. A `skip` slice holds the
+       8 dialog's phase, and the reload after a failure gets its own `ref
+         resh/*` actions instead of reusing `load/started`.
+     … +146 lines (ctrl+o to expand)
+
+● Write(SPECS/002-a-skip-shipment/task.md)
+  ⎿  Wrote 15 lines to SPECS/002-a-skip-shipment/task.md
+       1 # 002: Tasks
+       2
+       3 - [ ] T1 (R1, R2): `skip.ts` with `canSkip`, `predictNextChargeA
+         t` and the error → cause mapping, plus unit tests
+       4       (daylight-saving change, next year)
+       5 - [ ] T2 (R5–R10): reducer skip layer with `skip`, `stale`, `ann
+         ouncement`, `focus` and the new actions, plus unit
+       6       tests for every transition
+       7 - [ ] T3 (R1–R4): `SkipDialog` markup, the skip button in `Activ
+         eView`, opening, initial focus, Esc and "Keep my
+     … +8 lines (ctrl+o to expand)
+
+● Bash(npx prettier --write SPECS/002-a-skip-shipment/ && git diff --stat)
+  ⎿  Updated SPECS/002-a-skip-shipment/plan.md (+18 -18)
+      46  
+      47  ## Actions and transitions
+      48  
+      49 -| Action                                 | From                
+         -                            | To                               
+         -                                                               
+         -       |                                                       
+      50 -| -------------------------------------- | --------------------
+         ---------------------------- | ---------------------------------
+         ----------------------------------------------------------------
+         ------- |                                                       
+      51 -| `skip/opened`                          | `closed`            
+         -                            | `confirm`, focus `keep` (R4). If 
+         -`stale` is set: `stale`, focus `check-again` (R9).             
+         -        |                                                      
+      52 -| `skip/closed`                          | `confirm`, `stale`, 
+         -`rechecking`                | `closed`, focus `skip-button`. Ig
+         -nored while `skipping` or `checking` (R5).                     
+         -       |                                                       
+      53 -| `skip/started`                         | `confirm`           
+         -                            | `skipping`                       
+         -                                                               
+         -       |                                                       
+      54 -| `skip/succeeded`                       | `skipping`          
+         -                            | `closed`. `server` is replaced, t
+         -he announcement is set from the response, focus `skip-button` (
+         -R6).    |                                                      
+      55 -| `skip/failed`                          | `skipping`          
+         -                            | `checking`, `failedSkips + 1`, ca
+         -use from the error (R7)                                        
+         -       |                                                       
+      56 -| `refresh/started`                      | `checking`, `stale` 
+         -                            | the same phase, or `rechecking` f
+         -rom `stale`                                                    
+         -       |                                                       
+      57 -| `refresh/succeeded`                    | `checking`, `recheck
+         -ing`, `closed`              | `server` replaced and `stale` cle
+         -ared. Not skippable any more: `closed`, focus `heading` (R10). 
+         -Else `confirm` with a notice, focus `keep` (R7). From `closed`,
+         - only the data changes. |                                      
+      58 -| `refresh/failed`, 404                  | any                 
+         -                            | `load` becomes `not-found`, `clos
+         -ed`, focus `heading` (R10)                                     
+         -       |                                                       
+      59 -| `refresh/failed`, other                | `checking`, `recheck
+         -ing`                        | `stale`, and `stale` is set (R9).
+         - Focus `check-again`, because the confirm button it was on is g
+         -one.   |                                                       
+      49 +| Action                  | From                               
+         +| To                                                           
+         +                                                               
+         +                                                           |   
+      50 +| ----------------------- | ---------------------------------- 
+         +| -------------------------------------------------------------
+         +---------------------------------------------------------------
+         +---------------------------------------------------------- |   
+      51 +| `skip/opened`           | `closed`                           
+         +| `confirm`, focus `keep` (R4). If `stale` is set: `stale`, foc
+         +us `check-again` (R9).                                         
+         +                                                           |   
+      52 +| `skip/closed`           | `confirm`, `stale`, `rechecking`   
+         +| `closed`, focus `skip-button`. Ignored while `skipping` or `c
+         +hecking` (R5).                                                 
+         +                                                           |   
+      53 +| `skip/started`          | `confirm`                          
+         +| `skipping`                                                   
+         +                                                               
+         +                                                           |   
+      54 +| `skip/succeeded`        | `skipping`                         
+         +| `closed`. `server` is replaced, the announcement is set from 
+         +the response, focus `skip-button` (R6).                        
+         +                                                           |   
+      55 +| `skip/failed`           | `skipping`                         
+         +| `checking`, `failedSkips + 1`, cause from the error (R7)     
+         +                                                               
+         +                                                           |   
+      56 +| `refresh/started`       | `checking`, `stale`                
+         +| the same phase, or `rechecking` from `stale`                 
+         +                                                               
+         +                                                           |   
+      57 +| `refresh/succeeded`     | `checking`, `rechecking`, `closed` 
+         +| `server` replaced and `stale` cleared. Not skippable any more
+         +: `closed`, focus `heading` (R10). Else `confirm` with a notice
+         +, focus `keep` (R7). From `closed`, only the data changes. |   
+      58 +| `refresh/failed`, 404   | any                                
+         +| `load` becomes `not-found`, `closed`, focus `heading` (R10)  
+         +                                                               
+         +                                                           |   
+      59 +| `refresh/failed`, other | `checking`, `rechecking`           
+         +| `stale`, and `stale` is set (R9). Focus `check-again`, becaus
+         +e the confirm button it was on is gone.                        
+         +                                                           |   
+      60  
+      61  Every `*/succeeded` and `*/failed` with a `requestId` that isn'
+          t `state.requestId` is dropped, as in 001. Skips and
+      62  reloads share the counter.
+     ...
+      71  
+      72  ## Files
+      73  
+      74 -| File                                     | What              
+         -                                                               
+         -                 |                                             
+      75 -| ---------------------------------------- | ------------------
+         ----------------------------------------------------------------
+         ----------------- |                                             
+      76 -| `src/part-a/skip.ts`                     | `canSkip`, `predic
+         -tNextChargeAt` (R2), and the error → `Cause` mapping           
+         -                  |                                            
+      77 -| `src/part-a/subscriptionReducer.ts`      | the `skip` and `st
+         -ale` slices, `announcement`, `focus`, the new actions          
+         -                 |                                             
+      74 +| File                                     | What              
+         +                                                               
+         +                    |                                          
+      75 +| ---------------------------------------- | ------------------
+         +---------------------------------------------------------------
+         +------------------- |                                          
+      76 +| `src/part-a/skip.ts`                     | `canSkip`, `predic
+         +tNextChargeAt` (R2), and the error → `Cause` mapping           
+         +                    |                                          
+      77 +| `src/part-a/subscriptionReducer.ts`      | the `skip` and `st
+         +ale` slices, `announcement`, `focus`, the new actions          
+         +                    |                                          
+      78  | `src/part-a/SkipDialog.tsx`              | the `<dialog>` and
+           its phases. It takes `pendingIntervalDays: number \| null` for
+           R3, null until 003 |
+     … 9 more lines (ctrl+o to expand)
+
+● Prettier only re-aligned the transition table. Next is the changelog entry for
+  this step.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 22 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 002-a-skip-shipment / plan and tasks            
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - The spec is `Approved` again, after the human approved the 
+         +edge-case wording.                                             
+       9 +  - New R9 rule (human decision): closing a stale dialog and re
+         +opening it shows the R9 state again, until a reload            
+      10 +    succeeds.                                                  
+      11 +  - Known limitations now say e2e always uses the real mock (hu
+         +man decision, rejecting a rewrite of the module Vite           
+      12 +    serves). The earlier claim that `page.route` couldn't reach
+         + the mock was wrong: e2e runs on the dev server. It            
+      13 +    also says R5's call count is checked through what can be se
+         +en, and that the R1 local-cancel and R11 criteria              
+      14 +    move to 004 and 003.                                       
+      15 +  - New `plan.md` and `task.md` (T1–T7).                       
+      16 +- **Decisions (in the plan, for review):**                     
+      17 +  - The reload after a failure has its own `refresh/*` actions,
+         + so the page doesn't drop to the skeleton behind               
+      18 +    the dialog.                                                
+      19 +  - The reducer chooses the focus target, so focus rules are un
+         +it-tested.                                                     
+      20 +  - The moved date is compared by calendar day.                
+      21 +  - The alert region stays mounted and empties between attempts
+         +, so a repeated 409 is announced again.                        
+      22 +  - "Keep my order" looks like the primary button.             
+      23 +  - The Escape `keydown` is prevented while pending, because Ch
+         +rome's close watchers stop honoring a prevented                
+      24 +    `cancel` on a repeated Esc.                                
+      25 +- **Verified:** Prettier on `SPECS/002-a-skip-shipment/`.      
+      26 +                                                               
+      27  ## 2026-11-03: 002-a-skip-shipment / spec: edge cases settled
+      28  
+      29  - **Changed:** `SPECS/002-a-skip-shipment/spec.md` goes back to
+           `Draft` for re-approval. R1–R5 and R7–R10 are
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● I've written plan.md (SPECS/002-a-skip-shipment/plan.md) and task.md
+  (SPECS/002-a-skip-shipment/task.md), and the spec is back to Approved with
+  your two new decisions:
+  - Reopening a stale dialog: after a reload fails, closing and reopening the
+    dialog shows the "We couldn't check your subscription" state again, until a
+    reload works.
+  - E2e uses the real mock only: I also corrected the spec's Known limitations.
+    It wrongly said Playwright couldn't intercept the mock, when e2e actually
+    runs on the dev server.
+
+  How the plan works: the skip flow is added on top of 001's reducer without
+  changing how loading works. The reload after a failed skip has its own
+  actions, because reusing the page load would swap the page for the loading
+  skeleton behind the open dialog. The reducer also decides where focus goes
+  after each step, so every focus rule gets a unit test without a browser.
+
+  Please check these before I start T1. They're my decisions, not yours yet:
+  1. Focus when the reload fails (R9): focus moves to "Check again". The spec
+     doesn't say where it goes, and the confirm button that had focus
+     disappears. "Check again" is safe because it only reloads.
+  2. Button styling: "Keep my order" looks like the primary button, and "Skip
+     Dec 16 order" is an outline button of the same size. This is to guard
+     against accidental skips.
+  3. Wording the spec doesn't set: the dialog heading "Skip your next order?"
+     and the amount line "You won't be charged $101.87 for it."
+  4. Comparing dates for the "moved date" message: the dates are compared by the
+     calendar day the customer saw, not by the raw timestamps. Otherwise a
+     time-only change could produce "now Nov 8 (it was Nov 8)".
+
+  Risk I found: in Chrome, a second Esc press without a click in between can
+  close the dialog even though R5 blocks Esc while a request is pending. The fix
+  is to also block the Esc key press itself while pending, and the e2e test
+  presses Esc twice to prove it holds.
+
+  Coverage gaps:
+  - The "locally cancelled" check in R1 depends on 004, and R11 depends on 003,
+    which come later. Those two acceptance criteria will be ticked when 003 and
+    004 are built. For now the hooks exist and get tests with hand-built data.
+  - E2e can't count calls to the in-browser mock, so it checks that a double
+    click moves the date once (to Jan 15, 2027, not Feb 14). Exact call counts
+    are checked in component tests.
+
+  The tasks run T1 to T7, small helpers first, then the reducer, the dialog, the
+  confirm flow, the failure flow and e2e, then the edge-case question. Prettier
+  passes on SPECS/, and I've added a changelog entry. Nothing is committed yet.
+
+  Shall I start T1, or do you want to change any of the four decisions first?

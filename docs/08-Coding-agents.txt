@@ -1,0 +1,542 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/003-a-plan-changes/spec.md in the
+  IDE. This may or may not be related to the current task.</ide_opened_file>
+
+❯ Before starting on 003, we need to make some product decisions. For quantity
+  lets use native form controls only, not <input type=nuber >, I'd use a
+  <select> with options 1-10 or -\+ stepper buttons labelled like "Decrease
+  Multivitamin quantity" that stop at the limits, for frecuency a fieldset with
+  a legend a 3 radio buttons group
+
+● I'll read the 003 spec and the specs workflow first.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● The spec is Approved with only spec.md, and R8 doesn't specify the native
+  controls, so I'll add those decisions before writing a plan. Frequency is
+  settled as a fieldset with legend and 3 radios, but I need you to choose
+  between the two quantity options I proposed.
+
+● User answered Claude's questions:
+  ⎿  · For each item's quantity in 003 (1–10, no remove), should the control be
+     a native <select> or −/+ stepper buttons? → <select> 1–10 (Recommended)
+
+● Decision: a <select>. I'll write both decisions into the spec now.
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 5 lines, removed 2 lines
+      10  
+      11  ## Requirements
+      12  
+      13 -- R1 Frequency can be changed to every 30, 60 or 90 days. The c
+         -urrent server value is marked as current.                      
+      14 -- R2 Each item's quantity can be changed from 1 to 10. Removing
+         - an item is not offered.                                       
+      13 +- R1 Frequency can be changed to every 30, 60 or 90 days, using
+         + a `<fieldset>` with a visible `<legend>` and a group          
+      14 +  of 3 radio buttons. The current server value is marked as cur
+         +rent.                                                          
+      15 +- R2 Each item's quantity can be changed from 1 to 10, using a 
+         +`<select>` with options 1 to 10 and a visible                  
+      16 +  `<label>` naming the product (for example "Multivitamin quant
+         +ity"). The limits come from the options. There is no           
+      17 +  `<input type="number">` and no stepper. Removing an item is n
+         +ot offered.                                                    
+      18  - R3 A change applies after the next order. It never changes `n
+          extChargeAt` or `nextChargeTotalCents`. The page shows
+      19    it as a pending change: "Every 60 days, starting after your N
+          ov 8 order", or "2 → 1 Multivitamin, starting after
+      20    your Nov 8 order". The "Nov 8" reference is derived from the 
+          server's `nextChargeAt` on every render and is never
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      29  - R7 Pending changes are kept in a separate local layer and are
+           never merged into the server data. A reload after a
+      30    409 (002) keeps them. They are shown only while the server st
+          atus is active and there is no local cancel. When
+      31    hidden, they are kept, not thrown away.
+      32 -- R8 The controls are native form controls with visible labels,
+         - and they work by keyboard and at 375px.                       
+      32 +- R8 The controls are the native form controls in R1 and R2, wi
+         +th visible labels, and they work by keyboard and at            
+      33 +  375px. No custom widgets or ARIA roles stand in for them.    
+      34  
+      35  ## Acceptance criteria
+      36  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 11 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 003-a-plan-changes / spec: control decisions    
+       6 +                                                               
+       7 +- **Changed:** `SPECS/003-a-plan-changes/spec.md`: R1 names a `
+         +<fieldset>` with a `<legend>` and 3 radio buttons              
+       8 +  for frequency. R2 names a `<select>` with options 1 to 10 and
+         + a product-named `<label>` for quantity, and excludes          
+       9 +  `<input type="number">` and steppers. R8 points to both.     
+      10 +- **Decisions:** the human chose a `<select>` over −/+ stepper 
+         +buttons. The options set the 1–10 limits, so there's           
+      11 +  no disabled-at-limit state. A natively `disabled` button that
+         + has focus drops focus to `<body>`. Accepted                   
+      12 +  trade-off: arrow keys on a closed select fire `change` on eac
+         +h press, so each step is announced (R6), and the               
+      13 +  newest announcement replaces the previous one.               
+      14 +- **Verified:** spec-only change; no code touched, `check` not 
+         +run.                                                           
+      15 +                                                               
+      16  ## 2026-11-03: 002-a-skip-shipment / T11: e2e in the mock's ran
+          dom mode
+      17  
+      18  - **Changed:** `e2e/a-skip.spec.ts`: with no `conflict` paramet
+          er, the test confirms until a skip succeeds, at most
+
+● Both decisions are now in spec.md (SPECS/003-a-plan-changes/spec.md), and no
+  code was touched:
+
+  - Frequency (R1): a <fieldset> with a visible <legend> and 3 radio buttons
+    (30, 60 and 90 days). The server's current value is marked as current.
+  - Quantity (R2): one <select> per item with options 1 to 10 and a visible
+    <label> naming the product, such as "Multivitamin quantity". The spec now
+    rules out <input type="number"> and stepper buttons.
+  - R8: now points to those two controls and says no custom widgets or ARIA
+    roles stand in for them.
+
+  I left the status at Approved, since these only pin down what R8 already
+  required and don't change scope. The decision is logged in CHANGELOG.md
+  (SPECS/CHANGELOG.md), including the trade-off you accepted. On desktop,
+  pressing the arrow keys on a closed <select> fires a change on each press, so
+  each step gets announced, with the newest announcement replacing the last.
+
+  There's one small gap: R1 marks the current frequency, but the spec doesn't
+  say whether the quantity select should mark the current value too (for example
+  "2 (current)"). I'd raise it when we review the plan unless you want to
+  decide now.
+
+  Next is writing plan.md and task.md for you to review before I start building.
+
+❯ Yes mark the servers value in both controls, with the same wording, ex:
+  Frequency "Every 30 days (current)". Now lets write plan.md and task.md
+
+● I'll add the "(current)" marker to the spec, then read the existing code and
+  the 001/002 plans so the 003 plan follows them.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      11  ## Requirements
+      12  
+      13  - R1 Frequency can be changed to every 30, 60 or 90 days, using
+           a `<fieldset>` with a visible `<legend>` and a group
+      14 -  of 3 radio buttons. The current server value is marked as cur
+         -rent.                                                          
+      14 +  of 3 radio buttons. The server's value is marked in its label
+         +, for example "Every 30 days (current)".                       
+      15  - R2 Each item's quantity can be changed from 1 to 10, using a 
+          `<select>` with options 1 to 10 and a visible
+      16    `<label>` naming the product (for example "Multivitamin quant
+          ity"). The limits come from the options. There is no
+      17    `<input type="number">` and no stepper. Removing an item is n
+          ot offered.
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 3 lines, removed 2 lines
+      13  - R1 Frequency can be changed to every 30, 60 or 90 days, using
+           a `<fieldset>` with a visible `<legend>` and a group
+      14    of 3 radio buttons. The server's value is marked in its label
+          , for example "Every 30 days (current)".
+      15  - R2 Each item's quantity can be changed from 1 to 10, using a 
+          `<select>` with options 1 to 10 and a visible
+      16 -  `<label>` naming the product (for example "Multivitamin quant
+         -ity"). The limits come from the options. There is no           
+      17 -  `<input type="number">` and no stepper. Removing an item is n
+         -ot offered.                                                    
+      16 +  `<label>` naming the product (for example "Multivitamin quant
+         +ity"). The server's value is marked the same way as            
+      17 +  in R1, for example "2 (current)". The limits come from the op
+         +tions. There is no `<input type="number">` and no              
+      18 +  stepper. Removing an item is not offered.                    
+      19  - R3 A change applies after the next order. It never changes `n
+          extChargeAt` or `nextChargeTotalCents`. The page shows
+      20    it as a pending change: "Every 60 days, starting after your N
+          ov 8 order", or "2 → 1 Multivitamin, starting after
+      21    your Nov 8 order". The "Nov 8" reference is derived from the 
+          server's `nextChargeAt` on every render and is never
+
+  Read 1 file, ran 3 shell commands (ctrl+o to expand)
+
+● I've reviewed the reducer, views, the 002 plan, the reserved hook, and fixture
+  numbers, and found three layout/UX choices that affect the plan's structure.
+  I'll check with you on those before writing the plan.
+
+● User answered Claude's questions:
+  ⎿  · Where should the 003 controls go on the active card? → New "Change your
+     plan" section (Recommended)
+     · Product names in the data are long ("Multivitamin, 30 tablets", "Daily
+     Essentials Bundle (Vitamin D, ...)"). How should each quantity <select> be
+     labelled? → Full name + "quantity" (Recommended)
+     · "Discard changes" removes every pending change, and the button only shows
+     while there are some, so it disappears when pressed. Where should focus
+     go? → The section heading (Recommended)
+
+● I'll document these user-visible decisions—the new "Change your plan" section,
+  quantity label format, and focus behavior after Discard—in the spec before
+  writing the plan.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      13  - R1 Frequency can be changed to every 30, 60 or 90 days, using
+           a `<fieldset>` with a visible `<legend>` and a group
+      14    of 3 radio buttons. The server's value is marked in its label
+          , for example "Every 30 days (current)".
+      15  - R2 Each item's quantity can be changed from 1 to 10, using a 
+          `<select>` with options 1 to 10 and a visible
+      16 -  `<label>` naming the product (for example "Multivitamin quant
+         -ity"). The server's value is marked the same way as            
+      16 +  `<label>` with the product's full name, for example "Multivit
+         +amin, 30 tablets quantity". The server's value is              
+      17 +  marked the same way as                                       
+      18    in R1, for example "2 (current)". The limits come from the op
+          tions. There is no `<input type="number">` and no
+      19    stepper. Removing an item is not offered.
+      20  - R3 A change applies after the next order. It never changes `n
+          extChargeAt` or `nextChargeTotalCents`. The page shows
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 4 lines, removed 3 lines
+      18    in R1, for example "2 (current)". The limits come from the op
+          tions. There is no `<input type="number">` and no
+      19    stepper. Removing an item is not offered.
+      20  - R3 A change applies after the next order. It never changes `n
+          extChargeAt` or `nextChargeTotalCents`. The page shows
+      21 -  it as a pending change: "Every 60 days, starting after your N
+         -ov 8 order", or "2 → 1 Multivitamin, starting after            
+      22 -  your Nov 8 order". The "Nov 8" reference is derived from the 
+         -server's `nextChargeAt` on every render and is never           
+      23 -  stored, so it moves forward by itself after a skip.          
+      21 +  it as a pending change: "Every 60 days, starting after your N
+         +ov 8 order", or "2 → 1 Multivitamin, 30 tablets,               
+      22 +  starting after your Nov 8 order". The "Nov 8" reference is de
+         +rived from the server's `nextChargeAt` on every render         
+      23 +  and is never stored, so it moves forward by itself after a sk
+         +ip. Without `nextChargeAt`, it reads "starting after           
+      24 +  your next order" (001 R3: the page never fills in a missing d
+         +ate).                                                          
+      25  - R4 When quantities change, show "After that: {total} per orde
+          r". The total is
+      26    `totalAfterDiscount(items with pending quantities, discountPe
+          rcent)` (001 R4), and it is labelled as applying to
+      27    later orders.
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      26    `totalAfterDiscount(items with pending quantities, discountPe
+          rcent)` (001 R4), and it is labelled as applying to
+      27    later orders.
+      28  - R5 Changing a value back to the server's value clears that pe
+          nding change. There is also a "Discard changes" action
+      29 -  for all pending changes.                                     
+      29 +  for all pending changes, shown only while there are some. It 
+         +is announced as "Changes discarded.", and focus                
+      30 +  moves to the "Change your plan" heading, because the button i
+         +s gone.                                                        
+      31  - R6 Each change is announced in a live region, for example "Fr
+          equency changed to every 60 days, starting after your
+      32    Nov 8 order."
+      33  - R7 Pending changes are kept in a separate local layer and are
+           never merged into the server data. A reload after a
+
+● Update(SPECS/003-a-plan-changes/spec.md)  ⎿  Added 2 lines, removed 1 line
+      31  - R6 Each change is announced in a live region, for example "Fr
+          equency changed to every 60 days, starting after your
+      32    Nov 8 order."
+      33  - R7 Pending changes are kept in a separate local layer and are
+           never merged into the server data. A reload after a
+      34 -  409 (002) keeps them. They are shown only while the server st
+         -atus is active and there is no local cancel. When              
+      34 +  409 (002) keeps them, and a pending value that now equals the
+         + fresh server value is no longer shown as a change.            
+      35 +  They are shown only while the server status is active and the
+         +re is no local cancel. When                                    
+      36    hidden, they are kept, not thrown away.
+      37  - R8 The controls are the native form controls in R1 and R2, wi
+          th visible labels, and they work by keyboard and at
+      38    375px. No custom widgets or ARIA roles stand in for them.
+
+● Update(SPECS/003-a-plan-changes/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      35    They are shown only while the server status is active and the
+          re is no local cancel. When
+      36    hidden, they are kept, not thrown away.
+      37  - R8 The controls are the native form controls in R1 and R2, wi
+          th visible labels, and they work by keyboard and at
+      38 -  375px. No custom widgets or ARIA roles stand in for them.    
+      38 +  375px. No custom widgets or ARIA roles stand in for them. The
+         +y sit in their own "Change your plan" section after            
+      39 +  the products, so the "Next order" and "In your subscription" 
+         +sections stay read-only server data.                           
+      40  
+      41  ## Acceptance criteria
+      42  
+
+● I've calculated the plan: next order is Dec 16 for $101.87, and with one
+  Multivitamin the discounted total rounds to $63.67 — a good exact-.5 rounding
+  edge case to test.
+
+● Write(SPECS/003-a-plan-changes/plan.md)
+  ⎿  Wrote 182 lines to SPECS/003-a-plan-changes/plan.md
+       1 # 003: Plan
+       2
+       3 Spec: [spec.md](spec.md) (Approved)
+       4
+       5 ## Approach
+       6
+       7 Plan changes are a third layer on the reducer, next to `load` an
+         d `skip`, as 001's plan reserved. A `local` slice
+       8 holds what the customer picked. It is never merged into `server`
+          (R7). A selector, `pendingOf(server, local)`,
+     … +174 lines (ctrl+o to expand)
+
+● Write(SPECS/003-a-plan-changes/task.md)
+  ⎿  Wrote 16 lines to SPECS/003-a-plan-changes/task.md
+      1 # 003: Tasks
+      2
+      3 - [ ] T1 (R1–R5, R7): `plan.ts` with `FREQUENCIES`, `QUANTITIES`,
+         `pendingOf`, `hasPending`, `totalAfter` and
+      4       `startingAfter`, plus unit tests (the 6367 rounding, next y
+        ear, no date, SKUs the server dropped)
+      5 - [ ] T2 (R5–R7): reducer `local` layer with `plan/frequency`, `p
+        lan/quantity` and `plan/discarded`, the
+      6       announcements and the `plan-heading` focus target, plus uni
+        t tests for every row and every ignored input
+     … +10 lines (ctrl+o to expand)
+
+● Now the changelog entry. Then I'll run Prettier on the spec files, since check
+  includes formatting.
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 21 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 003-a-plan-changes / plan and tasks             
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `SPECS/003-a-plan-changes/spec.md`: four more decisions fro
+         +m the human:                                                   
+       9 +    - R1, R2: the server's value is marked "(current)" in both 
+         +controls.                                                      
+      10 +    - R2, R3: the label is the product's full name + "quantity"
+         +.                                                              
+      11 +    - R3: without a date, the text reads "starting after your n
+         +ext order".                                                    
+      12 +    - R5: Discard is shown only while something is pending, ann
+         +ounces "Changes discarded." and moves focus to the             
+      13 +      heading.                                                 
+      14 +    - R7: a pending value that now equals the fresh server valu
+         +e isn't shown.                                                 
+      15 +    - R8: the controls live in their own "Change your plan" sec
+         +tion after the products.                                       
+      16 +  - New `plan.md` and `task.md` (T1–T7).                       
+      17 +- **Decisions:**                                               
+      18 +  - The human chose a separate section, so the next-order and p
+         +roduct sections stay read-only server data.                    
+      19 +  - A `local` slice is compared with the server's data on every
+         + render through `pendingOf`, so "starting after"               
+      20 +    and "(current)" follow a skip or a reload with no extra act
+         +ions.                                                          
+      21 +  - 001's reserved `frequencyDays` is renamed `intervalDays` to
+         + match the server field.                                       
+      22 +  - Several pending lines share one "Starting after your Dec 16
+         + order:" intro instead of repeating the date.                  
+      23 +  - A server interval outside 30/60/90, or a quantity above 10,
+         + is left for the edge-case question (T7).                      
+      24 +- **Verified:** spec-only change; no code touched. Prettier che
+         +cked on the edited Markdown.                                   
+      25 +                                                               
+      26  ## 2026-11-03: 003-a-plan-changes / spec: control decisions
+      27  
+      28  - **Changed:** `SPECS/003-a-plan-changes/spec.md`: R1 names a `
+          <fieldset>` with a `<legend>` and 3 radio buttons
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(npx prettier --write SPECS/003-a-plan-changes/plan.md && git diff --stat
+      -- SPECS/003-a-plan-changes && npx prettier --check SPECS/ | tail -1)
+  ⎿  Updated SPECS/003-a-plan-changes/plan.md (+23 -23)
+      36  
+      37  ## Actions and transitions
+      38  
+      39 -| Action           | Accepted when                             
+         -                                        | Result               
+         -                                                               
+         -                                                           |   
+      40 -| ---------------- | ------------------------------------------
+         ---------------------------------------- | ---------------------
+         ----------------------------------------------------------------
+         ----------------------------------------------------------- |   
+      41 -| `plan/frequency` | `load` is ready, the server is active, and
+         - `days` is 30, 60 or 90                 | `local.intervalDays` 
+         -= `days`, or null when it equals the server's (R5). Announcemen
+         -t (R6). Focus `null`: it stays on the radio.               |   
+      42 -| `plan/quantity`  | as above, `sku` is in the server's items, 
+         -and `quantity` is an integer from 1–10 | `quantities[sku]` set,
+         - or the key removed when it equals the server's (R5). Announcem
+         -ent (R6). Focus `null`.                                  |     
+      43 -| `plan/discarded` | there is at least one pending change      
+         -                                        | `local` emptied, anno
+         -uncement "Changes discarded.", focus `plan-heading` (R5)       
+         -                                                          |    
+      39 +| Action           | Accepted when                             
+         +                                       | Result                
+         +                                                               
+         +                                            |                  
+      40 +| ---------------- | ------------------------------------------
+         +-------------------------------------- | ----------------------
+         +---------------------------------------------------------------
+         +------------------------------------------- |                  
+      41 +| `plan/frequency` | `load` is ready, the server is active, and
+         + `days` is 30, 60 or 90                | `local.intervalDays` =
+         + `days`, or null when it equals the server's (R5). Announcement
+         + (R6). Focus `null`: it stays on the radio. |                  
+      42 +| `plan/quantity`  | as above, `sku` is in the server's items, 
+         +and `quantity` is an integer from 1–10 | `quantities[sku]` set,
+         + or the key removed when it equals the server's (R5). Announcem
+         +ent (R6). Focus `null`.                     |                  
+      43 +| `plan/discarded` | there is at least one pending change      
+         +                                       | `local` emptied, annou
+         +ncement "Changes discarded.", focus `plan-heading` (R5)        
+         +                                            |                  
+      44  
+      45  Anything else is ignored and returns the same `state`. `load/*`
+          , `skip/*` and `refresh/*` never touch `local` (R7).
+      46  
+     ...
+      80  
+      81  With the e2e fixture (next order Dec 16, $101.87, Vitamin D × 1
+          , Multivitamin × 2):
+      82  
+      83 -| Where                       | Text                           
+         -                                                               
+         -                                              |                
+      84 -| --------------------------- | -------------------------------
+         ----------------------------------------------------------------
+         ---------------------------------------------- |                
+      85 -| Radio labels (R1)           | "Every 30 days (current)", "Eve
+         -ry 60 days", "Every 90 days"                                   
+         -                                              |                
+      86 -| Select label, options (R2)  | "Multivitamin, 30 tablets quant
+         -ity"; "1", "2 (current)", "3" … "10"                           
+         -                                              |                
+      87 -| Pending lines (R3)          | intro "Starting after your Dec 
+         -16 order:" followed by a list: "Every 60 days", "2 → 1 Multivit
+         -amin, 30 tablets"                            |                 
+      88 -| After that (R4)             | "After that: $63.67 per order" 
+         -                                                               
+         -                                              |                
+      89 -| Announce frequency (R6)     | "Frequency changed to every 60 
+         -days, starting after your Dec 16 order."                       
+         -                                              |                
+      90 -| Announce quantity (R6)      | "Multivitamin, 30 tablets quant
+         -ity changed from 2 to 1, starting after your Dec 16 order. Afte
+         -r that: $63.67 per order."                    |                
+      91 -| Announce back to server (R5, R6) | "Frequency back to every 3
+         -0 days, no change pending." / "Multivitamin, 30 tablets quantit
+         -y back to 2, no change pending."              |                
+      92 -| Announce discard (R5)       | "Changes discarded."           
+         -                                                               
+         -                                              |                
+      83 +| Where                            | Text                      
+         +                                                               
+         +                                 |                             
+      84 +| -------------------------------- | --------------------------
+         +---------------------------------------------------------------
+         +-------------------------------- |                             
+      85 +| Radio labels (R1)                | "Every 30 days (current)",
+         + "Every 60 days", "Every 90 days"                              
+         +                                 |                             
+      86 +| Select label, options (R2)       | "Multivitamin, 30 tablets 
+         +quantity"; "1", "2 (current)", "3" … "10"                      
+         +                                 |                             
+      87 +| Pending lines (R3)               | intro "Starting after your
+         + Dec 16 order:" followed by a list: "Every 60 days", "2 → 1 Mul
+         +tivitamin, 30 tablets"           |                             
+      88 +| After that (R4)                  | "After that: $63.67 per or
+         +der"                                                           
+         +                                 |                             
+      89 +| Announce frequency (R6)          | "Frequency changed to ever
+         +y 60 days, starting after your Dec 16 order."                  
+         +                                 |                             
+      90 +| Announce quantity (R6)           | "Multivitamin, 30 tablets 
+         +quantity changed from 2 to 1, starting after your Dec 16 order.
+         + After that: $63.67 per order."  |                             
+      91 +| Announce back to server (R5, R6) | "Frequency back to every 3
+         +0 days, no change pending." / "Multivitamin, 30 tablets quantit
+         +y back to 2, no change pending." |                             
+      92 +| Announce discard (R5)            | "Changes discarded."      
+         +                                                               
+         +                                 |                             
+      93  
+     … 25 more lines (ctrl+o to expand)
+
+● I've written plan.md (SPECS/003-a-plan-changes/plan.md) and task.md
+  (SPECS/003-a-plan-changes/task.md) for you to review, and updated the spec
+  with your decisions. No code has changed, and Prettier passes on SPECS/.
+
+  What went into spec.md (SPECS/003-a-plan-changes/spec.md):
+  - R1, R2: both controls mark the server's value, as in "Every 30 days
+    (current)" and "2 (current)".
+  - R2, R3: quantity labels use the full product name, as in "Multivitamin, 30
+    tablets quantity".
+  - R3: if the server sends no next order date, the text reads "starting after
+    your next order", so the page never makes up a date.
+  - R5: "Discard changes" only shows while something is pending. Pressing it
+    announces "Changes discarded." and moves focus to the "Change your plan"
+    heading.
+  - R7: if a reload shows the server already has the value the customer picked,
+    it's no longer shown as a pending change.
+  - R8: the controls live in their own "Change your plan" section after the
+    products. The next-order and product sections only show server data.
+
+  How the plan works:
+  - Storage: the customer's picks are kept in their own local part of the
+    reducer state and never merged into the server data. Each render compares
+    them with the latest server data. So "starting after Dec 16" changes to "Jan
+    15, 2027" after a skip, and the picks survive a reload after a 409, without
+    extra code.
+  - Total: "After that" uses the same totalAfterDiscount from
+    src/api/fixtures.ts, imported rather than copied, so the rounding matches
+    the server. Multivitamin going from 2 to 1 gives $63.67 (6366.5 rounds
+    to 6367), which tests the rounding exactly.
+  - 002 hooks: 002 left a slot for a pending frequency in the skip dialog. T5
+    fills it, and ticks 002's two open criteria (R3 and R11) that were waiting
+    on 003.
+
+  Choices I made myself, to check in review:
+  - With several pending changes, the lines share one intro, "Starting after
+    your Dec 16 order:", instead of repeating the date on each line. With a
+    single change it reads the same as the spec.
+  - Quantity announcements always say "from" the server's value, not from the
+    previous pick.
+  - The "→" in "2 → 1" is hidden from screen readers, which hear "2 to 1".
+  - 001's plan reserved the name frequencyDays for this state. I renamed it
+    intervalDays to match the server field.
+
+  The plan doesn't handle a server frequency outside 30, 60 or 90, or a quantity
+  above 10. In both cases no option would be marked "(current)". The mock never
+  sends them, so I've left them for the edge-case question in T7.
+
+  The 002 changes for T10 and T11 are still uncommitted in the working tree.
+  Once you approve the plan, I'll start with T1.

@@ -66,8 +66,17 @@ export function SubscriptionCard() {
 
   // 002: the reducer decides where focus goes (R4, R6, R7, R9, R10). This only applies it.
   useEffect(() => {
-    const targets = { keep: keepRef, "check-again": checkAgainRef, "skip-button": skipButtonRef, heading: headingRef };
-    if (state.focus) targets[state.focus].current?.focus();
+    const targets = {
+      keep: keepRef,
+      "check-again": checkAgainRef,
+      "skip-button": skipButtonRef,
+      heading: headingRef,
+      "heading-if-lost": headingRef,
+    };
+    if (!state.focus) return;
+    // R10: a removed focused element leaves focus on <body>. Focus anywhere else was the customer's choice.
+    if (state.focus === "heading-if-lost" && document.activeElement !== document.body) return;
+    targets[state.focus].current?.focus();
   }, [state.focus]);
 
   // R7, R9: reloads behind the open dialog. Its own actions, because `load/started` would swap the page for the

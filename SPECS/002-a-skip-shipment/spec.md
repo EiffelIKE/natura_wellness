@@ -91,10 +91,10 @@ rejects a skip with a 409, and the customer must always know what happened and w
 - [x] R9: Given the reload fails, then the dates and confirm are hidden, "Check again" reloads without sending a
       skip, and on success the fresh dates show with focus on "Keep my order".
 - [x] R9: Given the reload failed, when the dialog is closed and reopened, then it opens in the R9 state.
-- [ ] R10: Given the dialog was closed during "Check again" with focus on the skip button, when the reload shows a
+- [x] R10: Given the dialog was closed during "Check again" with focus on the skip button, when the reload shows a
       paused subscription, then focus moves to the `h1`.
 - [ ] R11: Given a pending frequency change, when a 409 happens, then the change is still shown after the reload.
-- [ ] R12: Given a 640×320 viewport, when the dialog is open, then both buttons can be reached by Tab and are scrolled
+- [x] R12: Given a 640×320 viewport, when the dialog is open, then both buttons can be reached by Tab and are scrolled
       into view, the page behind doesn't scroll, and axe passes.
 
 ## Out of scope

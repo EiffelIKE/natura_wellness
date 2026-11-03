@@ -13,11 +13,11 @@
 - [x] T6 (R1–R9): `e2e/a-skip.spec.ts`: success, pending with a double click and a double Esc, `conflict=always`,
       keyboard only, axe, and no horizontal scroll at 375px, 320px and 1200px
 - [x] T7: ask the human which further edge cases and e2e flows to cover, and add them as tasks
-- [ ] T8 (R10): focus fallback when the skip button disappears after a "Check again" reload that finished with the
+- [x] T8 (R10): focus fallback when the skip button disappears after a "Check again" reload that finished with the
       dialog closed, plus unit and component tests
-- [ ] T9 (R12): the dialog on short screens (scrolling inside the dialog, no page scroll behind it), plus an e2e
+- [x] T9 (R12): the dialog on short screens (scrolling inside the dialog, no page scroll behind it), plus an e2e
       test at 640×320 with axe and Tab reaching both buttons
-- [ ] T10 (R6): e2e: two skips in a row (Dec 16 → Jan 15, 2027 → Feb 14, 2027), each announced, the second sent with
+- [x] T10 (R6): e2e: two skips in a row (Dec 16 → Jan 15, 2027 → Feb 14, 2027), each announced, the second sent with
       the fresh `updatedAt`
-- [ ] T11 (R6, R7): e2e in the mock's default random mode: confirm until a skip succeeds (bounded attempts), then the
+- [x] T11 (R6, R7): e2e in the mock's default random mode: confirm until a skip succeeds (bounded attempts), then the
       announced date equals the page's date

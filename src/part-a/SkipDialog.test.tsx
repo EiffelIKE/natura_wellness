@@ -2,7 +2,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { fixtures } from "../api/fixtures";
 import { getSubscription, skipNextShipment } from "../api/mockApi";
 import { ApiError, type Subscription } from "../api/types";
@@ -549,6 +549,44 @@ describe("nothing left to skip after the reload (R10)", () => {
 
     expect(dialog()).not.toHaveAttribute("open");
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  });
+
+  type Reload = ReturnType<typeof deferred<Subscription>>;
+
+  /** Closes the dialog while "Check again" is pending, so focus is back on the skip button. */
+  async function closeDuringCheckAgain() {
+    const user = await openStale();
+    const reload = deferred<Subscription>();
+    getApi.mockReturnValueOnce(reload.promise);
+    await user.click(checkAgainButton());
+    await user.click(keep());
+    expect(dialog()).not.toHaveAttribute("open");
+    expect(skipButton()).toHaveFocus();
+    return reload;
+  }
+
+  it.each([
+    ["shows a paused subscription", (reload: Reload) => reload.resolve(fixtures.paused())],
+    ["returns a 404", (reload: Reload) => reload.reject(new ApiError(404, "Gone"))],
+  ])("moves focus from the removed skip button to the h1 when Check again %s after a close", async (_, finish) => {
+    const reload = await closeDuringCheckAgain();
+
+    await settle(() => finish(reload));
+
+    expect(screen.queryByRole("button", { name: "Skip next order" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+  });
+
+  it("leaves focus where the customer moved it after the close", async () => {
+    const elsewhere = document.body.appendChild(document.createElement("button"));
+    onTestFinished(() => elsewhere.remove());
+    const reload = await closeDuringCheckAgain();
+    elsewhere.focus();
+
+    await settle(() => reload.resolve(fixtures.paused()));
+
+    expect(screen.getByText(/^Paused until/)).toBeInTheDocument();
+    expect(elsewhere).toHaveFocus();
   });
 });
 

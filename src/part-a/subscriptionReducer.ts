@@ -25,7 +25,8 @@ export type Skip =
   | { kind: "stale"; failedSkips: number } // R9: the reload failed
   | { kind: "rechecking"; failedSkips: number }; // R9: "Check again" pending
 
-export type Focus = "keep" | "check-again" | "skip-button" | "heading";
+/** `heading-if-lost`: the h1, but only if focus fell to `<body>` (R10). The reducer can't see DOM focus. */
+export type Focus = "keep" | "check-again" | "skip-button" | "heading" | "heading-if-lost";
 
 export interface State {
   /** The latest request sent. A response to any other request is stale and dropped, whatever `load` is. */
@@ -163,8 +164,11 @@ export function subscriptionReducer(state: State, action: Action): State {
       const fresh = action.subscription;
       const updated = { ...next, load: { kind: "ready", server: fresh } as const, stale: null };
       const { skip } = state;
-      // From `closed` (the customer closed during "Check again"), only the data changes.
-      if (skip.kind !== "checking" && skip.kind !== "rechecking" && skip.kind !== "stale") return updated;
+      // From `closed` (the customer closed during "Check again"), only the data changes. R10: if the skip button
+      // goes with it while focused, focus would be lost.
+      if (skip.kind !== "checking" && skip.kind !== "rechecking" && skip.kind !== "stale") {
+        return canSkip(fresh) ? updated : { ...updated, focus: "heading-if-lost" };
+      }
       // R10: nothing left to skip, and the skip button is gone with it.
       if (!canSkip(fresh)) return { ...updated, skip: closed, focus: "heading" };
       // R7, R9: after "Check again", the cause and date come from the failure that made the data stale.
@@ -175,11 +179,12 @@ export function subscriptionReducer(state: State, action: Action): State {
 
     case "refresh/failed": {
       if (action.requestId !== state.requestId) return state;
+      const { skip } = state;
       // R10: the subscription is gone, so the dialog has nothing left to talk about.
       if (loadErrorKind(action.error) === "not-found") {
-        return { ...next, load: { kind: "not-found" }, skip: closed, stale: null, focus: "heading" };
+        const focus = skip.kind === "closed" ? "heading-if-lost" : "heading";
+        return { ...next, load: { kind: "not-found" }, skip: closed, stale: null, focus };
       }
-      const { skip } = state;
       // R9: "Check again" takes the confirm button's place, so focus goes to it.
       if (skip.kind === "checking") {
         return {

@@ -276,6 +276,16 @@ describe("refresh/succeeded (R7, R9, R10)", () => {
     expect(run([opened], state).skip).toMatchObject({ kind: "confirm" });
   });
 
+  it("with the dialog closed and nothing left to skip, moves focus to the h1 only if it was lost (R10)", () => {
+    const closedWhileRechecking = run([refreshStarted(4), closedAction], stale());
+    const paused = server({ status: "paused", nextChargeAt: null });
+    const state = run([refreshSucceeded(4, paused)], closedWhileRechecking);
+
+    expect(state.load).toEqual({ kind: "ready", server: paused });
+    expect(state.skip).toEqual({ kind: "closed" });
+    expect(state.focus).toBe("heading-if-lost");
+  });
+
   it.each([
     ["paused", server({ status: "paused", nextChargeAt: null })],
     ["cancelled", server({ status: "cancelled", nextChargeAt: null })],
@@ -327,6 +337,15 @@ describe("refresh/failed (R9, R10)", () => {
     expect(state.skip).toEqual({ kind: "closed" });
     expect(state.stale).toBeNull();
     expect(state.focus).toBe("heading");
+  });
+
+  it("on a 404 with the dialog closed during Check again, moves focus to the h1 only if it was lost (R10)", () => {
+    const closedWhileRechecking = run([refreshStarted(4), closedAction], stale());
+    const state = run([refreshFailed(4, notFound())], closedWhileRechecking);
+
+    expect(state.load).toEqual({ kind: "not-found" });
+    expect(state.stale).toBeNull();
+    expect(state.focus).toBe("heading-if-lost");
   });
 });
 

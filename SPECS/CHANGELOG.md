@@ -2,6 +2,115 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 003-a-plan-changes / T1: plan rules
+
+- **Changed:**
+  - `SPECS/003-a-plan-changes/plan.md`: status `Approved` by the human. `Local` is declared in `plan.ts`.
+  - New `src/part-a/plan.ts`: `Local`, `FREQUENCIES`, `QUANTITIES`, `pendingOf`, `hasPending`, `totalAfter` and
+    `startingAfter`.
+  - New `src/part-a/plan.test.ts`: 21 unit tests.
+- **Decisions:**
+  - `Local` lives in `plan.ts` rather than the reducer, so `plan.ts` never imports the reducer. T2 imports it.
+  - `totalAfter` imports `totalAfterDiscount` from `src/api/fixtures.ts`, so the rounding is the mock's
+    (Multivitamin 2 → 1 is 6367, from 6366.5).
+  - `startingAfter` keeps the plan's one-argument signature and uses `formatDate`'s default `now`. The tests pin
+    the clock with fake timers.
+- **Verified:** `npm run check` green (typecheck, lint, format, unit, e2e: 53 passed, 9 skipped as before).
+
+## 2026-11-03: 003-a-plan-changes / plan and tasks
+
+- **Changed:**
+  - `SPECS/003-a-plan-changes/spec.md`: four more decisions from the human:
+    - R1, R2: the server's value is marked "(current)" in both controls.
+    - R2, R3: the label is the product's full name + "quantity".
+    - R3: without a date, the text reads "starting after your next order".
+    - R5: Discard is shown only while something is pending, announces "Changes discarded." and moves focus to the
+      heading.
+    - R7: a pending value that now equals the fresh server value isn't shown.
+    - R8: the controls live in their own "Change your plan" section after the products.
+  - New `plan.md` and `task.md` (T1–T7).
+- **Decisions:**
+  - The human chose a separate section, so the next-order and product sections stay read-only server data.
+  - A `local` slice is compared with the server's data on every render through `pendingOf`, so "starting after"
+    and "(current)" follow a skip or a reload with no extra actions.
+  - 001's reserved `frequencyDays` is renamed `intervalDays` to match the server field.
+  - Several pending lines share one "Starting after your Dec 16 order:" intro instead of repeating the date.
+  - A server interval outside 30/60/90, or a quantity above 10, is left for the edge-case question (T7).
+- **Verified:** spec-only change; no code touched. Prettier checked on the edited Markdown.
+
+## 2026-11-03: 003-a-plan-changes / spec: control decisions
+
+- **Changed:** `SPECS/003-a-plan-changes/spec.md`: R1 names a `<fieldset>` with a `<legend>` and 3 radio buttons
+  for frequency. R2 names a `<select>` with options 1 to 10 and a product-named `<label>` for quantity, and excludes
+  `<input type="number">` and steppers. R8 points to both.
+- **Decisions:** the human chose a `<select>` over −/+ stepper buttons. The options set the 1–10 limits, so there's
+  no disabled-at-limit state. A natively `disabled` button that has focus drops focus to `<body>`. Accepted
+  trade-off: arrow keys on a closed select fire `change` on each press, so each step is announced (R6), and the
+  newest announcement replaces the previous one.
+- **Verified:** spec-only change; no code touched, `check` not run.
+
+## 2026-11-03: 002-a-skip-shipment / T11: e2e in the mock's random mode
+
+- **Changed:** `e2e/a-skip.spec.ts`: with no `conflict` parameter, the test confirms until a skip succeeds, at most
+  6 times. After each 409, it checks the conflict message, focus on "Keep my order" and the unchanged Dec 16 date.
+  At the end, the announcement and the page both say Jan 15, 2027, so exactly one skip went through.
+- **Decisions:** the 409 count is recorded as a test annotation. If all 6 attempts fail, the test says so ("6
+  skips in a row got a 409"); the chance is about 0.1%.
+- **Verified:**
+  - 10 repeats on both projects: all passed, with 0, 1 or 2 409s before the skip, so the conflict branch and
+    "Contact us" ran.
+  - Mutation: with the reload after a 409 keeping the old data, every retry sends a stale `updatedAt` and the test
+    fails with its message.
+  - `npm run check`, see T10.
+
+## 2026-11-03: 002-a-skip-shipment / T10: e2e for two skips in a row
+
+- **Changed:** `e2e/a-skip.spec.ts`: Dec 16 → Jan 15, 2027 → Feb 14, 2027. Both are announced; the status region
+  is empty after the reopen, so the second is new text; the second dialog shows the new dates; focus returns to
+  the skip button each time.
+- **Decisions:** "sent with the fresh `updatedAt`" is proven through the mock: it compares `updatedAt` even with
+  `conflict=never`, and the first skip changes it, so a stale value gets a 409. No request inspection needed.
+- **Verified:**
+  - T10 and T11 passed `--repeat-each=5` on both projects (20/20).
+  - Mutation: with the skip's result keeping the old `updatedAt`, the second skip isn't announced and the test
+    fails.
+  - `npm run check` after T11: 163 unit and component tests, 53 e2e with 9 skipped.
+
+## 2026-11-03: 002-a-skip-shipment / T9: the dialog on short screens (R12)
+
+- **Changed:**
+  - `SubscriptionCard.module.css`: the dialog sets `overflow: auto` itself, and `:root:has(.dialog[open])` hides the
+    page's overflow, so the page behind doesn't scroll.
+  - `e2e/a-skip.spec.ts`: a 640×320 test (mobile project only). The dialog fits the screen and scrolls inside, Tab
+    reaches both buttons fully in view, the wheel over the backdrop and past the dialog's end doesn't move the
+    page, the heading comes back when scrolled up, axe passes, and the page scrolls again after Esc. The R12
+    acceptance criterion is ticked.
+- **Decisions:**
+  - The test was written first. Only the page scroll was failing: Chrome's UA style already gives a modal dialog
+    `overflow: auto`. The explicit rule stays so R12 doesn't depend on it, but no test can catch its removal in
+    Chromium.
+  - The page position is compared with where it was at open, not with 0: the click scrolls the skip button into
+    view first. `overflow: hidden` keeps that position, so the page doesn't jump.
+  - With classic scrollbars, hiding the page's scrollbar shifts the page behind the backdrop by its width.
+    `scrollbar-gutter: stable` would trade that for a permanent gutter, so it's left as is.
+- **Verified:** without the `:root:has()` rule, the test fails (224 expected, 372 received); with it, it passes
+  `--repeat-each=5`. `npm run check`: 163 unit and component tests, 49 e2e with 9 skipped.
+
+## 2026-11-03: 002-a-skip-shipment / T8: lost-focus fallback (R10)
+
+- **Changed:**
+  - `subscriptionReducer.ts`: a new focus target, `heading-if-lost`. It is set when a reload finishes with the
+    dialog closed and nothing left to skip, through `refresh/succeeded` (paused, cancelled, no date) or a 404 in
+    `refresh/failed`.
+  - `SubscriptionCard.tsx`: the focus effect applies `heading-if-lost` only if focus is on `<body>`.
+  - Two reducer tests and three component tests: paused and 404 move focus to the `h1`, and focus the customer
+    moved elsewhere stays there. The R10 acceptance criterion is ticked.
+- **Decisions:** a 404 with the dialog closed uses the same target, because the not-found view removes the skip
+  button too. The plan's T8 note now says so. With the dialog open, R10 still moves focus to the `h1`, as before.
+- **Verified:** `npm run check` (163 unit and component tests, 48 e2e with 8 skipped). Mutations: without the
+  `<body>` check, the "focus elsewhere" test fails; without the reducer target, both reducer tests and the paused
+  component test fail.
+
 ## 2026-11-03: 002-a-skip-shipment / T7: edge cases and e2e flows chosen
 
 - **Changed:**
