@@ -1,6 +1,6 @@
 # 005: Buy box
 
-Status: Approved
+Status: Implemented
 
 ## Problem
 
@@ -148,61 +148,61 @@ below, which were settled with the human on 2026-11-03.
 
 ## Acceptance criteria
 
-- [ ] R2: The `visual` project runs at 1200×780 with `deviceScaleFactor: 2`, and its screenshot is 2400×1560.
-- [ ] R1, R2: Given the default state with the nav hidden, when the page is compared with the committed baseline,
+- [x] R2: The `visual` project runs at 1200×780 with `deviceScaleFactor: 2`, and its screenshot is 2400×1560.
+- [x] R1, R2: Given the default state with the nav hidden, when the page is compared with the committed baseline,
       then the diff ratio is within the plan's tolerance. The diff image and the ratio are attached to the report,
       and the ratio is recorded in the CHANGELOG.
-- [ ] R2: The committed baseline is byte-identical to `public/reference/buy-box.png`. Changing either file makes the
+- [x] R2: The committed baseline is byte-identical to `public/reference/buy-box.png`. Changing either file makes the
       test fail.
-- [ ] R1: In each state, every rendered text node and accessible-name attribute is in an expected set, built only
+- [x] R1: In each state, every rendered text node and accessible-name attribute is in an expected set, built only
       from `copy.ts` values, the money formatter applied to `copy.ts` prices and the state's totals, and the
       `copy.ts` templates. Formatted prices aren't literals in `copy.ts`, so they come from the formatter. The
       quantity field's value isn't a text node, so it isn't collected. Inline text makes the test fail.
-- [ ] R3: A screen reader gets "Rated 4.8 out of 5" once, and the stars are hidden from it.
-- [ ] R4, R5: Given the default state, when "One-time purchase" is selected, then its card gets the selected style,
+- [x] R3: A screen reader gets "Rated 4.8 out of 5" once, and the stars are hidden from it.
+- [x] R4, R5: Given the default state, when "One-time purchase" is selected, then its card gets the selected style,
       the subscription details and the fine print are gone, and the button reads "Add to cart · $29.95".
-- [ ] R4: Clicking the one-time card's padding, outside its label, selects it. The frequency `select` is not inside
+- [x] R4: Clicking the one-time card's padding, outside its label, selects it. The frequency `select` is not inside
       any `<label>` of a radio.
-- [ ] R4: The options can be chosen with the arrow keys, and each radio's accessible name includes its price.
-- [ ] R5, R6: Given 60 days was chosen, when the shopper switches to one-time and back, then 60 days is still
+- [x] R4: The options can be chosen with the arrow keys, and each radio's accessible name includes its price.
+- [x] R5, R6: Given 60 days was chosen, when the shopper switches to one-time and back, then 60 days is still
       selected.
-- [ ] R6, R9: Given the subscription, when 90 days is chosen, then the fine print says "every 90 days".
-- [ ] R8, R9: Given the subscription, when + is pressed twice, then the field shows 3, the button reads "Add to cart ·
+- [x] R6, R9: Given the subscription, when 90 days is chosen, then the fine print says "every 90 days".
+- [x] R8, R9: Given the subscription, when + is pressed twice, then the field shows 3, the button reads "Add to cart ·
       $76.38" and the fine print says "at $76.38". The option rows still show $25.46 and $29.95, and the status
       line stays empty, because the buttons never submit.
-- [ ] R8: At 1, "Decrease quantity" is `aria-disabled`, has the same colour as "Increase quantity" and keeps focus
+- [x] R8: At 1, "Decrease quantity" is `aria-disabled`, has the same colour as "Increase quantity" and keeps focus
       when pressed. At 10, "Increase quantity" does the same.
-- [ ] R8: The field has `inputMode="numeric"` and no visible spinner. With the field focused and the pointer over
+- [x] R8: The field has `inputMode="numeric"` and no visible spinner. With the field focused and the pointer over
       it, the mouse wheel doesn't change the value.
-- [ ] R8, R11: Typing 15 and leaving the field sets 10, and the status line shows and announces the correction.
+- [x] R8, R11: Typing 15 and leaving the field sets 10, and the status line shows and announces the correction.
       Typing 0 sets 1. Typing 2.6 sets 3. Clearing the field restores the last valid quantity. The next change
       clears the line.
-- [ ] R9: Given a quantity of 2, when the field is cleared and still has focus, then the button and the fine print
+- [x] R9: Given a quantity of 2, when the field is cleared and still has focus, then the button and the fine print
       still show the total for 2.
-- [ ] R10: Given 2 × subscription every 60 days, when "Add to cart" is pressed, then the status line reads "Added
+- [x] R10: Given 2 × subscription every 60 days, when "Add to cart" is pressed, then the status line reads "Added
       to cart: 2 × Vitamin D, delivered every 60 days, $50.92." in a polite live region. A later change clears it.
-- [ ] R10, R11: Pressing Enter in the quantity field with 15 corrects it to 10, then adds to the cart. The line shows
+- [x] R10, R11: Pressing Enter in the quantity field with 15 corrects it to 10, then adds to the cart. The line shows
       the correction, then the summary. The form has `noValidate`, so the browser's own range check doesn't block it.
-- [ ] R11: Typing 15, then clicking "Add to cart" while the field still has focus, corrects the field to 10 on blur
+- [x] R11: Typing 15, then clicking "Add to cart" while the field still has focus, corrects the field to 10 on blur
       and adds 10 to the cart. The line shows the correction, then the summary.
-- [ ] R1, R10: In the default state, the empty status line has zero height.
-- [ ] R10: Enter on either radio, and on the frequency `select`, doesn't add to the cart.
-- [ ] R12: At 1200px the columns are 64 / 540 / 64 / 468 / 64 (the geometry test). At 1024px the layout is still two
+- [x] R1, R10: In the default state, the empty status line has zero height.
+- [x] R10: Enter on either radio, and on the frequency `select`, doesn't add to the cart.
+- [x] R12: At 1200px the columns are 64 / 540 / 64 / 468 / 64 (the geometry test). At 1024px the layout is still two
       columns, with the photo column narrower and the box at full width.
-- [ ] R12: At 1024px and 768px there is no horizontal scroll. At 375px and 320px the layout is one column with no
+- [x] R12: At 1024px and 768px there is no horizontal scroll. At 375px and 320px the layout is one column with no
       horizontal scroll. Each is checked in the default and one-time states.
-- [ ] R13: A keyboard-only run reaches every control, picks one-time, the subscription, 60 days and a quantity of 2,
+- [x] R13: A keyboard-only run reaches every control, picks one-time, the subscription, 60 days and a quantity of 2,
       and adds to the cart without a mouse.
-- [ ] R14: Both axe runs pass at 375px and 1200px in each listed state, and the existing Part B smoke test uses the
+- [x] R14: Both axe runs pass at 375px and 1200px in each listed state, and the existing Part B smoke test uses the
       same two runs.
-- [ ] R15, R8, R9: Given a non-default quantity with either purchase option, when the shopper follows the nav to
+- [x] R15, R8, R9: Given a non-default quantity with either purchase option, when the shopper follows the nav to
       Part A and then the Part B nav link, the quantity is 1, the subscription is selected with 30 days, the cart
       button and fine print both show $25.46, and the status line is empty. Adding to cart reports that same
       quantity, frequency and total.
-- [ ] R3–R6, R8, R9: Given a non-default quantity with either purchase option, when "2,316 reviews" is clicked,
+- [x] R3–R6, R8, R9: Given a non-default quantity with either purchase option, when "2,316 reviews" is clicked,
       the URL still selects Part B with `#reviews`, the purchase option and quantity are unchanged, and all totals
       agree. For a subscription, the chosen frequency and renewal notice are preserved too.
-- [ ] The page loads and every interaction runs with no console errors.
+- [x] The page loads and every interaction runs with no console errors.
 
 ## Out of scope
 

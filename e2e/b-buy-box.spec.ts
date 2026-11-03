@@ -135,134 +135,29 @@ test("005 T6, R12: quantity 10 and long totals fit at 320px", async ({ page }) =
   await expectReflow(page, 320);
 });
 
-// Both projects exercise the actual links, including full-page navigation and same-document hashes.
-test.describe("005 T11–T12: buy-box navigation", () => {
-  let consoleErrors: string[];
+/**
+ * 005 "no console errors": call inside a `test.describe`. Each test in it opens Part B, and fails on any console
+ * error or uncaught exception from that first load, across any later navigation, through its last assertion.
+ */
+function openPartBWithoutBrowserErrors() {
+  let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {
-    consoleErrors = [];
+    errors = [];
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
+      if (message.type() === "error") errors.push(message.text());
     });
-    page.on("pageerror", (error) => consoleErrors.push(error.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     await page.goto("/?part=b");
   });
 
   test.afterEach(() => {
-    expect(consoleErrors, "No console errors or uncaught exceptions across navigation").toEqual([]);
+    expect(errors, "No console errors or uncaught exceptions").toEqual([]);
   });
+}
 
-  for (const option of ["subscription", "one-time"] as const) {
-    test(`T11, R15, R8, R9: Part A and back from ${option} resets the field and every total together`, async ({
-      page,
-    }) => {
-      const subscribed = option === "subscription";
-      const count = subscribed ? 3 : 2;
-      const amount = subscribed ? "$76.38" : "$59.90";
-      const quantity = page.getByRole("spinbutton", { name: copy.quantity.label });
-      const frequency = page.getByRole("combobox", { name: copy.subscribe.frequencyLabel });
-      const subscribe = page.getByRole("radio", { name: /^Subscribe/ });
-      const oneTime = page.getByRole("radio", { name: /^One-time purchase/ });
-      const add = page.getByRole("button", { name: /^Add to cart/ });
-      const status = page.getByRole("status");
-
-      if (subscribed) await frequency.selectOption("60 days");
-      else await oneTime.check();
-      await quantity.fill(String(count));
-      await expect(quantity).toHaveValue(String(count));
-      await expect(subscribed ? subscribe : oneTime).toBeChecked();
-      await expect(add).toHaveText(`Add to cart · ${amount}`);
-      if (subscribed) await expect(page.getByText(copy.renewalNotice("60 days", amount))).toBeVisible();
-      // Populate the announcement so the empty status after returning proves it was reset too.
-      await add.click();
-      await expect(status).toHaveText(
-        copy.added(count, copy.title, subscribed ? copy.planEvery("60 days") : copy.planOneTime, amount),
-      );
-
-      await page.getByRole("navigation").getByRole("link", { name: "Part A: Subscription page" }).click();
-      await expect(page).toHaveURL(/\?part=a&fixture=active$/);
-      await expect(page.getByRole("heading", { name: "Manage my subscription", exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: copy.title, exact: true })).toHaveCount(0);
-      await page.getByRole("navigation").getByRole("link", { name: "Part B: Buy box" }).click();
-      await expect(page).toHaveURL(/\?part=b$/);
-      await expect(page.getByRole("heading", { name: copy.title, exact: true })).toBeVisible();
-
-      await expect(subscribe).toBeChecked();
-      await expect(oneTime).not.toBeChecked();
-      await expect(frequency).toHaveValue("30 days");
-      await expect(quantity).toHaveValue("1");
-      await expect(add).toHaveText("Add to cart · $25.46");
-      await expect(page.getByText(copy.renewalNotice("30 days", "$25.46"))).toBeVisible();
-      await expect(oneTime).toHaveAccessibleName("One-time purchase $29.95");
-      await expect(subscribe).toHaveAccessibleName("Subscribe & save 15% Best value $25.46 originally $29.95");
-      await expect(status).toBeEmpty();
-      await add.click();
-      await expect(status).toHaveText(copy.added(1, copy.title, copy.planEvery("30 days"), "$25.46"));
-    });
-
-    test(`T12, R3–R6, R8, R9: reviews keeps Part B and its ${option} selection and totals`, async ({ page }) => {
-      const subscribed = option === "subscription";
-      const count = subscribed ? 3 : 2;
-      const amount = subscribed ? "$76.38" : "$59.90";
-      const quantity = page.getByRole("spinbutton", { name: copy.quantity.label });
-      const frequency = page.getByRole("combobox", { name: copy.subscribe.frequencyLabel });
-      const subscribe = page.getByRole("radio", { name: /^Subscribe/ });
-      const oneTime = page.getByRole("radio", { name: /^One-time purchase/ });
-      const add = page.getByRole("button", { name: /^Add to cart/ });
-      const status = page.getByRole("status");
-      const summary = copy.added(count, copy.title, subscribed ? copy.planEvery("60 days") : copy.planOneTime, amount);
-
-      if (subscribed) await frequency.selectOption("60 days");
-      else await oneTime.check();
-      await quantity.fill(String(count));
-
-      const expectSelection = async () => {
-        await expect(subscribed ? subscribe : oneTime).toBeChecked();
-        await expect(subscribed ? oneTime : subscribe).not.toBeChecked();
-        await expect(quantity).toHaveValue(String(count));
-        await expect(add).toHaveText(`Add to cart · ${amount}`);
-        await expect(oneTime).toHaveAccessibleName("One-time purchase $29.95");
-        await expect(subscribe).toHaveAccessibleName("Subscribe & save 15% Best value $25.46 originally $29.95");
-        if (subscribed) {
-          await expect(frequency).toHaveValue("60 days");
-          await expect(page.getByText(copy.renewalNotice("60 days", amount))).toBeVisible();
-        } else {
-          await expect(frequency).toHaveCount(0);
-          await expect(page.getByText(/^Your subscription renews every/)).toHaveCount(0);
-        }
-      };
-
-      await expectSelection();
-      await add.click();
-      await expect(status).toHaveText(summary);
-      const reviews = page.getByRole("link", { name: copy.reviewCount, exact: true });
-      await expect(reviews).toHaveAttribute("href", "#reviews");
-      await reviews.click();
-      await expect(page).toHaveURL(/\?part=b#reviews$/);
-      await expect(page.getByRole("heading", { name: copy.title, exact: true })).toBeVisible();
-      await expectSelection();
-      await expect(status).toHaveText(summary);
-      await add.click();
-      await expect(status).toHaveText(summary);
-    });
-  }
-});
-// 005 T8: each interaction flow also checks browser errors from navigation through its last assertion.
 test.describe("005 T8: buy-box browser interactions", () => {
-  let consoleErrors: string[];
-
-  test.beforeEach(async ({ page }) => {
-    consoleErrors = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
-    });
-    page.on("pageerror", (error) => consoleErrors.push(error.message));
-    await page.goto("/?part=b");
-  });
-
-  test.afterEach(() => {
-    expect(consoleErrors, "No console errors or uncaught exceptions during the flow").toEqual([]);
-  });
+  openPartBWithoutBrowserErrors();
 
   test("R3–R7: card padding collapses and restores the subscription with its chosen frequency", async ({ page }) => {
     const oneTime = page.getByRole("radio", { name: "One-time purchase $29.95", exact: true });
@@ -416,7 +311,7 @@ test.describe("005 T8: buy-box browser interactions", () => {
     await expect(page.getByRole("status")).toBeEmpty();
   });
 
-  test("R8: the wheel cannot change the focused quantity under the pointer", async ({ page }) => {
+  test("R8: no spinner, and the wheel cannot change the focused quantity under the pointer", async ({ page }) => {
     test.skip(test.info().project.name !== "desktop", "The wheel interaction is a desktop flow.");
     const quantity = page.getByRole("spinbutton", { name: copy.quantity.label });
     await expect(quantity).toHaveAttribute("inputmode", "numeric");
@@ -437,6 +332,16 @@ test.describe("005 T8: buy-box browser interactions", () => {
     }
     await expect(page.getByRole("button", { name: /^Add to cart/ })).toHaveText("Add to cart · $127.30");
     await expect(page.getByRole("status")).toBeEmpty();
+
+    // Chromium draws spin buttons only on hover or focus, so the default screenshot can't catch them. The focused,
+    // hovered field must look the same before and after spin buttons are forcibly hidden. The caret is hidden.
+    const field = await quantity.screenshot();
+    await page.addStyleTag({
+      content: `input { appearance: textfield !important; }
+        input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { appearance: none !important; }`,
+    });
+    await expect(quantity).toBeFocused();
+    expect(await quantity.screenshot(), "The focused, hovered field shows no spinner").toEqual(field);
   });
 
   test("R9, R11: clearing a focused field keeps every total until blur restores its last valid value", async ({
@@ -535,4 +440,104 @@ test.describe("005 T8: buy-box browser interactions", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByRole("status")).toHaveText(copy.added(2, copy.title, copy.planEvery("60 days"), "$50.92"));
   });
+});
+
+// Both projects exercise the actual links, including full-page navigation and same-document hashes.
+test.describe("005 T11–T12: buy-box navigation", () => {
+  openPartBWithoutBrowserErrors();
+
+  for (const option of ["subscription", "one-time"] as const) {
+    test(`T11, R15, R8, R9: Part A and back from ${option} resets the field and every total together`, async ({
+      page,
+    }) => {
+      const subscribed = option === "subscription";
+      const count = subscribed ? 3 : 2;
+      const amount = subscribed ? "$76.38" : "$59.90";
+      const quantity = page.getByRole("spinbutton", { name: copy.quantity.label });
+      const frequency = page.getByRole("combobox", { name: copy.subscribe.frequencyLabel });
+      const subscribe = page.getByRole("radio", { name: /^Subscribe/ });
+      const oneTime = page.getByRole("radio", { name: /^One-time purchase/ });
+      const add = page.getByRole("button", { name: /^Add to cart/ });
+      const status = page.getByRole("status");
+
+      if (subscribed) await frequency.selectOption("60 days");
+      else await oneTime.check();
+      await quantity.fill(String(count));
+      await expect(quantity).toHaveValue(String(count));
+      await expect(subscribed ? subscribe : oneTime).toBeChecked();
+      await expect(add).toHaveText(`Add to cart · ${amount}`);
+      if (subscribed) await expect(page.getByText(copy.renewalNotice("60 days", amount))).toBeVisible();
+      // Populate the announcement so the empty status after returning proves it was reset too.
+      await add.click();
+      await expect(status).toHaveText(
+        copy.added(count, copy.title, subscribed ? copy.planEvery("60 days") : copy.planOneTime, amount),
+      );
+
+      await page.getByRole("navigation").getByRole("link", { name: "Part A: Subscription page" }).click();
+      await expect(page).toHaveURL(/\?part=a&fixture=active$/);
+      await expect(page.getByRole("heading", { name: "Manage my subscription", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: copy.title, exact: true })).toHaveCount(0);
+      await page.getByRole("navigation").getByRole("link", { name: "Part B: Buy box" }).click();
+      await expect(page).toHaveURL(/\?part=b$/);
+      await expect(page.getByRole("heading", { name: copy.title, exact: true })).toBeVisible();
+
+      await expect(subscribe).toBeChecked();
+      await expect(oneTime).not.toBeChecked();
+      await expect(frequency).toHaveValue("30 days");
+      await expect(quantity).toHaveValue("1");
+      await expect(add).toHaveText("Add to cart · $25.46");
+      await expect(page.getByText(copy.renewalNotice("30 days", "$25.46"))).toBeVisible();
+      await expect(oneTime).toHaveAccessibleName("One-time purchase $29.95");
+      await expect(subscribe).toHaveAccessibleName("Subscribe & save 15% Best value $25.46 originally $29.95");
+      await expect(status).toBeEmpty();
+      await add.click();
+      await expect(status).toHaveText(copy.added(1, copy.title, copy.planEvery("30 days"), "$25.46"));
+    });
+
+    test(`T12, R3–R6, R8, R9: reviews keeps Part B and its ${option} selection and totals`, async ({ page }) => {
+      const subscribed = option === "subscription";
+      const count = subscribed ? 3 : 2;
+      const amount = subscribed ? "$76.38" : "$59.90";
+      const quantity = page.getByRole("spinbutton", { name: copy.quantity.label });
+      const frequency = page.getByRole("combobox", { name: copy.subscribe.frequencyLabel });
+      const subscribe = page.getByRole("radio", { name: /^Subscribe/ });
+      const oneTime = page.getByRole("radio", { name: /^One-time purchase/ });
+      const add = page.getByRole("button", { name: /^Add to cart/ });
+      const status = page.getByRole("status");
+      const summary = copy.added(count, copy.title, subscribed ? copy.planEvery("60 days") : copy.planOneTime, amount);
+
+      if (subscribed) await frequency.selectOption("60 days");
+      else await oneTime.check();
+      await quantity.fill(String(count));
+
+      const expectSelection = async () => {
+        await expect(subscribed ? subscribe : oneTime).toBeChecked();
+        await expect(subscribed ? oneTime : subscribe).not.toBeChecked();
+        await expect(quantity).toHaveValue(String(count));
+        await expect(add).toHaveText(`Add to cart · ${amount}`);
+        await expect(oneTime).toHaveAccessibleName("One-time purchase $29.95");
+        await expect(subscribe).toHaveAccessibleName("Subscribe & save 15% Best value $25.46 originally $29.95");
+        if (subscribed) {
+          await expect(frequency).toHaveValue("60 days");
+          await expect(page.getByText(copy.renewalNotice("60 days", amount))).toBeVisible();
+        } else {
+          await expect(frequency).toHaveCount(0);
+          await expect(page.getByText(/^Your subscription renews every/)).toHaveCount(0);
+        }
+      };
+
+      await expectSelection();
+      await add.click();
+      await expect(status).toHaveText(summary);
+      const reviews = page.getByRole("link", { name: copy.reviewCount, exact: true });
+      await expect(reviews).toHaveAttribute("href", "#reviews");
+      await reviews.click();
+      await expect(page).toHaveURL(/\?part=b#reviews$/);
+      await expect(page.getByRole("heading", { name: copy.title, exact: true })).toBeVisible();
+      await expectSelection();
+      await expect(status).toHaveText(summary);
+      await add.click();
+      await expect(status).toHaveText(summary);
+    });
+  }
 });

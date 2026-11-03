@@ -338,7 +338,8 @@ main.page
   - totals
   - the corrections, with the visible line
   - every Enter path, including Chromium's native radio submit, which is the reason for the guard
-  - the wheel, on `desktop`
+  - the wheel, on `desktop`, and no spinner on the focused, hovered field (a screenshot that must not change when
+    spin buttons are forcibly hidden, because Chromium draws them only on hover or focus)
   - a keyboard-only run
   - no console errors
 - `expectAccessibleBuyBox` in the default state, with one-time selected and after "Add to cart".

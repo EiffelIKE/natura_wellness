@@ -36,7 +36,7 @@
   - no console errors
 - [x] T9: ask the human which further edge cases and e2e flows to cover, and add them as tasks
       (chosen 2026-11-03; recorded as T11 and T12 below)
-- [ ] T10: after T11 and T12, tick the acceptance criteria and set the spec to Implemented
+- [x] T10: after T11 and T12, tick the acceptance criteria and set the spec to Implemented
 - [x] T11 (R15, R8, R9): at 375px and 1200px, choose a non-default quantity in each purchase option, follow the nav
       to Part A and then back through the Part B nav link. Check the default option, frequency and quantity,
       agreement between the field, button total, renewal notice and subsequent cart summary, fixed unit prices,

@@ -2,6 +2,21 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 005-b-buy-box / T10: final acceptance review, spec Implemented
+
+- **Changed:** `spec.md`: all 27 acceptance criteria ticked, status `Implemented`. `task.md`: T10 ticked.
+  `e2e/b-buy-box.spec.ts`: the console-error hooks duplicated in the T8 and T11–T12 groups are now one shared
+  `openPartBWithoutBrowserErrors()`; the T11–T12 group moved below T8, in task order. The R8 wheel test also checks
+  that the focused, hovered field shows no spinner. `plan.md` describes that check.
+- **Decisions:** each criterion was mapped to a passing unit, component or e2e test before it was ticked. Only
+  "no visible spinner" (R8) had no test: Chromium draws spin buttons only on hover or focus, so the default
+  screenshot can't see them. A computed-style probe of `::-webkit-inner-spin-button` was rejected (Chromium
+  returns the input's own `appearance`), and so was a click on the arrow (too position-dependent; it passed with
+  the spinner shown). The check compares the field's screenshot before and after force-hiding spin buttons.
+- **Verified:** the shared helper fails a test on an injected `console.error`. The spinner check passed 3 runs in
+  a row and failed with the CSS rules removed; the CSS was restored. `npm run check`: green; 611 unit/component tests and 164 e2e tests passed,
+  22 intentional skips. Visual diff remains **0.775%** (29,011 px), below the 1% tolerance.
+
 ## 2026-11-03: 005-b-buy-box / T12: reviews preserves Part B's selection and totals
 
 - **Changed:** `e2e/b-buy-box.spec.ts` adds reviews-link flows from a subscription every 60 days at quantity 3 and
