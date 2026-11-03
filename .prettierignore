@@ -1,0 +1,10 @@
+# src/api is read-only (see AGENTS.md); keep the starter's formatting untouched
+src/api
+INSTRUCTIONS.md
+package-lock.json
+public
+dist
+coverage
+playwright-report
+test-results
+docs
