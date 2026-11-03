@@ -18,4 +18,20 @@ export const copy = {
   trust: ["Third-party tested", "Non-GMO", "Made in the USA"],
   finePrint:
     "Your subscription renews every 30 days at $25.46 until you cancel. Skip or cancel anytime from your account.",
+
+  // 005: everything below was added for the buy box. The keys above are the provided copy, unchanged.
+  photoAlt: "Natura Wellness Vitamin D bottle, 60 softgels",
+  ratingLabel: (rating: string) => `Rated ${rating} out of 5`,
+  optionsLegend: "Purchase option",
+  originally: "originally",
+  quantity: { label: "Quantity", decrease: "Decrease quantity", increase: "Increase quantity" },
+  separator: "·",
+  renewalNotice: (frequency: string, total: string) =>
+    `Your subscription renews every ${frequency} at ${total} until you cancel. Skip or cancel anytime from your account.`,
+  added: (quantity: number, title: string, plan: string, total: string) =>
+    `Added to cart: ${quantity} × ${title}, ${plan}, ${total}.`,
+  planOneTime: "one-time purchase",
+  planEvery: (frequency: string) => `delivered every ${frequency}`,
+  quantityCorrected: (n: number, min: number, max: number) =>
+    `Quantity set to ${n}. You can order ${min} to ${max} at a time.`,
 };

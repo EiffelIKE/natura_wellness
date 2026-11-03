@@ -1,0 +1,47 @@
+/* 005: only what the behaviour needs (T3). T5 adds the measured layout, tokens and type from plan.md. */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* R4: the card's padding is a pointer target. The radio stays the keyboard path. */
+.card {
+  cursor: pointer;
+}
+
+/* R14 (WCAG 2.5.8): unstyled, these targets are under 24px and adjacent. T5 sets the design's 56px row. */
+.step,
+.quantity,
+.addToCart {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
+/* R8: no spinner arrows, as in the design. The arrow keys still step natively. */
+.quantity {
+  appearance: textfield;
+}
+
+.quantity::-webkit-inner-spin-button,
+.quantity::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* R8: at a limit the button keeps its colour. The cursor is the only visual change. */
+.step[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* R1, R10: the empty status line takes no height or margin, so the default screenshot is unaffected. */
+.status:empty {
+  margin: 0;
+}

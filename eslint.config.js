@@ -14,7 +14,14 @@ export default tseslint.config(
     extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       globals: globals.browser,
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        // The two root configs are in tsconfig.node.json, which isn't named tsconfig.json, so the service is told.
+        projectService: {
+          allowDefaultProject: ["vite.config.ts", "playwright.config.ts"],
+          defaultProject: "tsconfig.node.json",
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
   {

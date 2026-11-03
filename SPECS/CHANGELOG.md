@@ -2,6 +2,248 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 005-b-buy-box / T4: visual project, protected baseline and diff helper
+
+- **Changed:**
+  - `playwright.config.ts`: a `visual` project at 1200×780 with `deviceScaleFactor: 2` and its own
+    `snapshotPathTemplate` (`{testDir}/__screenshots__/{arg}{ext}`). It runs only `b-visual.spec.ts`, and `mobile`
+    and `desktop` ignore that file.
+  - New `e2e/__screenshots__/buy-box.png`: the committed baseline, a byte-for-byte copy of
+    `public/reference/buy-box.png`.
+  - New `e2e/visual.ts`:
+    - `pngSize`, read from the IHDR chunk
+    - `diffImages`, an in-browser canvas diff in a scratch page, with pixelmatch's YIQ delta at a threshold of 0.2
+      and no anti-aliasing excuse. It returns the ratio and a diff PNG, with differences in red over a faded copy of
+      the reference.
+  - New `e2e/b-visual.spec.ts`:
+    - the byte check, which reads the baseline through `testInfo.snapshotPath(..., { kind: "screenshot" })`, the path
+      `toHaveScreenshot` uses
+    - the capture test: the nav hidden, the font check, the 2400×1560 size check, and the diff PNG and the ratio JSON
+      attached and logged on every run
+    - two `test.fixme` gates for T5: geometry against the layout table (with the subtitle's two lines and the
+      zero-height status line), and pixels with `TOLERANCE`, which is the 3% ceiling until T5 sets it
+  - `package.json`: `@types/node@^24` as a dev dependency, with the human's approval (asked before installing).
+    `typecheck` now runs `tsc` on both configs.
+  - New `tsconfig.node.json` and `e2e/tsconfig.json`. `tsconfig.json` now covers `src/` only. `eslint.config.js`
+    gives the project service the two root tool configs through `allowDefaultProject`.
+  - `plan.md`: the font check's method and the tsconfig split, before the code.
+- **Decisions:**
+  - **The tsconfig split.** When I asked about `@types/node`, I said `src/` still wouldn't see Node's globals. A
+    probe showed that was wrong. Vite's own types (`vite/dist/node/index.d.ts`, through `vite.config.ts`) reference
+    Node's, so with one shared config, `Buffer.from(...)` in `src/` typechecked. Before this task, that reference
+    resolved to nothing. Browser code and Node code now have separate programs, as in Vite's own template. Re-probed:
+    `Buffer` in `src/` fails the typecheck again, `@types/node` is absent from the root program, and a type error in
+    `e2e/` still fails `npm run typecheck`.
+  - **The font check** calls `document.fonts.load()` before `check()`. `check()` alone returns true when the
+    stylesheet defined no face at all, and `load()` also fetches a face that the CSS doesn't use yet. Fraunces isn't
+    used until T5.
+  - **The diff runs in a separate page** opened from the same context, so the page under test is never changed.
+- **Diff ratio, first recording:** 7.007% (262,359 of 3,744,000 px), with T3's unstyled page. Playwright's own
+  comparator, from one probe run at `maxDiffPixelRatio: 0`, reported 221,973 px (ratio 0.06). T5 records the tuned
+  ratio.
+- **Verified:**
+  - Helper sanity, in a throwaway probe: the reference against itself gives 0. A black page against it gives 0.969,
+    because the design's dark pixels still match. It counts more differing pixels than Playwright (262,359 against
+    221,973), as designed.
+  - The diff image, viewed: the design's content and the unstyled page's content are both marked in red.
+  - The byte check fails with its message when one byte is appended to either PNG. Both files were restored, and
+    `git diff` shows the reference unchanged.
+  - With Google Fonts blocked, the capture test fails with "These fonts didn't load from Google Fonts: 600 44px
+    Fraunces, 400 16px Inter, ...".
+  - `npm audit`: the one moderate finding (minimatch, through ESLint) was there before this dependency.
+  - `npm run check` passed: 611 unit and component tests, and e2e 116 passed, 16 skipped. Those 16 are the 14
+    viewport-specific skips from before and the two T5 `fixme` gates.
+
+## 2026-11-03: 005-b-buy-box / T3: buy box markup and behaviour
+
+- **Changed:**
+  - `src/part-b/BuyBox.tsx`: the plan's markup, replacing the "Start here." stub. Native radios in a `fieldset` with
+    a hidden legend, and a card click handler that ignores controls and labels and focuses the card's radio. The
+    details and the fine print are removed while one-time is selected. The `form` has `noValidate`. The stepper
+    buttons are `type="button"` with `aria-disabled` at the limits. The field has `inputMode="numeric"`, plus the
+    non-passive wheel guard and the Enter guard. The status line is always mounted, with a `span` keyed by `seq`.
+    The four `data-contrast-exception` marks are in place.
+  - New `src/part-b/icons.tsx`: star, check, check-circle, chevron, minus and plus, all `aria-hidden`. T5 tunes
+    their shapes.
+  - New `src/part-b/BuyBox.module.css`, with only the behavioural rules: visually hidden text, the card's pointer
+    cursor, the hidden spinners, `not-allowed` at a limit, the empty status line's zero margin, and a 44px minimum
+    target for the stepper, the field and the button (below).
+  - `plan.md`: the Enter guard's location (below), in the markup sketch, the bullet and Risks.
+  - New `src/part-b/BuyBox.test.tsx` (39 tests).
+- **Decisions:**
+  - The Enter guard is one handler on both radios and the `select`, not on the `form`. jsx-a11y's
+    `no-noninteractive-element-interactions` rejects a key handler on a form, and those three controls are exactly
+    the Enter paths R10 names, so no rule is disabled. The card's click handler is the only line with a disable
+    comment, as the plan says.
+  - The reducer already ignores a step at a limit, so the buttons always dispatch and the limit rule lives in one
+    place.
+  - The visible "4.8" sits inside the stars' `aria-hidden` span, so a screen reader hears "Rated 4.8 out of 5" once.
+  - The selected card's style will come from `:has(:checked)` in T5, so there's no second copy of the selection in
+    the DOM. jsdom doesn't apply CSS modules, so the style is checked in e2e.
+  - A 44px minimum target size, ahead of T5. With no styling, the stepper's buttons and field were under 24px and
+    adjacent, and the Part B smoke test failed axe's `target-size` and `target-offset` (WCAG 2.5.8). T5 replaces it
+    with the design's 56px row.
+- **Found by the tests:** the subscription radio's name read "originally$29.95". The space inside the visually
+  hidden span was trimmed from the accessible name, so it now sits outside the span.
+- **Verified:**
+  - `BuyBox.test.tsx`: 39 passed:
+    - names and structure, including the rating, the select outside every label, and `noValidate`
+    - the four contrast marks
+    - collapse and restore, the frequency kept, and the card padding click
+    - the arrow keys, + twice with the line empty, and `aria-disabled` focus at both limits
+    - corrections on blur (15, 0, 2.6, empty), a cleared field keeping the total, and the wheel guard
+    - both summaries, 15 then a click while focused, Enter with 15, Enter on both radios and the select, and a
+      repeated add replacing the node
+    - the no-inline-text check in five states
+  - Five temporary breaks, each caught and then reverted: an inline `<p>Free gift</p>` (5 failures, one per state),
+    no Enter guard (3), no wheel guard (1), an unkeyed status span (1), and the card click not focusing the radio (1).
+  - A throwaway Playwright probe in real Chromium, then deleted. Enter on both radios and the select added nothing.
+    Enter in the field with 15, and a click on "Add to cart" while the field held 15, each showed the correction
+    and then the summary. The wheel left 5 unchanged.
+  - `e2e/smoke.spec.ts` passed on both projects.
+
+## 2026-11-03: 005-b-buy-box / T2: buy box reducer
+
+- **Changed:**
+  - New `src/part-b/buyBoxReducer.ts`: `State`, `Status`, the six actions, `initialState`, and two selectors,
+    `total` and `summaryOf`, so the component and the tests compute the total and the summary in one place.
+  - `plan.md`, before the code: three rules the transition table left open (below), and what "ignored" means.
+  - New `src/part-b/buyBoxReducer.test.ts` (55 tests).
+- **Decisions:**
+  - Choosing the option or frequency that's already selected is ignored, and the same state object is returned.
+    R10 clears the line when the selection _changes_, and a click on the selected card's padding isn't a change.
+  - A commit announces a change of value, not of text, following R8 ("if the value changes"). `"1e1"`, `"05"` and
+    `"3.0"` are tidied to `"10"`, `"5"` and `"3"` without a message. `""` and `"abc"` go back to the last valid
+    quantity and are announced. The plan's earlier wording ("if the field's text changes") would have announced
+    "Quantity set to 10" for a shopper who typed 1e1 and already had 10.
+  - A correction stays on the line only until a summary has followed it. The first add after a correction shows
+    both (R11). Pressing "Add to cart" again shows the summary alone, so an old correction isn't re-announced.
+  - A step uses the last valid quantity, not an invalid draft. In the browser the blur commits first anyway.
+- **Verified:**
+  - `buyBoxReducer.test.ts`: 55 passed. They cover every action, every ignored case (a step at either limit, an
+    unknown or unchanged frequency, an unchanged option, a commit with nothing to correct, a second commit), the
+    line clearing on each kind of change, `seq` on a repeated add, and the correction before the summary on both
+    submit paths, which also end on the same line.
+  - Four temporary breaks, each caught and then reverted: an unchanged option clearing the line (1 failure),
+    announcing text-only tidies (4), a repeated add keeping the old correction (1), and typing not clearing the line
+    (2).
+
+## 2026-11-03: 005-b-buy-box / T1: copy additions and buy box rules
+
+- **Changed:**
+  - `src/part-b/copy.ts`: the plan's new keys and templates, appended under a comment. `git diff` shows no removed
+    or changed lines, so the provided copy is byte-for-byte as given.
+  - New `src/part-b/buyBox.ts`:
+    - `PurchaseOption`, `MIN_QUANTITY` and `MAX_QUANTITY`
+    - `formatMoney` (en-US, USD), `unitPriceCents` and `totalCents` (unit price × quantity)
+    - `parseQuantity`, `isValidQuantity` and `correctQuantity`
+  - `plan.md`: `isValidQuantity` added to the file table, and `parseQuantity`'s contract written down, before the
+    code.
+  - New `src/part-b/buyBox.test.ts` (71 tests).
+- **Decisions:**
+  - `parseQuantity` accepts only an HTML valid floating-point number and returns `null` for anything else (`" 5 "`,
+    `"+5"`, `"0x10"`, `"Infinity"`). A number field only ever reports `""` or such a string, so this matches the
+    browser and keeps direct callers predictable. `"1e400"` parses to `Infinity` and is corrected to 10.
+  - `isValidQuantity` is new. The plan's `quantity/typed` rule ("a whole number from 1 to 10") needs it, so T2's
+    reducer and the tests share one definition.
+  - Halves round up (`Math.round`), so 2.5 becomes 3. Negatives clamp to 1.
+  - `PurchaseOption` lives in `buyBox.ts`, not the reducer, because the price helpers take it. T2 imports it.
+  - Template tests pin `renewalNotice("30 days", "$25.46") === copy.finePrint`, both spec summaries, the correction
+    message and "Rated 4.8 out of 5".
+- **Verified:**
+  - `buyBox.test.ts`: 71 passed.
+  - Three temporary breaks, each caught and then reverted: `Math.trunc` for `Math.round` (2 failures), a discount
+    rounded on the total, as in Part A's mock (4), and "anytime" changed to "any time" in `renewalNotice` (2).
+  - `npm run check` passed: 517 unit and component tests, and e2e 114 passed, 14 skipped. Those 14 are the existing
+    viewport-specific tests, skipped as before.
+
+## 2026-11-03: 005-b-buy-box: second spec review, plan Approved
+
+- **Changed:**
+  - `spec.md`, with the human's 6 changes:
+    - R10: the form has `noValidate`
+    - R8: both stepper buttons are `type="button"`, and the "+ twice" criterion now expects an empty status line
+    - R1, R10: the empty status line takes no height, and the shift below it is accepted
+    - R11: a correction on blur followed by a submit also shows the correction, then the summary, with a new
+      criterion
+    - R1: the no-inline-text criterion builds its expected set from `copy.ts` values, the formatter and the
+      templates
+    - R12: an exact 64/540/64/468/64 grid at 1200 that shrinks, the photo column first, down to 960
+  - `plan.md`, set to Approved:
+    - `noValidate` in the markup and the Enter guard
+    - the geometry test also asserts that the subtitle has exactly two lines (distinct `Range.getClientRects()`
+      tops, with a named failure message) and that the empty status line has zero height
+    - the 1024px figures
+    - two more component-test cases
+  - `task.md`: T3, T5 and T8 name these points.
+  - The R8 wording no longer splits `cursor: not-allowed` across a code-span line break, a Prettier reflow
+    artefact from the last pass.
+- **Decisions:** none beyond the human's. `noValidate` is required, not cosmetic. Without it, Chrome's
+  constraint validation stops the submit event, so neither the R8 correction nor `cart/added` would run on Enter
+  with 15.
+- **Verified:** `prettier --check .` passes. Docs only, so no code checks were needed.
+
+## 2026-11-03: 005-b-buy-box: spec Approved, plan and tasks drafted
+
+- **Changed:**
+  - `spec.md` with the human's 11 review changes, then status Approved:
+    - R2: a separate `visual` project at DPR 2, a byte-checked baseline copy, and the diff image and ratio
+      attached and recorded
+    - R14: two axe runs
+    - R8: `aria-disabled` keeps the design's colour, plus `inputMode`, no spinners and no wheel changes
+    - R11: the correction is visible
+    - R4: only the header row is in the label, with a card click handler
+    - R9: the last valid total is kept while the field is invalid
+    - R10: Enter on a radio or the select doesn't add
+    - R1: how inline text is enforced
+    - R12: 1024 and 768 added
+  - New `plan.md` (Draft) and `task.md` (T1–T10).
+- **Decisions:**
+  - **Enter blocked on radios.** Chromium submits a form on Enter in a radio button. A scratch Playwright script
+    showed radio → 1 submit, select → 0, number field → 1. So Enter on a radio or the select is blocked in the
+    form's `onKeyDown`.
+  - **Own diff helper.** Playwright's image comparator isn't exported (`playwright-core/lib/utils` gives
+    `ERR_PACKAGE_PATH_NOT_EXPORTED`). So the always-on diff image and ratio come from an in-browser canvas helper
+    (pixelmatch's YIQ delta at a threshold of 0.2). `toHaveScreenshot` stays the gate.
+  - **Geometry test.** It checks element boxes within ±1px. It's added because font rasterisation (the reference
+    was probably captured on macOS) makes the pixel ratio noisy, and the geometry test still catches layout
+    drift.
+  - **Selected border.** A 1px border plus an inset 1px shadow. The radio is at x 689 in both cards, so the
+    measured 2px green border can't be a real 2px border without shifting the content.
+  - **Tolerance.** The measured ratio rounded up to the next 0.5%, with a ceiling of 3%. Above the ceiling, the
+    agent stops and asks the human.
+- **Verified:**
+  - Measured the reference with scratch Pillow scripts:
+    - columns 64/540/64/468/64
+    - every band's position
+    - 15 colour tokens
+    - radii
+    - cap heights for the starting font sizes
+  - Matched `product.jpg` at 500×500, centred in the card, with a mean error of 0.15/255 (others were 0.77 or
+    worse).
+  - Confirmed that "−" and "+" are both `#4a5550` in the reference.
+
+## 2026-11-03: 005-b-buy-box: spec drafted
+
+- **Changed:** `SPECS/005-b-buy-box/spec.md` with status Draft: R1–R14, acceptance criteria, out of scope and
+  known limitations.
+- **Decisions:**
+  - Settled with the human:
+    - one-time collapses the subscription details and hides the fine print
+    - totals are unit price × quantity
+    - quantity is 1–10, by typing or buttons, and clamped when the field loses focus
+    - "Add to cart" shows and announces a summary
+    - the design's colours ship unchanged, even where they fail AA contrast
+  - Agent decisions, open to review in the spec:
+    - native `select` and native radios
+    - `aria-disabled` stepper buttons, so focus isn't lost at a limit
+    - a one-column layout below a breakpoint chosen in the plan
+    - new strings and templates go into `copy.ts`
+    - the visual test hides the app's nav, and the app keeps it
+- **Verified:** the reference is 2400×1560, so 1200×780 at 2x, which matches the existing `desktop` project.
+  Sampled the text colours from it with a scratch Pillow script. Four texts fail 4.5:1: the eyebrow, the reviews
+  link and the fine print at 4.27, and the struck-through price at 2.87. Everything else is 5.2:1 or higher.
+
 ## 2026-11-03: deploy: add vercel.json
 
 - **Changed:** `vercel.json`: the Vite preset, `npm ci`, `npm run build` (typecheck, then `vite build`), output

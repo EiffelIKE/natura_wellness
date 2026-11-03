@@ -1,0 +1,7 @@
+{
+  // Code that runs in Node: the two tool configs and the e2e tests. Only these get Node's types, so browser code in
+  // src/ that uses Buffer or process fails the typecheck (tsconfig.json).
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["vite.config.ts", "playwright.config.ts", "e2e"]
+}

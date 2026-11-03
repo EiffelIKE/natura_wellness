@@ -3,6 +3,9 @@ import type { TestOptions } from "./e2e/test";
 
 const port = 5179;
 
+// 005 R2: the pixel test needs its own 2x project, and nothing else runs in it.
+const visualSpec = /b-visual\.spec\.ts$/;
+
 export default defineConfig<TestOptions>({
   testDir: "e2e",
   fullyParallel: true,
@@ -18,8 +21,24 @@ export default defineConfig<TestOptions>({
   },
   projects: [
     // Most customers are on a 375px phone, so mobile is the primary project.
-    { name: "mobile", use: { ...devices["Desktop Chrome"], viewport: { width: 375, height: 812 }, hasTouch: true } },
-    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1200, height: 780 } } },
+    {
+      name: "mobile",
+      testIgnore: visualSpec,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 375, height: 812 }, hasTouch: true },
+    },
+    {
+      name: "desktop",
+      testIgnore: visualSpec,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1200, height: 780 } },
+    },
+    // 005 R2: the design is a 2x screenshot of a 1200×780 window. `desktop` is 1x, so it can't match it.
+    // The baseline is e2e/__screenshots__/buy-box.png, a committed copy of public/reference/buy-box.png.
+    {
+      name: "visual",
+      testMatch: visualSpec,
+      snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ext}",
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1200, height: 780 }, deviceScaleFactor: 2 },
+    },
   ],
   webServer: {
     command: `npm run dev -- --port ${port} --strictPort`,
