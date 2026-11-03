@@ -2,6 +2,15 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: deploy: add vercel.json
+
+- **Changed:** `vercel.json`: the Vite preset, `npm ci`, `npm run build` (typecheck, then `vite build`), output
+  `dist`.
+- **Decisions:** no rewrites. The app has one page and routes only through query params (`?part=`,
+  `?fixture=`, `&conflict=`), so every link serves `index.html` as-is. `npm ci` installs from the lockfile.
+- **Verified:** `npm run build` passes locally and writes `dist/` with `index.html`, `product.jpg` and
+  `reference/`. Prettier accepts `vercel.json`.
+
 ## 2026-11-03: 002-a-skip-shipment: marked Implemented
 
 - **Changed:** `SPECS/002-a-skip-shipment/spec.md`: status Implemented, and the last open criterion (R1, no skip
