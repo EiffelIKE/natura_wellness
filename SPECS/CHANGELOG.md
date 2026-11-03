@@ -2,6 +2,51 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 004-a-cancel-retention / T1: cancel rules
+
+- **Changed:**
+  - `SPECS/004-a-cancel-retention/plan.md`: status set to Approved by the human.
+  - New `src/part-a/cancel.ts`:
+    - `Reason` and `REASONS` (R2)
+    - `Offer` and `slowerFrequency` (R4)
+    - `offersFor(reason, server, local)`, which builds the offers and their texts from the server's data and the
+      pending 003 changes (R3)
+  - `src/part-a/plan.ts`: new `pendingItems(server, pending)`, which `totalAfter` and `offersFor` both use. The
+    plan's file table didn't list `plan.ts`, but the change is a pure extraction, and 003's behaviour is unchanged.
+  - New `src/part-a/cancel.test.ts` (22 tests), and two `pendingItems` tests in `plan.test.ts`.
+- **Decisions:**
+  - The skip offers check `canSkip`, so a missing next order date shows no skip.
+  - A quantity offer is left out when one unit less isn't in `quantityOptions`, for example 11 for a server 12.
+  - The totals always come from the item prices, so the offers still work without `nextChargeTotalCents`.
+  - The tests pin the spec's reason for using totals. With the fixture, the saving is $38.20, where the unit price
+    would give $38.21. With Vitamin D 3 pending, the same Multivitamin saving comes out at $38.21.
+- **Verified:**
+  - `cancel.test.ts` and `plan.test.ts`: 53 passed.
+  - Three temporary breaks, each caught and then reverted: a unit-price saving, ignoring a pending frequency, and
+    no `quantityOptions` check.
+  - `npm run check` passed: 315 unit and component tests, and e2e 70 passed, 10 skipped. Those 10 are the
+    existing viewport-specific tests, skipped as before.
+
+## 2026-11-03: 004-a-cancel-retention / spec rename, plan and tasks
+
+- **Changed:**
+  - `SPECS/004-a-cancel-retention/spec.md`: at the human's request, the step 2 confirm button is now "Yes, cancel
+    my subscription" in R3, R7 and the R3 criterion, so it no longer shares the trigger's name "Cancel
+    subscription". R1 and R10 still name the trigger. The status stays Approved, because the human made the change.
+  - New `plan.md` (Draft) and `task.md` (T1–T7).
+- **Decisions:**
+  - The local cancel is a top-level `cancelled` field, not part of `Local` as 003's plan suggested. That way
+    `plan/discarded` can never reset it.
+  - Taking an offer reuses the reducer's `skip/opened`, `plan/frequency` and `plan/quantity` cases, and the offer
+    is checked against `offersFor` first.
+  - `viewOf(server, cancelled)` is the one R9 rule, and it also guards `plan/*` and `skip/opened`. `canSkip` keeps
+    one argument.
+  - Offers that can't apply are left out: a skip offer without a next order date, and a quantity offer whose
+    lowered value isn't a choice.
+  - The step 2 title, the "Instead, you can:" lead, the undo announcement and the textarea label aren't in the
+    spec. The plan proposes them for review.
+- **Verified:** no code touched, only specs. Prettier checked on the edited Markdown.
+
 ## 2026-11-03: 003-a-plan-changes / T10: warn before leaving with pending changes
 
 - **Changed:**

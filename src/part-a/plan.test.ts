@@ -5,6 +5,7 @@ import {
   FREQUENCIES,
   hasPending,
   type Local,
+  pendingItems,
   pendingOf,
   QUANTITIES,
   quantityOptions,
@@ -109,6 +110,18 @@ describe("hasPending (R5)", () => {
 
   it("is false when every pick now equals the server's", () => {
     expect(hasPending(pendingOf(server, { intervalDays: 30, quantities: { "NW-MULTI-30": 2 } }))).toBe(false);
+  });
+});
+
+describe("pendingItems (R4)", () => {
+  it("applies pending quantities in the server's order and leaves the rest as the server's", () => {
+    const pending = pendingOf(server, { ...none, quantities: { "NW-MULTI-30": 1 } });
+    expect(pendingItems(server, pending)).toEqual([vitaminD, { ...multivitamin, quantity: 1 }]);
+  });
+
+  it("never changes the server's items", () => {
+    pendingItems(server, pendingOf(server, { ...none, quantities: { "NW-MULTI-30": 1 } }));
+    expect(multivitamin.quantity).toBe(2);
   });
 });
 

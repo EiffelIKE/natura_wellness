@@ -21,8 +21,9 @@ The right alternative depends on the reason. No discounts are invented.
 - R2 Step 1 asks "Why are you cancelling?" and shows the five reasons as a list of buttons. Each button goes
   straight to step 2, with no separate "Continue". This keeps the flow at 3 taps; auto-advancing radios would be an
   accessibility anti-pattern.
-- R3 Step 2 shows the alternative for the chosen reason. "Cancel subscription" is always there with the same size and
-  contrast as the offer buttons. There is also a "Back" button.
+- R3 Step 2 shows the alternative for the chosen reason. "Yes, cancel my subscription" is always there with the same
+  size and contrast as the offer buttons. There is also a "Back" button. The label differs from R1's trigger, so
+  the two buttons never share an accessible name.
   - **Too much product:** the main button is "Skip my Nov 8 order", and the second is "Ship every 60 days" (003),
     for customers whose problem is long term.
   - **Costs too much:** the main button is "Ship every 60 days: {total} every 60 days instead of every 30". The
@@ -39,7 +40,7 @@ The right alternative depends on the reason. No discounts are invented.
   and the customer still sees the exact new date before confirming.
 - R6 A frequency or quantity offer closes the flow, applies the 003 change, and announces it. The customer stays
   subscribed.
-- R7 "Cancel subscription" in step 2 cancels locally. That makes 3 taps: open, choose a reason, confirm.
+- R7 "Yes, cancel my subscription" in step 2 cancels locally. That makes 3 taps: open, choose a reason, confirm.
   The page then shows the cancelled view: "Your subscription is cancelled. You won't be charged again." There is no
   date, because the server never sent one.
 - R8 After a local cancel, "Undo cancellation" clears it. The server's active data is still stored, so the page shows
@@ -51,7 +52,7 @@ The right alternative depends on the reason. No discounts are invented.
 ## Acceptance criteria
 
 - [ ] R1, R2, R3, R7: From the active view, a customer can finish cancelling in 3 taps for any reason.
-- [ ] R3: Each reason shows the right offers, and "Cancel subscription" is always visible.
+- [ ] R3: Each reason shows the right offers, and "Yes, cancel my subscription" is always visible.
 - [ ] R3, R5: "Too much product" → "Skip my Nov 8 order" opens the skip dialog with both dates.
 - [ ] R4: Given a pending 90 days, the "costs too much" offers show no frequency button.
 - [ ] R6: "Ship every 60 days" applies the pending change and the subscription stays active.

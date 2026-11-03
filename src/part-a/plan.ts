@@ -60,12 +60,16 @@ export function hasPending(pending: Pending): boolean {
   return pending.intervalDays !== null || pending.quantities.length > 0;
 }
 
+/** The server's items with pending quantities applied, in the server's order (R4, 004 R3). */
+export function pendingItems(server: Subscription, pending: Pending): SubscriptionItem[] {
+  const picked = new Map(pending.quantities.map(({ item, quantity }) => [item.sku, quantity]));
+  return server.items.map((item) => ({ ...item, quantity: picked.get(item.sku) ?? item.quantity }));
+}
+
 /** R4: the server's own formula (001 R4) with pending quantities applied. Null when no quantity is pending. */
 export function totalAfter(server: Subscription, pending: Pending): number | null {
   if (pending.quantities.length === 0) return null;
-  const picked = new Map(pending.quantities.map(({ item, quantity }) => [item.sku, quantity]));
-  const items = server.items.map((item) => ({ ...item, quantity: picked.get(item.sku) ?? item.quantity }));
-  return totalAfterDiscount(items, server.discountPercent);
+  return totalAfterDiscount(pendingItems(server, pending), server.discountPercent);
 }
 
 /** R3: "starting after your Dec 16 order", or "starting after your next order" without a date (001 R3). */
