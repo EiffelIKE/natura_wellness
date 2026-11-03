@@ -36,6 +36,8 @@ running, and timers stay real, so the mock's 400–2500ms latency is still exerc
 fully frozen (`setFixedTime`). The mock detects a conflict by comparing `updatedAt` timestamps, and with a frozen
 `Date.now()` the second attempt under `conflict=always` would match and wrongly succeed.
 
-E2e tests must import `test` and `expect` from `./test`, not `@playwright/test`. ESLint enforces this.
+E2e tests must import `test` and `expect` from `./test`, not `@playwright/test`. ESLint enforces this. That
+fixture's `page.goto()` and `page.reload()` also wait for the web fonts, because a late font swap rewraps the text
+and can move a control between Playwright's stability check and its tap.
 
 Unit tests don't use the browser clock. Date formatting is tested with an injected `now`.

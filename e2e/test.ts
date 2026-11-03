@@ -15,6 +15,22 @@ export const test = base.extend<TestOptions>({
   page: async ({ page, startTime }, use) => {
     if (!startTime) throw new Error("Set `startTime` in playwright.config.ts");
     await page.clock.setSystemTime(new Date(startTime));
+    // Inter comes from Google Fonts with `display=swap`. If it lands after the first actions, the text rewraps and
+    // moves the controls between Playwright's stability check and its tap: a cancel e2e tapped below
+    // "Undo cancellation" when it moved up 25px. So every goto and reload waits for the web fonts.
+    const fontsReady = () => page.evaluate(() => document.fonts.ready.then(() => undefined));
+    const goto = page.goto.bind(page);
+    const reload = page.reload.bind(page);
+    page.goto = async (url, options) => {
+      const response = await goto(url, options);
+      await fontsReady();
+      return response;
+    };
+    page.reload = async (options) => {
+      const response = await reload(options);
+      await fontsReady();
+      return response;
+    };
     await use(page);
   },
 });

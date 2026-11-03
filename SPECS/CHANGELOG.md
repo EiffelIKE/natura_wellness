@@ -2,6 +2,22 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: e2e: wait for web fonts after every goto and reload
+
+- **Changed:** `e2e/test.ts`: the shared `page` fixture wraps `goto` and `reload` so that each one waits for
+  `document.fonts.ready`. `README.md`: the testing notes say so. No application change.
+- **Decisions:** `a-cancel` failed in three different tests across three `npm run check` runs. The failing trace
+  for "I didn't see results" showed the Undo tap done at y = 299 on a button measured at y = 277–321. The
+  screencast showed the cancelled message still in the fallback font (3 lines), then Inter arriving 118ms later
+  (2 lines), which moved the button up to y = 247–290, so the tap landed just below it. Google Fonts' timing made
+  it intermittent. Part B's tests already waited for fonts, and Part A's didn't. The wait goes in the fixture, so
+  every test gets it without remembering to. Navigations from a link click aren't covered; the Part B tests that
+  use them check state, not positions.
+- **Not changed:** a real customer on a slow network could see the same swap (layout shift). Self-hosting the
+  fonts with a metric-matched fallback would fix that for the product. This was left for the human to decide.
+- **Verified:** `a-cancel`, `a-skip` and `a-overview` passed 279 of 279 over 3 repeats. `npm run check`: green; 611
+  unit/component tests and 168 e2e tests passed, 26 intentional skips.
+
 ## 2026-11-03: 002-a-skip-shipment / T11 fix: random-mode e2e no longer stalls on a success
 
 - **Changed:** `e2e/a-skip.spec.ts`: the random-mode test reads the alert with `allTextContents()` instead of
