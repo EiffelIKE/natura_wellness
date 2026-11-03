@@ -2,6 +2,160 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 001-a-subscription-overview / T12: reflow, keyboard retry and console e2e
+
+- **Changed:** `e2e/a-overview.spec.ts` gains:
+  - every state at 320px (no horizontal scroll, axe)
+  - "Try again" by keyboard alone, with Enter and then Space, with focus on the `h1` each time and Tab back to
+    the button
+  - no console errors in each of the five states
+  - The R1 test now also asserts the skeleton is in `main` during loading and gone after. Until now only
+    screenshots had shown it.
+- **Decisions:**
+  - The 320px tests skip the desktop project, because they set their own viewport.
+  - The keyboard test tabs until "Try again" has focus, rather than counting stops, because the starter's nav
+    links come first.
+- **Verified:**
+  - Planted bugs, each one reverted. A 21rem card failed all five 320px tests and the T10 320px test, while R6 at
+    375px and 1200px still passed. A skeleton that never unmounts failed R1 on both projects.
+  - `npm run check` green.
+  - Spec 001 is now `Implemented`, with every acceptance criterion ticked.
+
+## 2026-11-03: 001-a-subscription-overview / T11: empty item list
+
+- **Changed:** `ItemList` renders "There are no products in this subscription." in place of an empty `ul`. The
+  "In your subscription" heading stays. Spec R8 and the plan were updated first. One component test.
+- **Verified:** removing the check failed that test.
+
+## 2026-11-03: 001-a-subscription-overview / T10: long names and many items
+
+- **Changed:**
+  - A component test renders all four catalog products, with full names and the right thumbnail for each.
+  - An e2e test at 375px and 320px copies rows in the rendered DOM and gives them the catalog's names, then
+    checks row alignment, that every name stays inside `main`, no horizontal scroll, and axe.
+  - Spec R10 and Known limitations say the mock can't send this data, so the e2e check edits the DOM.
+- **Decisions:** no CSS change was needed. `min-width: 0` and `overflow-wrap: anywhere` from T4 already held.
+  The 320px screenshot was reviewed: the six-line bundle name wraps inside the card.
+- **Verified:** a planted `white-space: nowrap` on names failed both widths.
+
+## 2026-11-03: 001-a-subscription-overview / T9: active subscription without a date or total
+
+- **Changed:**
+  - A null `nextChargeAt` shows "We'll confirm your next order date soon." in the date's place.
+  - A null `nextChargeTotalCents` leaves out the amount and the discount line.
+  - Spec R3, a new acceptance criterion and the plan were updated first. Two component tests.
+- **Decisions:** the human picked the copy for a missing date. A missing total keeps the date and drops the
+  discount line too, because "Includes your 15% discount" means nothing with no amount next to it. It is plain
+  text, not an alert, because nothing failed.
+- **Verified:** removing the fallback line, and showing the discount without a total, each failed their own test.
+
+## 2026-11-03: 001-a-subscription-overview / T8: broken product image
+
+- **Changed:**
+  - New `Thumbnail` in `ItemList.tsx` swaps to the placeholder on `error`. It is keyed by `imageUrl`, so a new URL
+    gets a fresh try.
+  - A component test fires `error`. An e2e test aborts `product.jpg` with `page.route`, a real network failure,
+    and checks the placeholder, row alignment and axe.
+  - Spec R8 was updated first.
+- **Verified:** removing `onError` failed both the component test and the e2e test on both projects.
+
+## 2026-11-03: 001-a-subscription-overview / T7: edge cases and e2e flows
+
+- **Decisions (asked the human):**
+  - The human picked all four edge cases: a broken image, an active subscription without a date or total, long
+    names and many items, and an empty item list.
+  - They picked three of the four e2e flows: 320px reflow, keyboard-only retry, and no console errors in every
+    state. They left out reduced motion.
+  - These became T8–T12. Spec R3, R8 and R10, the acceptance criteria and Known limitations were extended before
+    any code.
+
+## 2026-11-03: 001-a-subscription-overview / T6: overview e2e spec
+
+- **Changed:**
+  - New `e2e/a-overview.spec.ts`, 6 tests × 2 projects. Every fixture and the 404 have their key text, axe WCAG
+    2.2 A/AA and no horizontal scroll. It also covers:
+    - R1: the announcement appears and then clears.
+    - R2: "Try again" focuses the `h1`, and Tab returns to the button.
+    - R8: the image loads, and the placeholder row lines up with it.
+    - R3: the date is larger than the `h1`.
+  - `e2e/test.ts` re-exports the `Page` type, because ESLint blocks every import from `@playwright/test` in specs.
+  - `plan.md` Testing lists the extra checks and the loading-state polling.
+- **Decisions:**
+  - The loading state can be as short as 400ms, and `toHaveText`'s poll intervals widen to 1s, so it could be
+    missed. It is detected with `waitForFunction` polling every animation frame.
+  - "No buttons" and "no links" are scoped to `main`. The first run failed on the starter's `App.tsx` nav links,
+    which are a test bug, not an app bug. `App.tsx` stays untouched (Part B shares it).
+- **Verified:**
+  - 60/60 with `--repeat-each=5` on both projects.
+  - Planted CSS bugs, each one reverted: a 3.5rem placeholder failed the alignment check on both projects, and a
+    30rem `min-width` failed the scroll check on mobile only, as expected.
+  - `npm run check` green: 48 unit, 16 e2e.
+
+## 2026-11-03: 001-a-subscription-overview / T5: paused and cancelled views
+
+- **Changed:** `PausedView` ("Paused until {date}", "Want to resume sooner? Contact support", products) and
+  `CancelledView` ("Cancelled on {date}", products) in `views.tsx`, on a muted surface with a text badge. Five
+  component tests, including no buttons and no "Next order" in either view, and a paused subscription that still
+  carries next-order fields showing the paused view (R7, through `viewOf`).
+- **Decisions:** built in the same pass as T4, because the views share the badge, the date and the products
+  section. The cancelled view has no contact line, because R11 lists only R2, R5 and 002 R8.
+- **Verified:** covered by the T4 and T6 runs.
+
+## 2026-11-03: 001-a-subscription-overview / T4: active view and products
+
+- **Changed:**
+  - `ActiveView` in `views.tsx`: badge, then "Next order" (date, amount, discount line, frequency), then "In your
+    subscription". `SubscriptionCard` picks the view with `viewOf` (R7).
+  - New `src/part-a/ItemList.tsx` (R8): `img alt=""` with `width`/`height`, or an `aria-hidden` capsule
+    placeholder in the same 4rem box, with a hairline border on both.
+  - CSS module: badge, section, date, amount, item and thumbnail styles. New colors are tokens on the card root, and
+    every text pair was computed at ≥ 5.75:1.
+  - Six component tests for the active view. Only `Date` is faked, and dates are built in local time.
+  - `plan.md` UI decisions: the badge's hidden "Status: " prefix, the `<time>` dates, the order of the views, the
+    paused contact copy, and the products markup.
+- **Decisions:**
+  - The discount line is hidden at 0%. Each server field renders only when non-null, which is the type's contract.
+    What to show for an active subscription with a null date or total is a T7 question.
+  - The `h2`s are small muted labels and the date is the biggest text (2rem, 2.5rem from 48rem), so R3's "date at
+    a glance" holds at both widths.
+- **Verified:**
+  - Planted bugs, each one reverted: computing the total with `totalAfterDiscount`, moving the frequency above the
+    amount, and `alt={item.name}` each failed exactly their own test.
+  - Screenshots of all three views at 375px and 1200px reviewed.
+
+## 2026-11-03: 001-a-subscription-overview / T3: load effect, skeleton and load errors
+
+- **Changed:**
+  - `src/part-a/SubscriptionCard.tsx` is now the container. It holds the reducer, runs the load effect with a fresh
+    `requestId` per load, and renders the `main`, the `h1`, a status region and the view for the current state. The
+    `ready` state renders nothing yet, because T4 and T5 add those views.
+  - New `src/part-a/views.tsx` with `LoadingCard`, `LoadError` and `NotFound`.
+  - New `src/part-a/SubscriptionCard.module.css` (mobile-first), covering the card root, the panel, the button, the
+    link, the skeleton and `visually-hidden`. T4 adds the active view's styles to it.
+  - `constants.ts` gains `SUPPORT_MAILTO` (R11).
+  - New `src/part-a/SubscriptionCard.test.tsx` with 8 component tests.
+  - `plan.md`: UI decisions (landmark and heading, skeleton, load error, not found) and the files table
+    (`NotFound`) now match the code.
+- **Decisions:**
+  - **Retry focus (asked the human):** the plan said focus stays on "Try again", but the skeleton replaces the error
+    view, so the button unmounts and focus would fall to `<body>`. "Try again" now moves focus to the `h1`
+    (`tabIndex={-1}`). The human chose this over keeping the error on screen with a "retrying" state, which would
+    have reshaped the T2 reducer.
+  - The `role="status"` region lives on the card root and stays mounted, with its text switched between "Loading
+    your subscription" and empty. The plan's version, a status wrapper inside the skeleton, would mount with its
+    text already inside, which screen readers don't reliably announce, so a retry would be silent.
+  - The 404 message is `role="alert"`, like the 500, so the end of a load is announced either way.
+  - The request id comes from a ref and not from `state.requestId + 1`. Under StrictMode, both effect runs see the
+    same state, so both would send id 1 and the stale check would never fire.
+- **Verified:**
+  - Planted bugs, each one reverted: dropping the focus move failed the retry test, and a constant request id failed
+    the StrictMode stale-response test.
+  - A throwaway Playwright spec (deleted afterwards), run on mobile and desktop against `fixture=error` and an
+    unknown fixture, checked the loading, error and 404 states. axe found no violations, there was no horizontal
+    scroll, focus landed on the `h1` after "Try again" in a real browser, and Tab went back to the button.
+    Screenshots were reviewed at both widths.
+  - `npm run check` is green.
+
 ## 2026-11-03: 001-a-subscription-overview / T2: subscription reducer
 
 - **Changed:**

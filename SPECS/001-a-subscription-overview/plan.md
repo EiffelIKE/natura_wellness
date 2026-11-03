@@ -44,15 +44,15 @@ type Action =
 
 ## Files
 
-| File                                     | What                                                                       |
-| ---------------------------------------- | -------------------------------------------------------------------------- |
-| `src/part-a/format.ts`                   | `formatDate(iso, now)`, `formatMoney(cents)`, `formatFrequency(days)` (R9) |
-| `src/part-a/subscriptionReducer.ts`      | state, actions, reducer, `viewOf` selector                                 |
-| `src/part-a/SubscriptionCard.tsx`        | container: reducer, load effect, picks the view                            |
-| `src/part-a/views.tsx`                   | `LoadingCard`, `LoadError`, `ActiveView`, `PausedView`, `CancelledView`    |
-| `src/part-a/ItemList.tsx`                | products with image or placeholder, and quantity (R8)                      |
-| `src/part-a/SubscriptionCard.module.css` | the block; `.element` / `.element--modifier` inside (BEM-ish)              |
-| `src/part-a/constants.ts`                | `SUPPORT_MAILTO` (R11), locale and currency                                |
+| File                                     | What                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| `src/part-a/format.ts`                   | `formatDate(iso, now)`, `formatMoney(cents)`, `formatFrequency(days)` (R9)          |
+| `src/part-a/subscriptionReducer.ts`      | state, actions, reducer, `viewOf` selector                                          |
+| `src/part-a/SubscriptionCard.tsx`        | container: reducer, load effect, picks the view                                     |
+| `src/part-a/views.tsx`                   | `LoadingCard`, `LoadError`, `NotFound`, `ActiveView`, `PausedView`, `CancelledView` |
+| `src/part-a/ItemList.tsx`                | products with image or placeholder, and quantity (R8)                               |
+| `src/part-a/SubscriptionCard.module.css` | the block; `.element` / `.element--modifier` inside (BEM-ish)                       |
+| `src/part-a/constants.ts`                | `SUPPORT_MAILTO` (R11), locale and currency                                         |
 
 `App.tsx`, `main.tsx` and `index.html` are not touched, because Part B shares them. There is no global reset. The
 card sets `box-sizing` and its own font and colors for its subtree only, so nothing leaks into the Part B
@@ -62,12 +62,35 @@ pixel match.
 
 - **Headings:** an `h1` "Manage my subscription". In the active view, an `h2` "Next order" holds the date and
   amount, with the date as the largest text on the page, and an `h2` "In your subscription" holds the products.
-- **Status:** a text badge ("Active", "Paused", "Cancelled"). Paused and cancelled cards use a muted surface and have
-  no "Next order" block, so the difference never relies on color alone (R5, R6).
-- **Skeleton:** a `role="status"` wrapper with visually hidden "Loading your subscription". The shapes are
-  `aria-hidden`, and the shimmer is off under `prefers-reduced-motion`.
-- **Load error:** a `role="alert"` message. "Try again" dispatches a new `load/started` and focus stays on the
-  button.
+- **Status:** a text badge ("Active", "Paused", "Cancelled"), with a visually hidden "Status: " prefix so a screen
+  reader hears what the word means. Paused and cancelled cards use a muted surface and have no "Next order" block,
+  so the difference never relies on color alone (R5, R6).
+- **Active view (R3):** badge, then the "Next order" section: the date in a `<time>`, the amount, "Includes your
+  {n}% subscription discount" (only when `discountPercent > 0`, because "your 0% discount" says nothing), and the
+  frequency. Then "In your subscription". A null `nextChargeAt` shows "We'll confirm your next order date soon."
+  in the date's place, as plain text rather than an alert, because nothing failed. A null `nextChargeTotalCents`
+  leaves out the amount and the discount line, since the discount describes the amount (R3, decided in T7).
+- **Paused view (R5):** badge, "Paused until {date}", then "Want to resume sooner? Contact support" (R11), because
+  resuming is out of scope and support is the way to do it. Then "In your subscription".
+- **Cancelled view (R6):** badge, "Cancelled on {date}", then "In your subscription". No contact line, because R11
+  doesn't list R6.
+- **Products (R8):** a `ul`. Each `li` has a 4rem thumbnail (an `img` with `alt=""` and `width`/`height` set, so
+  there is no layout shift, or the placeholder), the name, and "Quantity: {n}". Long names wrap rather than
+  overflow. An `img` that fires `error` is swapped for the placeholder. The `failed` flag lives in a `Thumbnail`
+  keyed by `imageUrl`, so a reload with the same URL keeps the placeholder and a new URL gets a fresh try. No items: the "In your subscription"
+  heading stays, followed by "There are no products in this subscription." (T7).
+- **Landmark and heading:** the card is the page's `main`. The `h1` stays mounted in every state, including loading
+  and both errors, and has `tabIndex={-1}` so it can take focus.
+- **Skeleton:** a visually hidden `role="status"` region on the card root says "Loading your subscription" while
+  loading and is empty otherwise. It stays mounted across states, because a live region that mounts with its text
+  already inside is not reliably announced, and a retry would otherwise be silent. The shapes are `aria-hidden`,
+  and the shimmer is off under `prefers-reduced-motion`.
+- **Load error:** a `role="alert"` message. "Try again" moves focus to the `h1` and dispatches a new
+  `load/started`. Focus can't stay on the button, because the skeleton replaces the error view and the button
+  unmounts. From the `h1`, the next Tab stop is "Try again" again if the retry fails (decided with the human in
+  T3).
+- **Not found:** the 404 message is also `role="alert"`, so it is announced when the load ends, followed by a
+  "Contact support" `mailto:` link (R11) and no retry.
 - **Units:** rem for spacing and type, and px for hairline borders. CSS custom properties hold colors on the card
   root. Thumbnails are 4rem, and the placeholder is a neutral rounded square with an `aria-hidden` icon (R8).
 
@@ -85,8 +108,14 @@ pixel match.
   - axe WCAG 2.2 A/AA
   - no horizontal scroll (`scrollWidth <= clientWidth`)
 
-  The real mock's latency is kept, and expectations wait up to the default 5s. Dates are asserted as literals
-  because the clock is pinned (see Risks).
+  On top of that: the R1 announcement appears and then clears, "Try again" moves focus to the `h1` and Tab returns
+  to the button, the product image really loads, the placeholder row lines up with the image row (R8), and the date
+  is larger than the `h1` (R3). "No actions" checks are scoped to `main`, because the starter's `App.tsx` nav has
+  links of its own.
+
+  The real mock's latency is kept, and expectations wait up to the default 5s. The loading state can be as short as
+  400ms, which `toHaveText`'s widening poll intervals can miss, so it is detected with
+  `waitForFunction(..., { polling: "raf" })`. Dates are asserted as literals because the clock is pinned (see Risks).
 
 ## Risks
 
