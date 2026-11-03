@@ -6,7 +6,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** R7: a 409 means the subscription changed elsewhere. Everything else gets the same generic message. */
 export type Cause = "conflict" | "failed";
 
-/** R1, R10: there is an order to skip. 004 adds the local cancel as a second argument. */
+/** R1, R10: there is an order to skip. The local cancel (004 R9) is checked by the reducer, through `viewOf`. */
 export function canSkip(server: Subscription): boolean {
   return server.status === "active" && server.nextChargeAt !== null;
 }

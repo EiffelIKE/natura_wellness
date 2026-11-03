@@ -22,7 +22,7 @@ The right alternative depends on the reason. No discounts are invented.
   straight to step 2, with no separate "Continue". This keeps the flow at 3 taps; auto-advancing radios would be an
   accessibility anti-pattern.
 - R3 Step 2 shows the alternative for the chosen reason. "Yes, cancel my subscription" is always there with the same
-  size and contrast as the offer buttons. There is also a "Back" button. The label differs from R1's trigger, so
+  size and contrast as the offer buttons. There are also "Back" and "Keep my subscription" buttons. The label differs from R1's trigger, so
   the two buttons never share an accessible name.
   - **Too much product:** the main button is "Skip my Nov 8 order", and the second is "Ship every 60 days" (003),
     for customers whose problem is long term.
@@ -47,7 +47,9 @@ The right alternative depends on the reason. No discounts are invented.
   the real subscription again, with its pending 003 changes. Undo is available for the rest of the session. It is
   only offered for a local cancel, never for the cancelled fixture.
 - R9 A local cancel can only turn active into cancelled. A server status that isn't active always wins (001 R7).
-- R10 Esc or closing the dialog at any step keeps the subscription and returns focus to "Cancel subscription".
+- R10 Esc, closing the dialog or "Keep my subscription" at any step keeps the subscription and returns focus to
+  "Cancel subscription". Both steps end with "Keep my subscription", so a touch screen, which has no Esc, can always
+  leave in one tap.
 
 ## Acceptance criteria
 
@@ -58,7 +60,7 @@ The right alternative depends on the reason. No discounts are invented.
 - [ ] R6: "Ship every 60 days" applies the pending change and the subscription stays active.
 - [ ] R7, R8: After cancelling, the cancelled view shows. "Undo cancellation" brings back the active view with any
       pending changes.
-- [ ] R10: Esc at any step closes the flow without cancelling.
+- [ ] R10: Esc or "Keep my subscription" at any step closes the flow without cancelling.
 
 ## Out of scope
 

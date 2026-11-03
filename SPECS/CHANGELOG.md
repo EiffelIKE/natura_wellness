@@ -2,6 +2,99 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 004-a-cancel-retention / T4: step 2 and taking an offer
+
+- **Changed:**
+  - `src/part-a/CancelDialog.tsx`: step 2 has `<h2 tabIndex={-1}>Cancel your subscription?</h2>`. Then, when
+    `offersFor` returns any offers, "Instead, you can:" and a `<ul>` of offer buttons. For "Other", the optional
+    "Tell us more (optional)" `<textarea>`. Then "Yes, cancel my subscription", and "Back" and "Keep my
+    subscription" side by side.
+  - `src/part-a/SubscriptionCard.tsx`: dispatches `cancel/offerTaken`, `cancel/confirmed` and `cancel/back`, and
+    passes the server data, `local` and the heading ref to the dialog.
+  - `src/part-a/SubscriptionCard.module.css`: `.button--block`, shared by the offers and the cancel, and
+    `.textarea`. `.textarea` and `.dialog__title` are in the focus-visible list.
+  - `src/part-a/CancelDialog.test.tsx`: 29 more tests (44 in all). They cover:
+    - step 2's name, focus and buttons for each reason
+    - the shared class, and no button named "Cancel subscription"
+    - the textarea for "Other" only, lost on Back
+    - a pending 90 or 60, and no next order date
+    - Back's focus for every reason
+    - Esc, the native close and Keep at step 2
+    - both skip offers (R5)
+    - both frequency offers and the quantity offer (R6)
+- **Decisions:**
+  - "Yes, cancel my subscription" is wired now, because its reducer case exists since T2. T5 still owns the
+    cancelled view's message, Undo and their tests.
+  - The textarea is uncontrolled. It is never read or sent, and it unmounts with the step, so it needs no state.
+  - The offers are rebuilt from `offersFor` on every render. The reducer checks the offer again when it is taken.
+- **Verified:**
+  - Three temporary breaks, each caught and then reverted:
+    - Back always focusing the first reason: 4 tests fail
+    - the cancel styled apart from the offers: 1 test fails
+    - no `plan-heading` focus after an R6 offer: 3 tests fail
+  - In Chrome (dev server, 320px, mobile emulation):
+    - Step 2 for "It costs too much" has no horizontal scroll in the page or the dialog. The offers wrap to 3
+      lines (88px), and every button is at least 44px.
+    - The R5 swap leaves exactly one modal open, the skip dialog. Focus stays on "Keep my order" after the cancel
+      dialog's queued `close` event. Closing it focuses "Skip next order".
+  - `npm run check` passed: 420 unit and component tests, and e2e 70 passed, 10 skipped.
+
+## 2026-11-03: 004-a-cancel-retention / T3: trigger, step 1 and leaving the flow
+
+- **Changed:**
+  - `spec.md` (R3, R10 and the R10 criterion) and `plan.md` (texts, UI decisions, testing): both steps end with a
+    secondary "Keep my subscription". The status stays Approved, because the human chose this.
+  - `src/part-a/views.tsx`: a secondary "Cancel subscription" button ends `ActiveView`, after "Change your plan".
+  - New `src/part-a/CancelDialog.tsx`: the `<dialog>`, named by the current step's `<h2>`. Step 1 is a `<ul>` of
+    five reason buttons, then "Keep my subscription". Esc, the native `close` and Keep all dispatch `cancel/closed`.
+  - `src/part-a/SubscriptionCard.tsx`: one layout effect for both dialogs, which runs every `close()` before any
+    `showModal()` (R5). The skip dialog's ref is renamed `skipDialogRef`. `CancelDialog` renders after `SkipDialog`.
+  - `src/part-a/SubscriptionCard.module.css`: `.options` and `.option` (full width, at least 44px, left-aligned,
+    wrapping), and `.option` in the focus-visible list.
+  - New `src/part-a/CancelDialog.test.tsx` (15 tests).
+- **Decisions:**
+  - The gap: the plan gave step 1 no visible exit, so a phone, which has no Esc, could only leave by cancelling. The
+    human chose "Keep my subscription" on both steps over "step 1 only" and a × icon.
+  - The reasons use a neutral outlined `.option` style, not the accent button. Seven accent buttons in a row would
+    give the reasons the visual weight of actions.
+  - `CancelDialog` comes after `SkipDialog` in the DOM, so the existing tests that take the first `<dialog>` still
+    find the skip one.
+- **Verified:**
+  - Two temporary breaks, each caught and then reverted: the trigger without its ref (focus doesn't return, 3
+    tests fail), and a layout effect that never closes the cancel dialog (the Keep test fails).
+  - `npm run check` passed: 391 unit and component tests, and e2e 70 passed, 10 skipped.
+
+## 2026-11-03: 004-a-cancel-retention / T2: reducer cancel layer
+
+- **Changed:**
+  - `src/part-a/subscriptionReducer.ts`:
+    - `CancelFlow`, and the new `cancel` and `cancelled` fields
+    - the seven `cancel/*` actions from the plan's table
+    - three focus targets: `cancel-button`, `cancel-reason` and `cancel-heading`
+    - `viewOf(server, cancelled)`, which `activeServer` now uses. `skip/opened` and every `plan/*` case go through
+      it, so a local cancel blocks them (R9)
+    - `load/started` closes the flow and keeps `cancelled` (R8)
+  - `src/part-a/SubscriptionCard.tsx`: passes `cancelled` to `viewOf` in `StatusView` and `warnOnLeave`, and has
+    the three new refs in the focus map, which is now typed `Record<Focus, …>`. The refs are attached in T3 and T4.
+  - `src/part-a/skip.ts`: the `canSkip` comment only.
+  - New `src/part-a/cancelReducer.test.ts` (58 tests), and three R9 `viewOf` tests in `subscriptionReducer.test.ts`.
+  - `plan.md`: added "Never two modals" and the "label included" offer check.
+- **Decisions:**
+  - `cancel/offerTaken` hands the offer to the `skip/opened`, `plan/frequency` or `plan/quantity` case. If that
+    case ignores it, the whole action is ignored. The skip handover keeps 002's focus (`keep`, or `check-again`
+    when the data is stale). The frequency and quantity handovers focus `plan-heading`.
+  - The offer check compares every field, label included, so an offer whose saving text has changed is stale too.
+  - `skip/opened` is also ignored while the cancel flow is open (new guard, added to the plan first).
+  - Fixed while testing: `plan/discarded` only checked `load.kind === "ready"`, so a stray discard during a local
+    cancel would have wiped the changes that Undo must bring back. It now uses `activeServer`, as the plan says
+    every `plan/*` case does. 003 is unchanged, because Discard is only rendered in the active view.
+- **Verified:**
+  - The new `plan/discarded` test failed before the fix and passed after it.
+  - Three temporary breaks, each caught and then reverted: no label check, a local cancel that beats a paused
+    server, and `load/started` leaving the flow open.
+  - `npm run check` passed: 376 unit and component tests, and e2e 70 passed, 10 skipped (the existing
+    viewport-specific skips).
+
 ## 2026-11-03: 004-a-cancel-retention / T1: cancel rules
 
 - **Changed:**

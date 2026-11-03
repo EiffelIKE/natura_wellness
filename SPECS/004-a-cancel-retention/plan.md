@@ -61,8 +61,11 @@ Anything else is ignored and returns the same `state`.
   actions, uses it, and so does `skip/opened`. A locally cancelled subscription can't be skipped or changed, even
   by a stray action. `canSkip` keeps its single argument. Its "004 adds a second argument" comment is updated.
 - **The offer is checked, not trusted:** the action carries the offer, and the reducer only accepts it if
-  `offersFor` returns the same one for the current state. For example, a quantity offer built before a 003 change
-  is rejected after it.
+  `offersFor` returns the same one for the current state, label included. For example, a quantity offer built
+  before a 003 change is rejected after it. If the case it hands over to would ignore it, the whole action is
+  ignored, so the dialog never closes without doing anything.
+- **Never two modals:** `skip/opened` is also ignored while `cancel` isn't closed, mirroring `cancel/opened`. The
+  R5 handover closes `cancel` before it runs `skip/opened`, so it isn't affected.
 - **`load/started`** closes the cancel flow, like the skip dialog, and keeps `cancelled`. Undo lasts for the
   session (R8).
 - **`refresh/*`** only happen behind the skip dialog, so they never meet an open cancel flow. They keep
@@ -117,6 +120,7 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
 | Trying a different product (R3) | "Skip my Dec 16 order while you try it"                                                                                               |
 | Other (R3)                      | label "Tell us more (optional)" on a `<textarea>`                                                                                     |
 | Confirm and back (R3, R7)       | "Yes, cancel my subscription", "Back"                                                                                                 |
+| Leave the flow (R10)            | "Keep my subscription", at the end of both steps                                                                                      |
 | Cancelled view (R7)             | "Your subscription is cancelled. You won't be charged again." and the "Undo cancellation" button                                      |
 | Announce cancel (R7)            | "Your subscription is cancelled. You won't be charged again."                                                                         |
 | Announce undo (R8)              | "Cancellation undone. Your subscription is active."                                                                                   |
@@ -152,9 +156,10 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
   page, Esc and `::backdrop`. It uses the same `styles.dialog` and therefore 002 R12's short-screen layout.
   `aria-labelledby` points at the current step's `<h2>`.
 - **Step 1 (R2):** `<h2>Why are you cancelling?</h2>` and a `<ul>` with a full-width `<button>` (at least 44px)
-  for each reason. No radios and no "Continue".
+  for each reason. No radios and no "Continue". Then, outside the list, a secondary "Keep my subscription" (R10).
 - **Step 2 (R3):** `<h2 tabIndex={-1}>Cancel your subscription?</h2>`. Then, if there are offers, "Instead, you can:"
-  and a `<ul>` of offer buttons. Then "Yes, cancel my subscription" and a secondary "Back". The offers and the
+  and a `<ul>` of offer buttons. Then "Yes, cancel my subscription", and the secondary "Back" and "Keep my
+  subscription" (R10). The offers and the
   cancel button share one class, so they have the same size and contrast. "Other" puts the optional `<label>` and
   `<textarea>` before the buttons. The textarea is component state in the step, so it is lost on "Back" or
   closing, and is never sent (Known limitations).
@@ -162,7 +167,8 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
   - Opening focuses the first reason, because the dialog's name already reads the question.
   - Step 2 focuses its heading, because a dialog doesn't announce its name again when its content changes.
   - "Back" focuses the reason chosen before.
-  - Esc, the native `close` and every other way of closing return focus to the trigger (R10).
+  - Esc, "Keep my subscription", the native `close` and every other way of closing return focus to the trigger
+    (R10).
   - Confirming and undoing focus the h1. The trigger or the undo button is gone, and focusing "Undo cancellation"
     right away would invite a mis-tap.
   - A frequency or quantity offer focuses "Change your plan", where the pending line appears (R6).
@@ -199,7 +205,8 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
 - **Component (Testing Library), with the mocked API:**
   - roles and names: the trigger, the dialog "Why are you cancelling?" with five buttons, and the step 2 buttons
     for each reason
-  - R10: Esc and the native close at both steps return focus to the trigger, and the subscription stays active
+  - R10: Esc, "Keep my subscription" and the native close at both steps return focus to the trigger, and the
+    subscription stays active
   - Focus on open, on step 2 and after "Back"
   - R5: a skip offer closes the cancel dialog and opens "Skip your next order?" with both dates
   - R6: "Ship every 60 days" and the quantity offer close the flow, show the pending line, announce, and focus
@@ -215,7 +222,7 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
   - a pending 90 from "Change your plan" → "It costs too much" has no frequency button
   - "Ship every 60 days" → the dialog is gone, the badge says Active, and the pending line and announcement show
   - cancel with changes pending → Undo → the active view with the same pending lines
-  - Esc at step 1 and at step 2: focus on "Cancel subscription", still active
+  - Esc and "Keep my subscription" at step 1 and at step 2: focus on "Cancel subscription", still active
   - axe WCAG 2.2 A/AA and no horizontal scroll at 375px, 320px and 1200px on step 1, step 2 ("Other", with the
     textarea, and "It costs too much", with the longest labels) and the cancelled view
 

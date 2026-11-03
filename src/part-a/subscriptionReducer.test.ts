@@ -82,8 +82,16 @@ describe("loadErrorKind (R2)", () => {
   });
 });
 
-describe("viewOf (R7)", () => {
+describe("viewOf (R7, 004 R9)", () => {
   it.each(["active", "paused", "cancelled"] as const)("shows the server's %s status", (status) => {
-    expect(viewOf(fixtures[status]())).toBe(status);
+    expect(viewOf(fixtures[status](), false)).toBe(status);
+  });
+
+  it("turns an active subscription into the cancelled view after a local cancel", () => {
+    expect(viewOf(fixtures.active(), true)).toBe("cancelled");
+  });
+
+  it.each(["paused", "cancelled"] as const)("lets a %s server win over a local cancel", (status) => {
+    expect(viewOf(fixtures[status](), true)).toBe(status);
   });
 });

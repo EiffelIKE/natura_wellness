@@ -1,27 +1,50 @@
-// Part A: "Manage my subscription" (001–003). This container owns the state, the API calls and focus; views.tsx,
-// SkipDialog.tsx and PlanChanges.tsx render it.
-import { type Ref, useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
+// Part A: "Manage my subscription" (001–004). This container owns the state, the API calls and focus; views.tsx,
+// SkipDialog.tsx, PlanChanges.tsx and CancelDialog.tsx render it.
+import { type Ref, type RefObject, useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { getSubscription, skipNextShipment } from "../api/mockApi";
 import type { Subscription } from "../api/types";
+import type { Offer, Reason } from "./cancel";
+import { CancelDialog } from "./CancelDialog";
 import type { PlanChangesProps } from "./PlanChanges";
 import { hasPending, pendingOf } from "./plan";
 import { SkipDialog } from "./SkipDialog";
 import styles from "./SubscriptionCard.module.css";
-import { initialState, subscriptionReducer, viewOf } from "./subscriptionReducer";
+import { type Focus, initialState, subscriptionReducer, viewOf } from "./subscriptionReducer";
 import { ActiveView, CancelledView, LoadError, LoadingCard, NotFound, PausedView } from "./views";
 
 interface StatusViewProps {
   subscription: Subscription;
+  /** 004 R7: the local cancel. */
+  cancelled: boolean;
   onSkip: () => void;
   skipButtonRef: Ref<HTMLButtonElement>;
   plan: Omit<PlanChangesProps, "subscription">;
+  onCancel: () => void;
+  cancelButtonRef: Ref<HTMLButtonElement>;
 }
 
 /** R7: the view follows the server's status, through `viewOf`. 003 R7: plan changes are shown only when active. */
-function StatusView({ subscription, onSkip, skipButtonRef, plan }: StatusViewProps) {
-  switch (viewOf(subscription)) {
+function StatusView({
+  subscription,
+  cancelled,
+  onSkip,
+  skipButtonRef,
+  plan,
+  onCancel,
+  cancelButtonRef,
+}: StatusViewProps) {
+  switch (viewOf(subscription, cancelled)) {
     case "active":
-      return <ActiveView subscription={subscription} onSkip={onSkip} skipButtonRef={skipButtonRef} plan={plan} />;
+      return (
+        <ActiveView
+          subscription={subscription}
+          onSkip={onSkip}
+          skipButtonRef={skipButtonRef}
+          plan={plan}
+          onCancel={onCancel}
+          cancelButtonRef={cancelButtonRef}
+        />
+      );
     case "paused":
       return <PausedView subscription={subscription} />;
     case "cancelled":
@@ -34,10 +57,14 @@ export function SubscriptionCard() {
   const lastRequestId = useRef(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const skipButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const skipDialogRef = useRef<HTMLDialogElement>(null);
   const keepRef = useRef<HTMLButtonElement>(null);
   const checkAgainRef = useRef<HTMLButtonElement>(null);
   const planHeadingRef = useRef<HTMLHeadingElement>(null);
+  const cancelDialogRef = useRef<HTMLDialogElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelReasonRef = useRef<HTMLButtonElement>(null);
+  const cancelHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // R1, R2: every load gets a fresh id, and the reducer drops any response that isn't the latest one. That covers
   // the StrictMode double effect, where the mock's random latency can resolve request 2 before request 1.
@@ -58,25 +85,33 @@ export function SubscriptionCard() {
     load();
   };
 
-  // 002: the open dialog follows the reducer. A layout effect, so the dialog closes in the same frame its content
+  // 002, 004: the open dialogs follow the reducer. A layout effect, so a dialog closes in the same frame its content
   // unmounts, and always before the focus effect below: close() first, so Chrome's own focus restore can't win.
-  const dialogOpen = state.skip.kind !== "closed";
+  // 004 R5 swaps the cancel dialog for the skip dialog in one render, so every close runs before any showModal(),
+  // and a modal is never left open behind the other.
+  const skipOpen = state.skip.kind !== "closed";
+  const cancelOpen = state.cancel.kind !== "closed";
   useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (dialogOpen && !dialog.open) dialog.showModal();
-    if (!dialogOpen && dialog.open) dialog.close();
-  }, [dialogOpen]);
+    const dialogs = [
+      [skipDialogRef.current, skipOpen],
+      [cancelDialogRef.current, cancelOpen],
+    ] as const;
+    for (const [dialog, open] of dialogs) if (dialog?.open && !open) dialog.close();
+    for (const [dialog, open] of dialogs) if (dialog && open && !dialog.open) dialog.showModal();
+  }, [skipOpen, cancelOpen]);
 
-  // 002, 003: the reducer decides where focus goes (002 R4, R6, R7, R9, R10, 003 R5). This only applies it.
+  // 002–004: the reducer decides where focus goes (002 R4, R6, R7, R9, R10, 003 R5, 004 R10). This only applies it.
   useEffect(() => {
-    const targets = {
+    const targets: Record<Focus, RefObject<HTMLElement | null>> = {
       keep: keepRef,
       "check-again": checkAgainRef,
       "skip-button": skipButtonRef,
       heading: headingRef,
       "heading-if-lost": headingRef,
       "plan-heading": planHeadingRef,
+      "cancel-button": cancelButtonRef,
+      "cancel-reason": cancelReasonRef,
+      "cancel-heading": cancelHeadingRef,
     };
     if (!state.focus) return;
     // R10: a removed focused element leaves focus on <body>. Focus anywhere else was the customer's choice.
@@ -88,7 +123,7 @@ export function SubscriptionCard() {
   // Discard, setting every value back, a fresh server value or a view that isn't active ends it by itself.
   const warnOnLeave =
     state.load.kind === "ready" &&
-    viewOf(state.load.server) === "active" &&
+    viewOf(state.load.server, state.cancelled) === "active" &&
     hasPending(pendingOf(state.load.server, state.local));
   useEffect(() => {
     if (!warnOnLeave) return;
@@ -143,6 +178,14 @@ export function SubscriptionCard() {
     if (state.skip.kind === "stale") refresh();
   };
 
+  // 004: no request is sent for a cancel either (Known limitations), so these only dispatch.
+  const openCancel = () => dispatch({ type: "cancel/opened" });
+  const chooseReason = (reason: Reason) => dispatch({ type: "cancel/reasonChosen", reason });
+  const closeCancel = () => dispatch({ type: "cancel/closed" });
+  const takeOffer = (offer: Offer) => dispatch({ type: "cancel/offerTaken", offer });
+  const confirmCancel = () => dispatch({ type: "cancel/confirmed" });
+  const backToReasons = () => dispatch({ type: "cancel/back" });
+
   // 003: no request is sent for a plan change (Known limitations), so these only dispatch.
   const plan = {
     local: state.local,
@@ -166,18 +209,40 @@ export function SubscriptionCard() {
       {state.load.kind === "not-found" && <NotFound />}
       {state.load.kind === "ready" && (
         <>
-          <StatusView subscription={state.load.server} onSkip={openSkip} skipButtonRef={skipButtonRef} plan={plan} />
+          <StatusView
+            subscription={state.load.server}
+            cancelled={state.cancelled}
+            onSkip={openSkip}
+            skipButtonRef={skipButtonRef}
+            plan={plan}
+            onCancel={openCancel}
+            cancelButtonRef={cancelButtonRef}
+          />
           {/* Outside the view, so it stays mounted when R10 swaps the view behind it. */}
           <SkipDialog
             subscription={state.load.server}
             skip={state.skip}
             pendingIntervalDays={pendingOf(state.load.server, state.local).intervalDays}
-            dialogRef={dialogRef}
+            dialogRef={skipDialogRef}
             keepRef={keepRef}
             checkAgainRef={checkAgainRef}
             onConfirm={confirmSkip}
             onCheckAgain={checkAgain}
             onClose={closeSkip}
+          />
+          {/* After SkipDialog, and outside the view too, so the local cancel (R7) can swap the view behind it. */}
+          <CancelDialog
+            subscription={state.load.server}
+            local={state.local}
+            cancel={state.cancel}
+            dialogRef={cancelDialogRef}
+            reasonRef={cancelReasonRef}
+            headingRef={cancelHeadingRef}
+            onReason={chooseReason}
+            onOffer={takeOffer}
+            onConfirm={confirmCancel}
+            onBack={backToReasons}
+            onClose={closeCancel}
           />
         </>
       )}

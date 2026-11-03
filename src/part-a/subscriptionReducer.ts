@@ -1,5 +1,6 @@
 // 001: the load lifecycle. 002–004 add their own layers to `State` without reshaping `load` (plan.md).
 import { ApiError, type Subscription, type SubscriptionItem, type SubscriptionStatus } from "../api/types";
+import { type Offer, offersFor, type Reason } from "./cancel";
 import { formatDate, formatMoney } from "./format";
 import {
   frequencyOptions,
@@ -34,11 +35,25 @@ export type Skip =
   | { kind: "stale"; failedSkips: number } // R9: the reload failed
   | { kind: "rechecking"; failedSkips: number }; // R9: "Check again" pending
 
+/** 004 R2, R3: the cancel dialog's step. `previous` is the reason to focus after "Back". */
+export type CancelFlow =
+  { kind: "closed" } | { kind: "reason"; previous: Reason | null } | { kind: "offer"; reason: Reason };
+
 /**
  * `heading-if-lost`: the h1, but only if focus fell to `<body>` (R10). The reducer can't see DOM focus.
  * `plan-heading`: "Change your plan", after "Discard changes" removes itself (003 R5).
+ * `cancel-reason`: the reason chosen before "Back", or the first one (004 R2, R3).
  */
-export type Focus = "keep" | "check-again" | "skip-button" | "heading" | "heading-if-lost" | "plan-heading";
+export type Focus =
+  | "keep"
+  | "check-again"
+  | "skip-button"
+  | "heading"
+  | "heading-if-lost"
+  | "plan-heading"
+  | "cancel-button"
+  | "cancel-reason"
+  | "cancel-heading";
 
 export interface State {
   /** The latest request sent. A response to any other request is stale and dropped, whatever `load` is. */
@@ -49,6 +64,10 @@ export interface State {
   stale: { attempted: string; cause: Cause } | null;
   /** 003 R7: what the customer picked. Only the `plan/*` actions change it, and it is never merged into `server`. */
   local: Local;
+  /** 004: the cancel dialog's step. */
+  cancel: CancelFlow;
+  /** 004 R7, R8: the local cancel. Never merged into `server`, and it only turns an active server into the cancelled view (R9). */
+  cancelled: boolean;
   /** Text for the page's status region (002 R6, 003 R6). Cleared by `load/started` and `skip/opened`. */
   announcement: string;
   /** Where focus goes after this transition, or null to leave it. SubscriptionCard applies it and doesn't decide it. */
@@ -69,7 +88,14 @@ export type Action =
   | { type: "refresh/failed"; requestId: number; error: unknown }
   | { type: "plan/frequency"; days: number }
   | { type: "plan/quantity"; sku: string; quantity: number }
-  | { type: "plan/discarded" };
+  | { type: "plan/discarded" }
+  | { type: "cancel/opened" }
+  | { type: "cancel/reasonChosen"; reason: Reason }
+  | { type: "cancel/back" }
+  | { type: "cancel/closed" }
+  | { type: "cancel/offerTaken"; offer: Offer }
+  | { type: "cancel/confirmed" }
+  | { type: "cancel/undone" };
 
 /** Loading from the first render, so the skeleton shows before the load effect runs (R1). */
 export const initialState: State = {
@@ -78,6 +104,8 @@ export const initialState: State = {
   skip: { kind: "closed" },
   stale: null,
   local: { intervalDays: null, quantities: {} },
+  cancel: { kind: "closed" },
+  cancelled: false,
   announcement: "",
   focus: null,
 };
@@ -88,6 +116,7 @@ export function loadErrorKind(error: unknown): "failed" | "not-found" {
 }
 
 const closed: Skip = { kind: "closed" };
+const cancelClosed: CancelFlow = { kind: "closed" };
 
 /** 002 R7: compared by the calendar day the customer saw, so a change in the time alone isn't a move. */
 function noticeFor(cause: Cause, attempted: string, fresh: Subscription): Notice {
@@ -95,9 +124,36 @@ function noticeFor(cause: Cause, attempted: string, fresh: Subscription): Notice
   return { cause, movedFrom: moved ? attempted : null };
 }
 
-/** 003: plan changes are only taken for an active subscription the page has loaded (R7). */
+/** 003 R7, 004 R9: the server data, while the page shows the active view. Skips, plan changes and cancels need it. */
 function activeServer(state: State): Subscription | null {
-  return state.load.kind === "ready" && state.load.server.status === "active" ? state.load.server : null;
+  return state.load.kind === "ready" && viewOf(state.load.server, state.cancelled) === "active"
+    ? state.load.server
+    : null;
+}
+
+/** 004: the offer the customer took is still one `offersFor` returns, label included (plan.md). */
+function sameOffer(a: Offer, b: Offer): boolean {
+  if (a.label !== b.label) return false;
+  switch (a.kind) {
+    case "skip":
+      return b.kind === "skip";
+    case "frequency":
+      return b.kind === "frequency" && a.days === b.days;
+    case "quantity":
+      return b.kind === "quantity" && a.sku === b.sku && a.quantity === b.quantity;
+  }
+}
+
+/** 004 R5, R6: an offer hands over to 002's or 003's own case, so it has their guards, texts and focus. */
+function handOver(offer: Offer): Action {
+  switch (offer.kind) {
+    case "skip":
+      return { type: "skip/opened" };
+    case "frequency":
+      return { type: "plan/frequency", days: offer.days };
+    case "quantity":
+      return { type: "plan/quantity", sku: offer.sku, quantity: offer.quantity };
+  }
 }
 
 /** 003 R6: "From 2" is always the server's quantity, so the text says what changes compared to the real plan. */
@@ -119,6 +175,7 @@ export function subscriptionReducer(state: State, action: Action): State {
         requestId: action.requestId,
         load: { kind: "loading" },
         skip: closed,
+        cancel: cancelClosed, // 004 R8: `cancelled` stays, so Undo lasts for the session.
         stale: null,
         announcement: "",
       };
@@ -129,12 +186,15 @@ export function subscriptionReducer(state: State, action: Action): State {
       if (action.requestId !== state.requestId) return state;
       return { ...next, load: { kind: loadErrorKind(action.error) } };
 
-    case "skip/opened":
-      if (state.skip.kind !== "closed" || state.load.kind !== "ready" || !canSkip(state.load.server)) return state;
+    case "skip/opened": {
+      // 004 R9: not while locally cancelled, and never stacked on the cancel dialog.
+      const server = activeServer(state);
+      if (state.skip.kind !== "closed" || state.cancel.kind !== "closed" || !server || !canSkip(server)) return state;
       // R9: data we know may be stale is never shown as something to confirm.
       return state.stale
         ? { ...next, skip: { kind: "stale", failedSkips: 0 }, announcement: "", focus: "check-again" }
         : { ...next, skip: { kind: "confirm", failedSkips: 0, notice: null }, announcement: "", focus: "keep" };
+    }
 
     case "skip/closed":
       // R5: no backing out while a skip or its reload is pending. The native `close` after our own close() lands here too.
@@ -259,19 +319,75 @@ export function subscriptionReducer(state: State, action: Action): State {
       return { ...next, local, announcement: quantityAnnouncement(server, local, item, action.quantity) };
     }
 
-    case "plan/discarded":
-      // R5: the button only exists while something is pending, and leaves with the changes.
-      if (state.load.kind !== "ready" || !hasPending(pendingOf(state.load.server, state.local))) return state;
+    case "plan/discarded": {
+      // R5: the button only exists while something is pending, and leaves with the changes. 004 R8: never while
+      // cancelled locally, so Undo brings the changes back.
+      const server = activeServer(state);
+      if (!server || !hasPending(pendingOf(server, state.local))) return state;
       return {
         ...next,
         local: initialState.local,
         announcement: "Changes discarded.",
         focus: "plan-heading",
       };
+    }
+
+    // 004: no request is sent for a cancel either (Known limitations).
+    case "cancel/opened":
+      if (!activeServer(state) || state.skip.kind !== "closed" || state.cancel.kind !== "closed") return state;
+      return { ...next, cancel: { kind: "reason", previous: null }, announcement: "", focus: "cancel-reason" };
+
+    case "cancel/reasonChosen":
+      if (state.cancel.kind !== "reason") return state;
+      // A dialog doesn't announce its name again when its content changes, so step 2's heading takes focus.
+      return { ...next, cancel: { kind: "offer", reason: action.reason }, focus: "cancel-heading" };
+
+    case "cancel/back":
+      if (state.cancel.kind !== "offer") return state;
+      return { ...next, cancel: { kind: "reason", previous: state.cancel.reason }, focus: "cancel-reason" };
+
+    case "cancel/closed":
+      // R10: nothing in the flow is pending, so it always closes. The native `close` after our own close() lands here too.
+      if (state.cancel.kind === "closed") return state;
+      return { ...next, cancel: cancelClosed, focus: "cancel-button" };
+
+    case "cancel/offerTaken": {
+      const server = activeServer(state);
+      if (state.cancel.kind !== "offer" || !server) return state;
+      // The action carries the offer, so it is checked against the current data, never trusted.
+      if (!offersFor(state.cancel.reason, server, state.local).some((offer) => sameOffer(offer, action.offer))) {
+        return state;
+      }
+      const handedOver = { ...state, cancel: cancelClosed };
+      const result = subscriptionReducer(handedOver, handOver(action.offer));
+      if (result === handedOver) return state;
+      // R5: the skip dialog sets its own focus. R6: the pending line shows under "Change your plan".
+      return action.offer.kind === "skip" ? result : { ...result, focus: "plan-heading" };
+    }
+
+    case "cancel/confirmed":
+      if (state.cancel.kind !== "offer" || !activeServer(state)) return state;
+      return {
+        ...next,
+        cancel: cancelClosed,
+        cancelled: true,
+        announcement: "Your subscription is cancelled. You won't be charged again.",
+        focus: "heading",
+      };
+
+    case "cancel/undone":
+      // R8: only a local cancel of an active server can be undone, never the cancelled fixture.
+      if (!state.cancelled || state.load.kind !== "ready" || state.load.server.status !== "active") return state;
+      return {
+        ...next,
+        cancelled: false,
+        announcement: "Cancellation undone. Your subscription is active.",
+        focus: "heading",
+      };
   }
 }
 
-/** Which view a loaded subscription gets. 004 adds the local cancel here, and a server status that isn't active wins (R7). */
-export function viewOf(server: Subscription): SubscriptionStatus {
-  return server.status;
+/** Which view a loaded subscription gets. 004 R9: the local cancel only turns active into cancelled (001 R7). */
+export function viewOf(server: Subscription, cancelled: boolean): SubscriptionStatus {
+  return server.status === "active" && cancelled ? "cancelled" : server.status;
 }

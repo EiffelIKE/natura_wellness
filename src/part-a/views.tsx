@@ -99,10 +99,14 @@ interface ActiveViewProps {
   skipButtonRef: Ref<HTMLButtonElement>;
   /** 003: passed through to "Change your plan". */
   plan: Omit<PlanChangesProps, "subscription">;
+  /** 004 R1: opens the cancel dialog. */
+  onCancel: () => void;
+  /** 004 R10: focus comes back here when the cancel dialog closes. */
+  cancelButtonRef: Ref<HTMLButtonElement>;
 }
 
 /** R3, R4: in the order the spec lists, and every date and amount is the server's. */
-export function ActiveView({ subscription, onSkip, skipButtonRef, plan }: ActiveViewProps) {
+export function ActiveView({ subscription, onSkip, skipButtonRef, plan, onCancel, cancelButtonRef }: ActiveViewProps) {
   const { nextChargeAt, nextChargeTotalCents, discountPercent, intervalDays, items } = subscription;
   return (
     <div className={styles.panel}>
@@ -141,6 +145,17 @@ export function ActiveView({ subscription, onSkip, skipButtonRef, plan }: Active
       <Products items={items} />
       {/* 003 R8: after the products, so the sections above stay read-only server data. */}
       <PlanChanges subscription={subscription} {...plan} />
+      {/* 004 R1: a plain button the size of "Skip next order", last so the sections above come first. */}
+      <div className={styles.section}>
+        <button
+          ref={cancelButtonRef}
+          type="button"
+          className={`${styles.button} ${styles["button--secondary"]}`}
+          onClick={onCancel}
+        >
+          Cancel subscription
+        </button>
+      </div>
     </div>
   );
 }
