@@ -344,6 +344,19 @@ main.page
 - `expectAccessibleBuyBox` in the default state, with one-time selected and after "Add to cart".
 - Reflow at 1024, 768, 375 and 320, using `page.setViewportSize` inside the test.
 
+### Further flows chosen by the human in T9 (2026-11-03)
+
+- **T11 (R15, R8, R9): nav round trip.** Start with a subscription every 60 days at quantity 3, and separately a
+  one-time purchase at quantity 2. Follow the actual nav links to Part A and back to Part B. Verify the default
+  subscription, frequency and quantity, matching button and renewal totals, fixed unit prices and empty status;
+  then add to cart and check that its summary agrees. Full-page navigation resets state under the existing
+  no-persistence scope. Run at 375px and 1200px and check console errors throughout the navigation.
+- **T12 (R3–R6, R8, R9): reviews link.** In the same two non-default selections, click the actual reviews link and
+  verify `part=b` and `#reviews`, the product heading, unchanged selection and quantity, matching totals and the
+  subscription's retained frequency. Keep the reviews target out of scope. Run at both project widths and check
+  console errors.
+- Complete these follow-up tests before T10's final acceptance review.
+
 ### E2e, `visual` project only: `b-visual.spec.ts`
 
 Settings: 1200×780, `deviceScaleFactor: 2`, `snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ext}"`.

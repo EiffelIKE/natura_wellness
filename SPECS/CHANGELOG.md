@@ -2,6 +2,67 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 005-b-buy-box / T12: reviews preserves Part B's selection and totals
+
+- **Changed:** `e2e/b-buy-box.spec.ts` adds reviews-link flows from a subscription every 60 days at quantity 3 and
+  a one-time purchase at quantity 2, at 375px and 1200px. Both click the actual link, check `part=b#reviews` and
+  the product heading, and verify the option, quantity, unit prices, button total and cart summary are preserved.
+  The subscription retains its frequency and renewal notice; one-time still has neither. Console errors and
+  uncaught exceptions are checked throughout. `task.md`: T12 ticked; T10's final acceptance review remains pending.
+- **Decisions:** check the selection before and after clicking, preserve an existing cart announcement, and add
+  again afterwards to confirm the next summary still agrees. No application changes were needed.
+- **Verified:** `npm run check`: green; 611 unit/component tests and 164 e2e tests passed, 22 intentional skips.
+  All eight T11/T12 browser cases pass. Visual diff remains **0.775%** (29,011 px), below the 1% tolerance.
+
+## 2026-11-03: 005-b-buy-box / T11: totals agree after the Part A/Part B nav round trip
+
+- **Changed:** `e2e/b-buy-box.spec.ts` adds round trips from a subscription every 60 days at quantity 3 and a
+  one-time purchase at quantity 2, at 375px and 1200px. Both follow the actual nav links, check Part A rendered,
+  then verify Part B's default option, frequency, quantity, button and renewal totals, unit prices, empty status
+  and subsequent cart summary. Browser console errors and uncaught exceptions are checked across navigation.
+  `task.md`: T11 ticked.
+- **Decisions:** populate the cart summary before leaving so its absence on return also proves the state reset.
+  No application changes were needed.
+- **Verified:** `npm run check`: green; 611 unit/component tests and 160 e2e tests passed, 22 intentional skips.
+  All four new navigation tests pass. Visual diff remains **0.775%** (29,011 px), below the 1% tolerance.
+
+## 2026-11-03: 005-b-buy-box / T9: record the human's navigation edge cases
+
+- **Changed:** `spec.md` adds R15 and acceptance criteria for the Part A/Part B nav round trip, and extends R3 to
+  preserve Part B's selection on reviews-link clicks. `plan.md` describes both flows. `task.md` marks T9 complete
+  and adds pending T11 and T12 for both purchase options at 375px and 1200px, before T10's final review.
+- **Decisions:** the human chose these two flows. Returning through the Part B nav link starts the default state,
+  consistent with full-page navigation and the existing no-persistence scope; following `#reviews` preserves the
+  current selection. This task records coverage to implement; it adds no application code or browser tests.
+- **Verified:** `npm run check`: green; 611 unit/component tests and 156 e2e tests passed, 22 intentional skips.
+  Visual diff remains **0.775%** (29,011 px), below the 1% tolerance. Spec, plan and task formatting and diff checks
+  pass.
+
+## 2026-11-03: 005-b-buy-box / T8: browser interaction and keyboard coverage
+
+- **Changed:** `e2e/b-buy-box.spec.ts` adds 14 interaction cases: card-padding selection and frequency restoration,
+  totals and fixed unit prices, visible blur corrections for 15/0/2.6/empty, focused-field click and Enter submits
+  with 15, Enter guards, focusable step limits, the desktop wheel, cleared-field totals, repeated announcements
+  and status clearing, and a keyboard-only purchase. Every flow checks console errors and uncaught exceptions.
+  `task.md`: T8 ticked; T9's edge-case question recorded as awaiting the human's choices.
+- **Decisions:** no application changes were needed. The invalid-submit tests observe native `invalid` events to
+  check that browser validation does not block correction. The wheel test waits for actual wheel delivery and
+  checks that its default was prevented. The keyboard flow checks visible focus outlines and native arrow keys.
+- **Verified:** targeted T8 run: 27 passed, with the mobile copy of the desktop wheel test intentionally skipped.
+  `npm run check`: green; 611 unit/component tests and 156 e2e tests passed, 22 intentional skips. The protected
+  baseline, geometry and pixel checks pass; visual diff remains **0.775%** (29,011 px), below the 1% tolerance.
+
+## 2026-11-03: 005-b-buy-box / T7: accessibility across purchase and cart states
+
+- **Changed:** `e2e/b-buy-box.spec.ts` checks both purchase options before and after adding to cart at the mobile
+  (375px) and desktop (1200px) project viewports. Each state uses `expectAccessibleBuyBox`, whose two axe runs and
+  smoke-test integration were completed in T5. `task.md`: T7 ticked.
+- **Decisions:** check the cart summary for both purchase options, so the live region is populated during each
+  after-add accessibility check. The four approved contrast exceptions remain limited to the contrast-only run.
+- **Verified:** `npm run check`: green; 611 unit/component tests and 129 e2e tests passed, 21 intentional skips.
+  All four new browser tests pass. Visual diff remains **0.775%** (29,011 px), below the 1% tolerance. The local
+  server and full check required execution outside the sandbox because sandbox networking denied the test port.
+
 ## 2026-11-03: 005-b-buy-box / T6: responsive buy box and reflow coverage
 
 - **Changed:**

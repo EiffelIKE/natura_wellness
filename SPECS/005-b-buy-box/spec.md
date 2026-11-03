@@ -44,7 +44,8 @@ below, which were settled with the human on 2026-11-03.
     the app keeps it.
 
 - R3 **Rating.** The five stars are decorative, all five full as in the design. A screen reader hears "Rated 4.8 out
-  of 5" once, never "star" five times, then the "2,316 reviews" link. The link points to `#reviews`.
+  of 5" once, never "star" five times, then the "2,316 reviews" link. The link points to `#reviews`. Clicking it
+  keeps Part B open and preserves the purchase option, frequency and quantity, with every total still matching.
 - R4 **Purchase options.** The two options are native radio buttons in a `fieldset` with an accessible name (a
   visually hidden legend). "Subscribe & save 15%" is selected by default, and the arrow keys move between options
   natively.
@@ -140,6 +141,11 @@ below, which were settled with the human on 2026-11-03.
   | Fine print              | `#6b7a70` on `#fbf8f3`      | 4.27:1   | 4.5 |
   | Struck-through "$29.95" | `#8a948e` on `#f3f6f2`      | 2.87:1   | 4.5 |
 
+- R15 **Navigation consistency.** After following the nav link to Part A and returning through the Part B nav
+  link, the quantity field and every total agree. These links perform full-page navigation, so returning starts
+  the default subscription (30 days, quantity 1, $25.46 total), with an empty status line. Preserving the selection
+  across full-page navigation remains out of scope. The option rows still show their unit prices.
+
 ## Acceptance criteria
 
 - [ ] R2: The `visual` project runs at 1200×780 with `deviceScaleFactor: 2`, and its screenshot is 2400×1560.
@@ -189,6 +195,13 @@ below, which were settled with the human on 2026-11-03.
       and adds to the cart without a mouse.
 - [ ] R14: Both axe runs pass at 375px and 1200px in each listed state, and the existing Part B smoke test uses the
       same two runs.
+- [ ] R15, R8, R9: Given a non-default quantity with either purchase option, when the shopper follows the nav to
+      Part A and then the Part B nav link, the quantity is 1, the subscription is selected with 30 days, the cart
+      button and fine print both show $25.46, and the status line is empty. Adding to cart reports that same
+      quantity, frequency and total.
+- [ ] R3–R6, R8, R9: Given a non-default quantity with either purchase option, when "2,316 reviews" is clicked,
+      the URL still selects Part B with `#reviews`, the purchase option and quantity are unchanged, and all totals
+      agree. For a subscription, the chosen frequency and renewal notice are preserved too.
 - [ ] The page loads and every interaction runs with no console errors.
 
 ## Out of scope
