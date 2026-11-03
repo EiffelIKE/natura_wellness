@@ -2,6 +2,43 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 004-a-cancel-retention / T5: local cancel and Undo
+
+- **Changed:**
+  - `src/part-a/views.tsx`: `CancelledView` takes an optional `onUndo`. When it is set, the view shows "Your
+    subscription is cancelled. You won't be charged again." and an "Undo cancellation" button instead of "Cancelled
+    on …", then the server's products.
+  - `src/part-a/SubscriptionCard.tsx`: `StatusView` passes `onUndo` only when the server is active, so the cancelled
+    fixture never offers Undo (R8). It dispatches `cancel/undone`.
+  - `src/part-a/SubscriptionCard.tsx`: the focus effect runs on every new `state`, not only when `state.focus`
+    changes (fix, see Decisions).
+  - `src/part-a/CancelDialog.test.tsx`: 14 more tests (58 in all). They cover:
+    - 3 clicks to the cancelled view for each of the five reasons (R7)
+    - the announcement, and focus on the h1 rather than on Undo
+    - no date, the server's products, and Undo as the only button
+    - no request sent
+    - the leave warning off while cancelled
+    - Undo: the active view, its announcement and h1 focus (R8)
+    - Undo brings back a pending frequency and quantity, with their lines, the new total and the leave warning
+    - cancelling again after Undo starts at step 1
+    - no Undo for the cancelled fixture
+- **Decisions:**
+  - Fixed while testing: after cancel, Undo left focus on `<body>`. Both transitions ask for `heading`, so a focus
+    effect keyed on `state.focus` didn't run the second time, and the Undo button had already unmounted. The effect
+    is now keyed on the whole state. That is safe because every accepted action starts from `focus: null` and an
+    ignored one returns the same object, so it runs once per transition that asks for focus. This also covers any
+    later pair of transitions with the same target. The reducer and the plan are unchanged.
+  - "Undo cancellation" uses the primary button style, because it is the only action in that view. Focus goes to
+    the h1, not to the button, as the plan says, so it can't be pressed by mistake right after confirming.
+  - The message tests ignore the status region, which repeats the same text by design (R7).
+- **Verified:**
+  - Two temporary breaks, each caught and then reverted:
+    - the focus effect keyed on `state.focus` again: the Undo focus test fails
+    - Undo offered for every cancelled view: 4 tests fail (the new one, two 001 cancelled tests and one 002 R10
+      test)
+  - `npm run check` passed: 434 unit and component tests, and e2e 70 passed, 10 skipped (the same
+    viewport-specific skips). The real-browser checks (axe, reflow and keyboard for the cancelled view) are T6.
+
 ## 2026-11-03: 004-a-cancel-retention / T4: step 2 and taking an offer
 
 - **Changed:**

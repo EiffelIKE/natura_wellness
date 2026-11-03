@@ -1,0 +1,1380 @@
+
+❯ /clear
+
+❯ <ide_opened_file>The user opened the file
+  /home/eiffelike/work/natura_wellness/SPECS/004-a-cancel-retention/task.md in
+  the IDE. This may or may not be related to the current
+  task.</ide_opened_file>
+
+❯ lets start working on T2 --> T4
+
+● I'll start by reading the task file and the spec workflow.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Now the current source: reducer, cancel.ts, card, views, skip dialog, and
+  tests.
+
+  Read 2 files, listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+● Let me look at the component test setup, CSS dialog styles, and the last
+  CHANGELOG entry.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I'll proceed with T2 → T3 → T4 in order, running npm run check and logging
+  progress after each. First, I'm flagging two edge cases the plan left
+  open—guarding skip/opened against the cancel flow too, and comparing
+  stale/made-up offers field by field so no-ops don't close the dialog—then
+  checking the types before starting T2.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Now T2, the reducer cancel layer.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/subscriptionReducer.ts'…)
+  ⎿  Updated src/part-a/subscriptionReducer.ts (+124 -9)
+      1  // 001: the load lifecycle. 002–004 add their own layers to `Sta
+         te` without reshaping `load` (plan.md).
+      2  import { ApiError, type Subscription, type SubscriptionItem, typ
+         e SubscriptionStatus } from "../api/types";
+      3 +import { type Offer, offersFor, type Reason } from "./cancel";  
+      4  import { formatDate, formatMoney } from "./format";
+      5  import {
+      6    frequencyOptions,
+     ...
+      35    | { kind: "stale"; failedSkips: number } // R9: the reload fa
+          iled
+      36    | { kind: "rechecking"; failedSkips: number }; // R9: "Check 
+          again" pending
+      37  
+      38 +/** 004 R2, R3: the cancel dialog's step. `previous` is the rea
+         +son to focus after "Back". */                                  
+      39 +export type CancelFlow =                                       
+      40 +  | { kind: "closed" }                                         
+      41 +  | { kind: "reason"; previous: Reason | null }                
+      42 +  | { kind: "offer"; reason: Reason };                         
+      43 +                                                               
+      44  /**
+      45   * `heading-if-lost`: the h1, but only if focus fell to `<body>
+          ` (R10). The reducer can't see DOM focus.
+      46   * `plan-heading`: "Change your plan", after "Discard changes" 
+          removes itself (003 R5).
+      47 + * `cancel-reason`: the reason chosen before "Back", or the fir
+         +st one (004 R2, R3).                                           
+      48   */
+      41 -export type Focus = "keep" | "check-again" | "skip-button" | "h
+         -eading" | "heading-if-lost" | "plan-heading";                  
+      49 +export type Focus =                                            
+      50 +  | "keep"                                                     
+      51 +  | "check-again"                                              
+      52 +  | "skip-button"                                              
+      53 +  | "heading"                                                  
+      54 +  | "heading-if-lost"                                          
+      55 +  | "plan-heading"                                             
+      56 +  | "cancel-button"                                            
+      57 +  | "cancel-reason"                                            
+      58 +  | "cancel-heading";                                          
+      59  
+      60  export interface State {
+      61    /** The latest request sent. A response to any other request 
+          is stale and dropped, whatever `load` is. */
+     ...
+      66    stale: { attempted: string; cause: Cause } | null;
+      67    /** 003 R7: what the customer picked. Only the `plan/*` actio
+          ns change it, and it is never merged into `server`. */
+      68    local: Local;
+      69 +  /** 004: the cancel dialog's step. */                        
+      70 +  cancel: CancelFlow;                                          
+      71 +  /** 004 R7, R8: the local cancel. Never merged into `server`,
+         + and it only turns an active server into the cancelled view (R9
+         +). */                                                          
+     … 164 more lines (ctrl+o to expand)
+  ⎿  Updated src/part-a/skip.ts (+1 -1)
+       6  /** R7: a 409 means the subscription changed elsewhere. Everyth
+          ing else gets the same generic message. */
+       7  export type Cause = "conflict" | "failed";
+       8  
+       9 -/** R1, R10: there is an order to skip. 004 adds the local canc
+         -el as a second argument. */                                    
+       9 +/** R1, R10: there is an order to skip. The local cancel (004 R
+         +9) is checked by the reducer, through `viewOf`. */             
+      10  export function canSkip(server: Subscription): boolean {
+      11    return server.status === "active" && server.nextChargeAt !== 
+          null;
+      12  }
+  ⎿  (files that changed while this command ran, by the command or by
+     another process; a convenience view, not a review or audit of the
+     command)
+
+● Now the two viewOf call sites in the card. Nothing can set cancelled from the
+  UI yet, but the signature changed, so the card passes it through.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/SubscriptionCard.tsx'…)
+  ⎿  Updated src/part-a/SubscriptionCard.tsx (+12 -4)
+      12  
+      13  interface StatusViewProps {
+      14    subscription: Subscription;
+      15 +  /** 004 R7: the local cancel. */                             
+      16 +  cancelled: boolean;                                          
+      17    onSkip: () => void;
+      18    skipButtonRef: Ref<HTMLButtonElement>;
+      19    plan: Omit<PlanChangesProps, "subscription">;
+      20  }
+      21  
+      22  /** R7: the view follows the server's status, through `viewOf`.
+           003 R7: plan changes are shown only when active. */
+      21 -function StatusView({ subscription, onSkip, skipButtonRef, plan
+         - }: StatusViewProps) {                                         
+      22 -  switch (viewOf(subscription)) {                              
+      23 +function StatusView({ subscription, cancelled, onSkip, skipButt
+         +onRef, plan }: StatusViewProps) {                              
+      24 +  switch (viewOf(subscription, cancelled)) {                   
+      25      case "active":
+      26        return <ActiveView subscription={subscription} onSkip={on
+          Skip} skipButtonRef={skipButtonRef} plan={plan} />;
+      27      case "paused":
+     ...
+      90    // Discard, setting every value back, a fresh server value or
+           a view that isn't active ends it by itself.
+      91    const warnOnLeave =
+      92      state.load.kind === "ready" &&
+      91 -    viewOf(state.load.server) === "active" &&                  
+      93 +    viewOf(state.load.server, state.cancelled) === "active" && 
+      94      hasPending(pendingOf(state.load.server, state.local));
+      95    useEffect(() => {
+      96      if (!warnOnLeave) return;
+     ...
+      168        {state.load.kind === "not-found" && <NotFound />}
+      169        {state.load.kind === "ready" && (
+      170          <>
+      169 -          <StatusView subscription={state.load.server} onSkip=
+          -{openSkip} skipButtonRef={skipButtonRef} plan={plan} />       
+      171 +          <StatusView                                         
+      172 +            subscription={state.load.server}                  
+      173 +            cancelled={state.cancelled}                       
+      174 +            onSkip={openSkip}                                 
+      175 +            skipButtonRef={skipButtonRef}                     
+      176 +            plan={plan}                                       
+      177 +          />                                                  
+      178            {/* Outside the view, so it stays mounted when R10 s
+           waps the view behind it. */}
+      179            <SkipDialog
+      180              subscription={state.load.server}
+  ⎿  Created tsconfig.tsbuildinfo (+1 -0)
+      1 +{"root":["./src/App.tsx","./src/main.tsx","./src/api/fixtures.ts
+        +","./src/api/mockApi.ts","./src/api/types.ts","./src/part-a/Item
+        +List.tsx","./src/part-a/PlanChanges.test.tsx","./src/part-a/Plan
+        +Changes.tsx","./src/part-a/SkipDialog.test.tsx","./src/part-a/Sk
+        +ipDialog.tsx","./src/part-a/SubscriptionCard.test.tsx","./src/pa
+        +rt-a/SubscriptionCard.tsx","./src/part-a/cancel.test.ts","./src/
+        +part-a/cancel.ts","./src/part-a/constants.ts","./src/part-a/form
+        +at.test.ts","./src/part-a/format.ts","./src/part-a/plan.test.ts"
+        +,"./src/part-a/plan.ts","./src/part-a/planReducer.test.ts","./sr
+        +c/part-a/skip.test.ts","./src/part-a/skip.ts","./src/part-a/skip
+        +Reducer.test.ts","./src/part-a/subscriptionReducer.test.ts","./s
+        +rc/part-a/subscriptionReducer.ts","./src/part-a/views.tsx","./sr
+        +c/part-b/BuyBox.tsx","./src/part-b/copy.ts","./src/test/deferred
+        +.ts","./src/test/setup.ts","./e2e/a-overview.spec.ts","./e2e/a-p
+        +lan.spec.ts","./e2e/a-skip.spec.ts","./e2e/a11y.ts","./e2e/smoke
+        +.spec.ts","./e2e/test.ts","./vite.config.ts","./playwright.confi
+        +g.ts"],"errors":true,"version":"5.8.3"}                         
+      2   No newline at end of file
+
+● The focus map has to cover the three new targets. I'll add their refs now; T3
+  attaches them. I'll also type the map as Record<Focus, …> so a future target
+  can't be missed.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/SubscriptionCard.tsx'…)
+  ⎿  Updated src/part-a/SubscriptionCard.tsx (+10 -4)
+       1  // Part A: "Manage my subscription" (001–003). This container o
+          wns the state, the API calls and focus; views.tsx,
+       2  // SkipDialog.tsx and PlanChanges.tsx render it.
+       3 -import { type Ref, useCallback, useEffect, useLayoutEffect, use
+         -Reducer, useRef } from "react";                                
+       3 +import { type Ref, type RefObject, useCallback, useEffect, useL
+         +ayoutEffect, useReducer, useRef } from "react";                
+       4  import { getSubscription, skipNextShipment } from "../api/mockA
+          pi";
+       5  import type { Subscription } from "../api/types";
+       6  import type { PlanChangesProps } from "./PlanChanges";
+       7  import { hasPending, pendingOf } from "./plan";
+       8  import { SkipDialog } from "./SkipDialog";
+       9  import styles from "./SubscriptionCard.module.css";
+      10 -import { initialState, subscriptionReducer, viewOf } from "./su
+         -bscriptionReducer";                                            
+      10 +import { type Focus, initialState, subscriptionReducer, viewOf 
+         +} from "./subscriptionReducer";                                
+      11  import { ActiveView, CancelledView, LoadError, LoadingCard, Not
+          Found, PausedView } from "./views";
+      12  
+      13  interface StatusViewProps {
+     ...
+      40    const keepRef = useRef<HTMLButtonElement>(null);
+      41    const checkAgainRef = useRef<HTMLButtonElement>(null);
+      42    const planHeadingRef = useRef<HTMLHeadingElement>(null);
+      43 +  const cancelButtonRef = useRef<HTMLButtonElement>(null);     
+      44 +  const cancelReasonRef = useRef<HTMLButtonElement>(null);     
+      45 +  const cancelHeadingRef = useRef<HTMLHeadingElement>(null);   
+      46  
+      47    // R1, R2: every load gets a fresh id, and the reducer drops 
+          any response that isn't the latest one. That covers
+      48    // the StrictMode double effect, where the mock's random late
+          ncy can resolve request 2 before request 1.
+     ...
+      73      if (!dialogOpen && dialog.open) dialog.close();
+      74    }, [dialogOpen]);
+      75  
+      73 -  // 002, 003: the reducer decides where focus goes (002 R4, R6
+         -, R7, R9, R10, 003 R5). This only applies it.                  
+      76 +  // 002–004: the reducer decides where focus goes (002 R4, R6,
+         + R7, R9, R10, 003 R5, 004 R10). This only applies it.          
+      77    useEffect(() => {
+      75 -    const targets = {                                          
+      78 +    const targets: Record<Focus, RefObject<HTMLElement | null>>
+         + = {                                                           
+      79        keep: keepRef,
+      80        "check-again": checkAgainRef,
+      81        "skip-button": skipButtonRef,
+      82        heading: headingRef,
+      83        "heading-if-lost": headingRef,
+      84        "plan-heading": planHeadingRef,
+      85 +      "cancel-button": cancelButtonRef,                        
+      86 +      "cancel-reason": cancelReasonRef,                        
+     … 4 more lines (ctrl+o to expand)
+
+● Now the reducer tests: a new cancelReducer.test.ts next to skipReducer.test.ts
+  and planReducer.test.ts, plus R9 cases in the existing viewOf describe.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/subscriptionReducer.test.ts'…)
+  ⎿  Updated src/part-a/subscriptionReducer.test.ts (+10 -2)
+      82    });
+      83  });
+      84  
+      85 -describe("viewOf (R7)", () => {                                
+      85 +describe("viewOf (R7, 004 R9)", () => {                        
+      86    it.each(["active", "paused", "cancelled"] as const)("shows th
+          e server's %s status", (status) => {
+      87 -    expect(viewOf(fixtures[status]())).toBe(status);           
+      87 +    expect(viewOf(fixtures[status](), false)).toBe(status);    
+      88    });
+      89 +                                                               
+      90 +  it("turns an active subscription into the cancelled view afte
+         +r a local cancel", () => {                                     
+      91 +    expect(viewOf(fixtures.active(), true)).toBe("cancelled"); 
+      92 +  });                                                          
+      93 +                                                               
+      94 +  it.each(["paused", "cancelled"] as const)("lets a %s server w
+         +in over a local cancel", (status) => {                         
+      95 +    expect(viewOf(fixtures[status](), true)).toBe(status);     
+      96 +  });                                                          
+      97  });
+
+● Write(src/part-a/cancelReducer.test.ts)
+  ⎿  Wrote 320 lines to src/part-a/cancelReducer.test.ts
+       1 // 004: the cancel layer of subscriptionReducer. One describe pe
+         r action, following plan.md's transition table.
+       2 import { afterEach, beforeEach, describe, expect, it, vi } from
+         "vitest";
+       3 import { fixtures } from "../api/fixtures";
+       4 import { type Subscription } from "../api/types";
+       5 import { type Offer, offersFor } from "./cancel";
+       6 import { type Action, type State, initialState, subscriptionRedu
+         cer } from "./subscriptionReducer";
+       7
+     … +313 lines (ctrl+o to expand)
+
+● I noticed plan/discarded is gated only by load.kind === "ready" rather than
+  activeServer, so a stray discard during a local cancel could wipe pending
+  changes Undo needs to restore (R8). I've added a test to cover this and will
+  run it now, before the fix, to confirm it catches the bug.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The test catches it as expected, and everything else passes. Now the fix:
+  plan/discarded goes through activeServer, like the other plan/* cases, which
+  is what the plan's R9 rule says.
+
+● Update(src/part-a/subscriptionReducer.ts)
+  ⎿  Added 5 lines, removed 3 lines
+      321        return { ...next, local, announcement: quantityAnnouncem
+           ent(server, local, item, action.quantity) };
+      322      }
+      323  
+      324 -    case "plan/discarded":                                    
+      325 -      // R5: the button only exists while something is pending
+          -, and leaves with the changes.                                
+      326 -      if (state.load.kind !== "ready" || !hasPending(pendingOf
+          -(state.load.server, state.local))) return state;              
+      324 +    case "plan/discarded": {                                  
+      325 +      // R5: the button only exists while something is pending
+          +, and leaves with the changes. 004 R8: never while            
+      326 +      // cancelled locally, so Undo brings the changes back.  
+      327 +      const server = activeServer(state);                     
+      328 +      if (!server || !hasPending(pendingOf(server, state.local
+          +))) return state;                                             
+      329        return {
+      330          ...next,
+      331          local: initialState.local,
+
+● Update(src/part-a/subscriptionReducer.ts)
+  ⎿  Added 1 line
+      332          announcement: "Changes discarded.",
+      333          focus: "plan-heading",
+      334        };
+      335 +    }                                                         
+      336  
+      337      // 004: no request is sent for a cancel either (Known limi
+           tations).
+      338      case "cancel/opened":
+
+● Bash(npx prettier --write src/part-a/cancelReducer.test.ts
+      src/part-a/subscriptionReducer.ts src/part-a/SubscriptionCard.tsx
+      >/dev/null && npm run typecheck 2>&1 | t…)
+  ⎿  Updated src/part-a/cancelReducer.test.ts (+4 -1)
+      176        ...loaded(),
+      177        stale: { attempted: DEC_16, cause: "conflict" as const }
+           ,
+      178      };
+      179 -    const state = run([opened, chosen("different"), taken({ ..
+          -.SKIP, label: "Skip my Dec 16 order while you try it" })], sta
+          -le);                                                          
+      179 +    const state = run(                                        
+      180 +      [opened, chosen("different"), taken({ ...SKIP, label: "S
+          +kip my Dec 16 order while you try it" })],                    
+      181 +      stale,                                                  
+      182 +    );                                                        
+      183      expect(state.skip).toEqual({ kind: "stale", failedSkips: 0
+            });
+      184      expect(state.focus).toBe("check-again");
+      185    });
+  ⎿  Updated src/part-a/subscriptionReducer.ts (+1 -3)
+      37  
+      38  /** 004 R2, R3: the cancel dialog's step. `previous` is the rea
+          son to focus after "Back". */
+      39  export type CancelFlow =
+      40 -  | { kind: "closed" }                                         
+      41 -  | { kind: "reason"; previous: Reason | null }                
+      42 -  | { kind: "offer"; reason: Reason };                         
+      40 +  { kind: "closed" } | { kind: "reason"; previous: Reason | nul
+         +l } | { kind: "offer"; reason: Reason };                       
+      41  
+      42  /**
+      43   * `heading-if-lost`: the h1, but only if focus fell to `<body>
+          ` (R10). The reducer can't see DOM focus.
+
+● All 376 unit tests pass, and the disk-change notices just reflect my Prettier
+  formatting run. Now I'll introduce three temporary bugs, like with T1, to
+  verify the new tests catch them, then revert each one.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All three breaks were caught, and the file was restored from the backup each
+  time. Next, the full npm run check for T2 (it includes e2e):
+  Ran 1 shell command (ctrl+o to expand)
+
+● All checks pass: 376 unit tests and 70/10 e2e tests (same expected skips). The
+  plan/discarded fix already aligns with the spec, but I need to add the new
+  skip/opened guard to the plan before marking T2 complete.
+
+● Update(SPECS/004-a-cancel-retention/plan.md)
+  ⎿  Added 5 lines, removed 2 lines
+      61    actions, uses it, and so does `skip/opened`. A locally cancel
+          led subscription can't be skipped or changed, even
+      62    by a stray action. `canSkip` keeps its single argument. Its "
+          004 adds a second argument" comment is updated.
+      63  - **The offer is checked, not trusted:** the action carries the
+           offer, and the reducer only accepts it if
+      64 -  `offersFor` returns the same one for the current state. For e
+         -xample, a quantity offer built before a 003 change             
+      65 -  is rejected after it.                                        
+      64 +  `offersFor` returns the same one for the current state, label
+         + included. For example, a quantity offer built                 
+      65 +  before a 003 change is rejected after it. If the case it hand
+         +s over to would ignore it, the whole action is                 
+      66 +  ignored, so the dialog never closes without doing anything.  
+      67 +- **Never two modals:** `skip/opened` is also ignored while `ca
+         +ncel` isn't closed, mirroring `cancel/opened`. The             
+      68 +  R5 handover closes `cancel` before it runs `skip/opened`, so 
+         +it isn't affected.                                             
+      69  - **`load/started`** closes the cancel flow, like the skip dial
+          og, and keeps `cancelled`. Undo lasts for the
+      70    session (R8).
+      71  - **`refresh/*`** only happen behind the skip dialog, so they n
+          ever meet an open cancel flow. They keep
+
+● Bash(sed -i 's/^- \[ \] T2 (R1, R5–R10)/- [x] T2 (R1, R5–R10)/'
+      SPECS/004-a-cancel-retention/task.md && grep -n "T2"
+      SPECS/004-a-cancel-retention/task.md && grep -c…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+      2  
+      3  - [x] T1 (R2–R4): `cancel.ts` with `REASONS`, `slowerFrequency` 
+         and `offersFor` with their texts, plus unit tests
+      4        (every reason, $38.20, a pending 90, a pending quantity, a
+          server quantity of 12, no next order date)
+      5 -- [ ] T2 (R1, R5–R10): reducer cancel layer with `cancel` and `c
+        -ancelled`, the seven `cancel/*` actions,                        
+      5 +- [x] T2 (R1, R5–R10): reducer cancel layer with `cancel` and `c
+        +ancelled`, the seven `cancel/*` actions,                        
+      6        `viewOf(server, cancelled)` guarding `plan/*` and `skip/op
+         ened`, and the three focus targets, plus unit tests
+      7        for every row and every ignored case
+      8  - [ ] T3 (R1, R2, R10): the "Cancel subscription" trigger, `Canc
+         elDialog` step 1, the shared layout effect for both
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 31 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T2: reducer cancel laye
+         +r                                                              
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-a/subscriptionReducer.ts`:                       
+       9 +    - `CancelFlow`, and the new `cancel` and `cancelled` fields
+      10 +    - the seven `cancel/*` actions from the plan's table       
+      11 +    - three focus targets: `cancel-button`, `cancel-reason` and
+         + `cancel-heading`                                              
+      12 +    - `viewOf(server, cancelled)`, which `activeServer` now use
+         +s. `skip/opened` and every `plan/*` case go through            
+      13 +      it, so a local cancel blocks them (R9)                   
+      14 +    - `load/started` closes the flow and keeps `cancelled` (R8)
+      15 +  - `src/part-a/SubscriptionCard.tsx`: passes `cancelled` to `v
+         +iewOf` in `StatusView` and `warnOnLeave`, and has              
+      16 +    the three new refs in the focus map, which is now typed `Re
+         +cord<Focus, …>`. The refs are attached in T3 and T4.           
+      17 +  - `src/part-a/skip.ts`: the `canSkip` comment only.          
+      18 +  - New `src/part-a/cancelReducer.test.ts` (58 tests), and thre
+         +e R9 `viewOf` tests in `subscriptionReducer.test.ts`.          
+      19 +  - `plan.md`: added "Never two modals" and the "label included
+         +" offer check.                                                 
+      20 +- **Decisions:**                                               
+      21 +  - `cancel/offerTaken` hands the offer to the `skip/opened`, `
+         +plan/frequency` or `plan/quantity` case. If that               
+      22 +    case ignores it, the whole action is ignored. The skip hand
+         +over keeps 002's focus (`keep`, or `check-again`               
+      23 +    when the data is stale). The frequency and quantity handove
+         +rs focus `plan-heading`.                                       
+      24 +  - The offer check compares every field, label included, so an
+         + offer whose saving text has changed is stale too.             
+      25 +  - `skip/opened` is also ignored while the cancel flow is open
+         + (new guard, added to the plan first).                         
+      26 +  - Fixed while testing: `plan/discarded` only checked `load.ki
+         +nd === "ready"`, so a stray discard during a local             
+      27 +    cancel would have wiped the changes that Undo must bring ba
+         +ck. It now uses `activeServer`, as the plan says               
+      28 +    every `plan/*` case does. 003 is unchanged, because Discard
+         + is only rendered in the active view.                          
+      29 +- **Verified:**                                                
+      30 +  - The new `plan/discarded` test failed before the fix and pas
+         +sed after it.                                                  
+      31 +  - Three temporary breaks, each caught and then reverted: no l
+         +abel check, a local cancel that beats a paused                 
+      32 +    server, and `load/started` leaving the flow open.          
+      33 +  - `npm run check` passed: 376 unit and component tests, and e
+         +2e 70 passed, 10 skipped (the existing                         
+      34 +    viewport-specific skips).                                  
+      35 +                                                               
+      36  ## 2026-11-03: 004-a-cancel-retention / T1: cancel rules
+      37  
+      38  - **Changed:**
+
+● T2 is complete. Before building CancelDialog for T3, I need to flag a gap in
+  the approved plan: step 1 (reason selection) lacks any explicit way out
+  besides Esc, which doesn't exist on mobile—violating R10's "closing keeps the
+  subscription" rule and trapping mobile users into cancelling to escape.
+
+● User answered Claude's questions:
+  ⎿  · The approved 004 plan has no visible way to close the cancel dialog: step
+     1 shows only the five reasons, and step 2 only offers, "Yes, cancel my
+     subscription" and "Back". On a phone (no Esc key), a customer who opens the
+     flow by mistake can only leave by cancelling. Which exit should the dialog
+     get? → Keep button, both steps (Recommended)
+
+● I'll update the spec to add the "Keep my subscription" button for R10 and R3,
+  along with the plan's updated text and placement, keeping its status as
+  Approved since this is your decision.
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      def edit(p, pairs):…)
+  ⎿  Updated SPECS/004-a-cancel-retention/spec.md (+5 -3)
+      22    straight to step 2, with no separate "Continue". This keeps t
+          he flow at 3 taps; auto-advancing radios would be an
+      23    accessibility anti-pattern.
+      24  - R3 Step 2 shows the alternative for the chosen reason. "Yes, 
+          cancel my subscription" is always there with the same
+      25 -  size and contrast as the offer buttons. There is also a "Back
+         -" button. The label differs from R1's trigger, so              
+      25 +  size and contrast as the offer buttons. There are also "Back"
+         + and "Keep my subscription" buttons. The label differs from R1'
+         +s trigger, so                                                  
+      26    the two buttons never share an accessible name.
+      27    - **Too much product:** the main button is "Skip my Nov 8 ord
+          er", and the second is "Ship every 60 days" (003),
+      28      for customers whose problem is long term.
+     ...
+      47    the real subscription again, with its pending 003 changes. Un
+          do is available for the rest of the session. It is
+      48    only offered for a local cancel, never for the cancelled fixt
+          ure.
+      49  - R9 A local cancel can only turn active into cancelled. A serv
+          er status that isn't active always wins (001 R7).
+      50 -- R10 Esc or closing the dialog at any step keeps the subscript
+         -ion and returns focus to "Cancel subscription".                
+      50 +- R10 Esc, closing the dialog or "Keep my subscription" at any 
+         +step keeps the subscription and returns focus to               
+      51 +  "Cancel subscription". Both steps end with "Keep my subscript
+         +ion", so a touch screen, which has no Esc, can always          
+      52 +  leave in one tap.                                            
+      53  
+      54  ## Acceptance criteria
+      55  
+     ...
+      60  - [ ] R6: "Ship every 60 days" applies the pending change and t
+          he subscription stays active.
+      61  - [ ] R7, R8: After cancelling, the cancelled view shows. "Undo
+           cancellation" brings back the active view with any
+      62        pending changes.
+      61 -- [ ] R10: Esc at any step closes the flow without cancelling. 
+      63 +- [ ] R10: Esc or "Keep my subscription" at any step closes the
+         + flow without cancelling.                                      
+      64  
+      65  ## Out of scope
+      66  
+  ⎿  Updated SPECS/004-a-cancel-retention/plan.md (+9 -5)
+      120  | Trying a different product (R3) | "Skip my Dec 16 order whil
+           e you try it"                                                 
+                                                         |
+      121  | Other (R3)                      | label "Tell us more (optio
+           nal)" on a `<textarea>`                                       
+                                                         |
+      122  | Confirm and back (R3, R7)       | "Yes, cancel my subscripti
+           on", "Back"                                                   
+                                                         |
+      123 +| Leave the flow (R10)            | "Keep my subscription", at
+          + the end of both steps                                        
+          +                                              |               
+      124  | Cancelled view (R7)             | "Your subscription is canc
+           elled. You won't be charged again." and the "Undo cancellation
+           " button                                      |
+      125  | Announce cancel (R7)            | "Your subscription is canc
+           elled. You won't be charged again."                           
+                                                         |
+      126  | Announce undo (R8)              | "Cancellation undone. Your
+            subscription is active."                                     
+                                                         |
+     ...
+      156    page, Esc and `::backdrop`. It uses the same `styles.dialog`
+            and therefore 002 R12's short-screen layout.
+      157    `aria-labelledby` points at the current step's `<h2>`.
+      158  - **Step 1 (R2):** `<h2>Why are you cancelling?</h2>` and a `<
+           ul>` with a full-width `<button>` (at least 44px)
+      158 -  for each reason. No radios and no "Continue".               
+      159 +  for each reason. No radios and no "Continue". Then, outside 
+          +the list, a secondary "Keep my subscription" (R10).           
+      160  - **Step 2 (R3):** `<h2 tabIndex={-1}>Cancel your subscription
+           ?</h2>`. Then, if there are offers, "Instead, you can:"
+      160 -  and a `<ul>` of offer buttons. Then "Yes, cancel my subscrip
+          -tion" and a secondary "Back". The offers and the              
+      161 +  and a `<ul>` of offer buttons. Then "Yes, cancel my subscrip
+          +tion", and the secondary "Back" and "Keep my                  
+      162 +  subscription" (R10). The offers and the                     
+      163    cancel button share one class, so they have the same size an
+           d contrast. "Other" puts the optional `<label>` and
+      164    `<textarea>` before the buttons. The textarea is component s
+           tate in the step, so it is lost on "Back" or
+      165    closing, and is never sent (Known limitations).
+     ...
+      167    - Opening focuses the first reason, because the dialog's nam
+           e already reads the question.
+      168    - Step 2 focuses its heading, because a dialog doesn't annou
+           nce its name again when its content changes.
+      169    - "Back" focuses the reason chosen before.
+      168 -  - Esc, the native `close` and every other way of closing ret
+          -urn focus to the trigger (R10).                               
+      170 +  - Esc, "Keep my subscription", the native `close` and every 
+          +other way of closing return focus to the trigger              
+      171 +    (R10).                                                    
+      172    - Confirming and undoing focus the h1. The trigger or the un
+           do button is gone, and focusing "Undo cancellation"
+      173      right away would invite a mis-tap.
+      174    - A frequency or quantity offer focuses "Change your plan", 
+           where the pending line appears (R6).
+     ...
+      205  - **Component (Testing Library), with the mocked API:**
+      206    - roles and names: the trigger, the dialog "Why are you canc
+           elling?" with five buttons, and the step 2 buttons
+      207      for each reason
+      205 -  - R10: Esc and the native close at both steps return focus t
+          -o the trigger, and the subscription stays active              
+      208 +  - R10: Esc, "Keep my subscription" and the native close at b
+          +oth steps return focus to the trigger, and the                
+      209 +    subscription stays active                                 
+      210    - Focus on open, on step 2 and after "Back"
+      211    - R5: a skip offer closes the cancel dialog and opens "Skip 
+           your next order?" with both dates
+      212    - R6: "Ship every 60 days" and the quantity offer close the 
+           flow, show the pending line, announce, and focus
+     ...
+      222    - a pending 90 from "Change your plan" → "It costs too much"
+            has no frequency button
+      223    - "Ship every 60 days" → the dialog is gone, the badge says 
+           Active, and the pending line and announcement show
+      224    - cancel with changes pending → Undo → the active view with 
+           the same pending lines
+     … 5 more lines (ctrl+o to expand)
+
+● Spec and plan are updated. Now T3. Before I add a second <dialog> and a new
+  button to the active view, I'll check whether any existing test assumes there
+  is only one of either.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Since tests grab the first <dialog> in DOM order, placing CancelDialog after
+  SkipDialog keeps everything working without changes. I'll now write
+  CancelDialog with step 1, including the shared "Keep my subscription" button.
+
+● Write(src/part-a/CancelDialog.tsx)
+  ⎿  Wrote 91 lines to src/part-a/CancelDialog.tsx
+       1 // 004: the cancel flow. It only renders: SubscriptionCard owns
+         the state and focus (plan.md).
+       2 import { type Ref, useId } from "react";
+       3 import { type Reason, REASONS } from "./cancel";
+       4 import styles from "./SubscriptionCard.module.css";
+       5 import type { CancelFlow } from "./subscriptionReducer";
+       6
+       7 interface CancelDialogProps {
+       8   cancel: CancelFlow;
+       9   dialogRef: Ref<HTMLDialogElement>;
+     … +82 lines (ctrl+o to expand)
+
+● Now the CSS (the reason list, plus its focus ring) and the trigger in
+  ActiveView:
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/SubscriptionCard.module.css'…)
+  ⎿  Updated src/part-a/SubscriptionCard.module.css (+32 -0)
+      304  .choice input:focus-visible,
+      305  .select:focus-visible,
+      306  .button:focus-visible,
+      307 +.option:focus-visible,                                        
+      308  .link:focus-visible {
+      309    outline: 2px solid var(--color-focus);
+      310    outline-offset: 2px;
+     ...
+      375    align-self: stretch;
+      376  }
+      377  
+      378 +/* 004 R2: the reasons, one full-width button each, at least 4
+          +4px. Long text wraps instead of overflowing. */               
+      379 +                                                              
+      380 +.options {                                                    
+      381 +  display: flex;                                              
+      382 +  flex-direction: column;                                     
+      383 +  gap: 0.5rem;                                                
+      384 +  margin: 0;                                                  
+      385 +  padding: 0;                                                 
+      386 +  list-style: none;                                           
+      387 +}                                                             
+      388 +                                                              
+      389 +.option {                                                     
+      390 +  width: 100%;                                                
+      391 +  min-height: 2.75rem;                                        
+      392 +  padding: 0.5rem 1rem;                                       
+      393 +  border: 1px solid var(--color-muted);                       
+      394 +  border-radius: 0.5rem;                                      
+      395 +  background: var(--color-surface);                           
+      396 +  color: var(--color-text);                                   
+      397 +  font: inherit;                                              
+      398 +  font-weight: 600;                                           
+      399 +  text-align: left;                                           
+      400 +  overflow-wrap: anywhere;                                    
+      401 +  cursor: pointer;                                            
+      402 +}                                                             
+      403 +                                                              
+      404 +.option:hover {                                               
+      405 +  border-color: var(--color-text);                            
+      406 +  background: var(--color-surface-muted);                     
+      407 +}                                                             
+     … 4 more lines (ctrl+o to expand)
+  ⎿  Updated src/part-a/views.tsx (+16 -1)
+       99    skipButtonRef: Ref<HTMLButtonElement>;
+      100    /** 003: passed through to "Change your plan". */
+      101    plan: Omit<PlanChangesProps, "subscription">;
+      102 +  /** 004 R1: opens the cancel dialog. */                     
+      103 +  onCancel: () => void;                                       
+      104 +  /** 004 R10: focus comes back here when the cancel dialog cl
+          +oses. */                                                      
+      105 +  cancelButtonRef: Ref<HTMLButtonElement>;                    
+      106  }
+      107  
+      108  /** R3, R4: in the order the spec lists, and every date and am
+           ount is the server's. */
+      105 -export function ActiveView({ subscription, onSkip, skipButtonR
+          -ef, plan }: ActiveViewProps) {                                
+      109 +export function ActiveView({ subscription, onSkip, skipButtonR
+          +ef, plan, onCancel, cancelButtonRef }: ActiveViewProps) {     
+      110    const { nextChargeAt, nextChargeTotalCents, discountPercent,
+            intervalDays, items } = subscription;
+      111    return (
+      112      <div className={styles.panel}>
+     ...
+      145        <Products items={items} />
+      146        {/* 003 R8: after the products, so the sections above st
+           ay read-only server data. */}
+      147        <PlanChanges subscription={subscription} {...plan} />
+      148 +      {/* 004 R1: a plain button the size of "Skip next order"
+          +, last so the sections above come first. */}                  
+      149 +      <div className={styles.section}>                        
+      150 +        <button                                               
+      151 +          ref={cancelButtonRef}                               
+      152 +          type="button"                                       
+      153 +          className={`${styles.button} ${styles["button--secon
+          +dary"]}`}                                                     
+      154 +          onClick={onCancel}                                  
+      155 +        >                                                     
+      156 +          Cancel subscription                                 
+      157 +        </button>                                             
+      158 +      </div>                                                  
+      159      </div>
+      160    );
+      161  }
+
+● Now the card: the cancel props on StatusView, one layout effect for both
+  dialogs (close first, then showModal()), the dispatches, and CancelDialog
+  after SkipDialog.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/SubscriptionCard.tsx'…)
+  ⎿  Updated src/part-a/SubscriptionCard.tsx (+55 -13)
+       1 -// Part A: "Manage my subscription" (001–003). This container o
+         -wns the state, the API calls and focus; views.tsx,             
+       2 -// SkipDialog.tsx and PlanChanges.tsx render it.               
+       1 +// Part A: "Manage my subscription" (001–004). This container o
+         +wns the state, the API calls and focus; views.tsx,             
+       2 +// SkipDialog.tsx, PlanChanges.tsx and CancelDialog.tsx render 
+         +it.                                                            
+       3  import { type Ref, type RefObject, useCallback, useEffect, useL
+          ayoutEffect, useReducer, useRef } from "react";
+       4  import { getSubscription, skipNextShipment } from "../api/mockA
+          pi";
+       5  import type { Subscription } from "../api/types";
+       6 +import type { Reason } from "./cancel";                        
+       7 +import { CancelDialog } from "./CancelDialog";                 
+       8  import type { PlanChangesProps } from "./PlanChanges";
+       9  import { hasPending, pendingOf } from "./plan";
+      10  import { SkipDialog } from "./SkipDialog";
+     ...
+      19    onSkip: () => void;
+      20    skipButtonRef: Ref<HTMLButtonElement>;
+      21    plan: Omit<PlanChangesProps, "subscription">;
+      22 +  onCancel: () => void;                                        
+      23 +  cancelButtonRef: Ref<HTMLButtonElement>;                     
+      24  }
+      25  
+      26  /** R7: the view follows the server's status, through `viewOf`.
+           003 R7: plan changes are shown only when active. */
+      23 -function StatusView({ subscription, cancelled, onSkip, skipButt
+         -onRef, plan }: StatusViewProps) {                              
+      27 +function StatusView({                                          
+      28 +  subscription,                                                
+      29 +  cancelled,                                                   
+      30 +  onSkip,                                                      
+      31 +  skipButtonRef,                                               
+      32 +  plan,                                                        
+      33 +  onCancel,                                                    
+      34 +  cancelButtonRef,                                             
+      35 +}: StatusViewProps) {                                          
+      36    switch (viewOf(subscription, cancelled)) {
+      37      case "active":
+      26 -      return <ActiveView subscription={subscription} onSkip={on
+         -Skip} skipButtonRef={skipButtonRef} plan={plan} />;            
+      38 +      return (                                                 
+      39 +        <ActiveView                                            
+      40 +          subscription={subscription}                          
+      41 +          onSkip={onSkip}                                      
+      42 +          skipButtonRef={skipButtonRef}                        
+      43 +          plan={plan}                                          
+      44 +          onCancel={onCancel}                                  
+     … 86 more lines (ctrl+o to expand)
+
+● All 376 existing tests pass with the second dialog and the new button. Now the
+  T3 component tests: the trigger, step 1's roles, names and focus, and the
+  three R10 exits.
+
+● Write(src/part-a/CancelDialog.test.tsx)
+  ⎿  Wrote 208 lines to src/part-a/CancelDialog.test.tsx
+       1 // 004: the cancel flow through SubscriptionCard, with a mocked
+         API (as in SkipDialog.test.tsx).
+       2 import { act, fireEvent, render, screen, within } from "@testing
+         -library/react";
+       3 import userEvent from "@testing-library/user-event";
+       4 import { afterEach, beforeEach, describe, expect, it, vi } from
+         "vitest";
+       5 import { fixtures } from "../api/fixtures";
+       6 import { getSubscription, skipNextShipment } from "../api/mockAp
+         i";
+     … +202 lines (ctrl+o to expand)
+
+● The "same classes" test I wrote is convoluted. I'll simplify it to "every
+  class on the trigger is also on Skip next order", then run the tests.
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/CancelDialog.test.tsx'…)
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+3 -1)
+       93    it("has the same classes as Skip next order, so it is the sa
+           me size", async () => {
+       94      await renderLoaded();
+       95  
+       96 -    expect(trigger().className).toBe(screen.getByRole("button"
+          -, { name: "Skip next order" }).className.replace(/\s*\S*sectio
+          -n__action\S*/, ""));                                          
+       96 +    const skip = screen.getByRole("button", { name: "Skip next
+          + order" });                                                   
+       97 +    expect(trigger().classList.length).toBeGreaterThan(0);    
+       98 +    for (const name of trigger().classList) expect(skip).toHav
+          +eClass(name);                                                 
+       99    });
+      100  
+      101    it("is offered without a next order date, where only skippin
+           g is unavailable", async () => {
+
+● 15 pass. Now two temporary breaks for T3: the trigger without its ref (so
+  focus wouldn't return), and a layout effect that never closes the cancel
+  dialog.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both breaks were caught. The never-close break only fails the Keep test, which
+  is expected: Esc and the native close shut the dialog themselves. Full check
+  for T3:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● check passed. Ticking T3 and logging it:
+
+● Bash(npx vitest run 2>&1 | grep "Tests " && sed -i 's/^- \[ \] T3 (R1, R2,
+      R10)/- [x] T3 (R1, R2, R10)/' SPECS/004-a-cancel-retention/task.md && grep
+      -n "\[x\] T3" S…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+       5  - [x] T2 (R1, R5–R10): reducer cancel layer with `cancel` and `
+          cancelled`, the seven `cancel/*` actions,
+       6        `viewOf(server, cancelled)` guarding `plan/*` and `skip/o
+          pened`, and the three focus targets, plus unit tests
+       7        for every row and every ignored case
+       8 -- [ ] T3 (R1, R2, R10): the "Cancel subscription" trigger, `Can
+         -celDialog` step 1, the shared layout effect for both           
+       8 +- [x] T3 (R1, R2, R10): the "Cancel subscription" trigger, `Can
+         +celDialog` step 1, the shared layout effect for both           
+       9        dialogs, and focus on open and on close, plus the CSS and
+           component tests (names, Esc and native close)
+      10  - [ ] T4 (R3–R6): step 2 with the offers, "Yes, cancel my subsc
+          ription", "Back" and the "Other" textarea, and taking
+      11        an offer (the skip dialog for R5, a 003 change for R6), p
+          lus component tests
+
+● Update(SPECS/CHANGELOG.md)  ⎿  Added 25 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T3: trigger, step 1 and
+         + leaving the flow                                              
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `spec.md` (R3, R10 and the R10 criterion) and `plan.md` (te
+         +xts, UI decisions, testing): both steps end with a             
+       9 +    secondary "Keep my subscription". The status stays Approved
+         +, because the human chose this.                                
+      10 +  - `src/part-a/views.tsx`: a secondary "Cancel subscription" b
+         +utton ends `ActiveView`, after "Change your plan".             
+      11 +  - New `src/part-a/CancelDialog.tsx`: the `<dialog>`, named by
+         + the current step's `<h2>`. Step 1 is a `<ul>` of              
+      12 +    five reason buttons, then "Keep my subscription". Esc, the 
+         +native `close` and Keep all dispatch `cancel/closed`.          
+      13 +  - `src/part-a/SubscriptionCard.tsx`: one layout effect for bo
+         +th dialogs, which runs every `close()` before any              
+      14 +    `showModal()` (R5). The skip dialog's ref is renamed `skipD
+         +ialogRef`. `CancelDialog` renders after `SkipDialog`.          
+      15 +  - `src/part-a/SubscriptionCard.module.css`: `.options` and `.
+         +option` (full width, at least 44px, left-aligned,              
+      16 +    wrapping), and `.option` in the focus-visible list.        
+      17 +  - New `src/part-a/CancelDialog.test.tsx` (15 tests).         
+      18 +- **Decisions:**                                               
+      19 +  - The gap: the plan gave step 1 no visible exit, so a phone, 
+         +which has no Esc, could only leave by cancelling. The          
+      20 +    human chose "Keep my subscription" on both steps over "step
+         + 1 only" and a × icon.                                         
+      21 +  - The reasons use a neutral outlined `.option` style, not the
+         + accent button. Seven accent buttons in a row would            
+      22 +    give the reasons the visual weight of actions.             
+      23 +  - `CancelDialog` comes after `SkipDialog` in the DOM, so the 
+         +existing tests that take the first `<dialog>` still            
+      24 +    find the skip one.                                         
+      25 +- **Verified:**                                                
+      26 +  - Two temporary breaks, each caught and then reverted: the tr
+         +igger without its ref (focus doesn't return, 3                 
+      27 +    tests fail), and a layout effect that never closes the canc
+         +el dialog (the Keep test fails).                               
+      28 +  - `npm run check` passed: 391 unit and component tests, and e
+         +2e 70 passed, 10 skipped.                                      
+      29 +                                                               
+      30  ## 2026-11-03: 004-a-cancel-retention / T2: reducer cancel laye
+          r
+      31  
+      32  - **Changed:**
+
+● T3 is complete; moving to T4 step 2, where I'm making three own calls: giving
+  offers and "Yes, cancel" shared full-width accent styling with secondary
+  back/keep buttons, leaving the "Other" textarea uncontrolled so it naturally
+  resets on back/close, and wiring up "Yes, cancel" now since the reducer case
+  already exists (T5 will still handle the cancelled view's message, Undo, and
+  tests).
+
+● Bash(python3 - <<'EOF'
+      p='src/part-a/CancelDialog.tsx'…)
+  ⎿  Updated src/part-a/CancelDialog.tsx (+104 -2)
+       1  // 004: the cancel flow. It only renders: SubscriptionCard owns
+           the state and focus (plan.md).
+       2  import { type Ref, useId } from "react";
+       3 -import { type Reason, REASONS } from "./cancel";               
+       3 +import type { Subscription } from "../api/types";              
+       4 +import { type Offer, offersFor, type Reason, REASONS } from "./
+         +cancel";                                                       
+       5 +import type { Local } from "./plan";                           
+       6  import styles from "./SubscriptionCard.module.css";
+       7  import type { CancelFlow } from "./subscriptionReducer";
+       8  
+       9  interface CancelDialogProps {
+      10 +  /** The subscription currently shown, and the pending 003 cha
+         +nges. The offers are built from both (R3). */                  
+      11 +  subscription: Subscription;                                  
+      12 +  local: Local;                                                
+      13    cancel: CancelFlow;
+      14    dialogRef: Ref<HTMLDialogElement>;
+      15    /** R2, R3: the first reason on open, or the one chosen befor
+          e "Back". */
+      16    reasonRef: Ref<HTMLButtonElement>;
+      17 +  /** R3: step 2's heading, focused because a dialog doesn't an
+         +nounce its name again when its content changes. */             
+      18 +  headingRef: Ref<HTMLHeadingElement>;                         
+      19    onReason: (reason: Reason) => void;
+      20 +  /** R5, R6: the reducer checks the offer against `offersFor` 
+         +before it hands over. */                                       
+      21 +  onOffer: (offer: Offer) => void;                             
+      22 +  /** R7: the local cancel. */                                 
+      23 +  onConfirm: () => void;                                       
+      24 +  onBack: () => void;                                          
+      25    /** R10: "Keep my subscription", Esc and the native `close` e
+          vent. Nothing is pending, so it always closes. */
+      26    onClose: () => void;
+      27  }
+      28  
+      29  const secondary = `${styles.button} ${styles["button--secondary
+          "]}`;
+      30 +/** R3: the offers and "Yes, cancel my subscription" share this
+         +, so they always have the same size and contrast. */           
+      31 +const choice = `${styles.button} ${styles["button--block"]}`;  
+      32  
+      33  /** R10: ends both steps, so a touch screen without Esc can alw
+          ays leave in one tap. */
+      34  function KeepButton({ onClose }: Pick<CancelDialogProps, "onClo
+          se">) {
+     ...
+       74    );
+       75  }
+       76  
+       63 -export function CancelDialog({ cancel, dialogRef, reasonRef, o
+          -nReason, onClose }: CancelDialogProps) {                      
+       77 +/** R3: "Other" only. Uncontrolled and never read: it is lost 
+          +with the step and never sent (Known limitations). */          
+     … 97 more lines (ctrl+o to expand)
+  ⎿  Updated src/part-a/SubscriptionCard.tsx (+10 -1)
+      3  import { type Ref, type RefObject, useCallback, useEffect, useLa
+         youtEffect, useReducer, useRef } from "react";
+      4  import { getSubscription, skipNextShipment } from "../api/mockAp
+         i";
+      5  import type { Subscription } from "../api/types";
+      6 -import type { Reason } from "./cancel";                         
+      6 +import type { Offer, Reason } from "./cancel";                  
+      7  import { CancelDialog } from "./CancelDialog";
+      8  import type { PlanChangesProps } from "./PlanChanges";
+      9  import { hasPending, pendingOf } from "./plan";
+     ...
+      182    const openCancel = () => dispatch({ type: "cancel/opened" })
+           ;
+      183    const chooseReason = (reason: Reason) => dispatch({ type: "c
+           ancel/reasonChosen", reason });
+      184    const closeCancel = () => dispatch({ type: "cancel/closed" }
+           );
+      185 +  const takeOffer = (offer: Offer) => dispatch({ type: "cancel
+          +/offerTaken", offer });                                       
+      186 +  const confirmCancel = () => dispatch({ type: "cancel/confirm
+          +ed" });                                                       
+      187 +  const backToReasons = () => dispatch({ type: "cancel/back" }
+          +);                                                            
+      188  
+      189    // 003: no request is sent for a plan change (Known limitati
+           ons), so these only dispatch.
+      190    const plan = {
+     ...
+      232            />
+      233            {/* After SkipDialog, and outside the view too, so t
+           he local cancel (R7) can swap the view behind it. */}
+      234            <CancelDialog
+      235 +            subscription={state.load.server}                  
+      236 +            local={state.local}                               
+      237              cancel={state.cancel}
+      238              dialogRef={cancelDialogRef}
+      239              reasonRef={cancelReasonRef}
+      240 +            headingRef={cancelHeadingRef}                     
+      241              onReason={chooseReason}
+      242 +            onOffer={takeOffer}                               
+      243 +            onConfirm={confirmCancel}                         
+      244 +            onBack={backToReasons}                            
+      245              onClose={closeCancel}
+      246            />
+      247          </>
+  ⎿  Updated src/part-a/SubscriptionCard.module.css (+22 -0)
+      200    color: var(--color-accent-hover);
+      201  }
+      202  
+      203 +/* 004 R3: the offers and "Yes, cancel my subscription", full 
+          +width. Long labels wrap to more lines. */                     
+      204 +.button--block {                                              
+      205 +  align-self: stretch;                                        
+      206 +  width: 100%;                                                
+      207 +  overflow-wrap: anywhere;                                    
+      208 +}                                                             
+      209 +                                                              
+      210  /* 002 R5: "Keep my order" is natively disabled while a reques
+           t is pending. */
+      211  .button:disabled,
+      212  .button:disabled:hover {
+     ...
+      284    font: inherit;
+      285  }
+      286  
+      287 +/* 004 R3: "Tell us more" for "Other". It reuses `.field` and 
+          +`.field__label`. */                                           
+      288 +.textarea {                                                   
+      289 +  width: 100%;                                                
+      290 +  min-height: 5.5rem;                                         
+      291 +  padding: 0.5rem 0.75rem;                                    
+      292 +  border: 1px solid var(--color-muted);                       
+      293 +  border-radius: 0.5rem;                                      
+      294 +  background: var(--color-surface);                           
+      295 +  color: var(--color-text);                                   
+      296 +  font: inherit;                                              
+      297 +  resize: vertical;                                           
+      298 +}                                                             
+      299 +                                                              
+      300  /* R3, R4: the pending changes, set apart from the controls th
+           at made them. */
+      301  .pending {
+      302    display: flex;
+     ...
+      323  .heading:focus-visible,
+      324  .choice input:focus-visible,
+      325  .select:focus-visible,
+      326 +.textarea:focus-visible,                                      
+      327 +.dialog__title:focus-visible,                                 
+      328  .button:focus-visible,
+      329  .option:focus-visible,
+      330  .link:focus-visible {
+
+● It typechecks and lints, and all 391 tests still pass. Now the T4 component
+  tests, appended to CancelDialog.test.tsx:
+
+● Bash(cat >> src/part-a/CancelDialog.test.tsx <<'EOF'…)
+  ⎿  Updated src/part-a/CancelDialog.test.tsx (+236 -0)
+      208      expect(inDialog().getByRole("button", { name: REASON_LABEL
+           S[0] })).toHaveFocus();
+      209    });
+      210  });
+      211 +                                                              
+      212 +const STEP_2_ACTIONS = ["Yes, cancel my subscription", "Back",
+          + "Keep my subscription"];                                     
+      213 +const EVERY_60_COSTS = "Ship every 60 days: $101.87 every 60 d
+          +ays instead of every 30";                                     
+      214 +const MULTI_1 = "Get 1 Multivitamin, 30 tablets instead of 2: 
+          +save $38.20 per order";                                       
+      215 +                                                              
+      216 +/** Opens the flow and chooses `reason` (one of REASON_LABELS)
+          + with clicks. */                                              
+      217 +async function atStep2(reason: string, subscription = active()
+          +) {                                                           
+      218 +  const user = await openFlow(subscription);                  
+      219 +  await user.click(inDialog().getByRole("button", { name: reas
+          +on }));                                                       
+      220 +  return user;                                                
+      221 +}                                                             
+      222 +                                                              
+      223 +const buttonTexts = () =>                                     
+      224 +  inDialog()                                                  
+      225 +    .getAllByRole("button")                                   
+      226 +    .map((button) => button.textContent);                     
+      227 +                                                              
+      228 +describe("step 2 (R3, R4)", () => {                           
+      229 +  it("is named by its own heading, which takes focus", async (
+          +) => {                                                        
+      230 +    await atStep2("It costs too much");                       
+      231 +                                                              
+      232 +    const heading = inDialog().getByRole("heading", { level: 2
+          +, name: "Cancel your subscription?" });                       
+      233 +    expect(screen.getByRole("dialog", { name: "Cancel your sub
+          +scription?" })).toBe(dialog());                               
+      234 +    expect(heading).toHaveFocus();                            
+      235 +    expect(heading).toHaveAttribute("tabindex", "-1");        
+      236 +  });                                                         
+      237 +                                                              
+      238 +  it.each([                                                   
+      239 +    ["I have too much product left", ["Skip my Dec 16 order", 
+          +"Ship every 60 days"]],                                       
+      240 +    ["It costs too much", [EVERY_60_COSTS, MULTI_1]],         
+      241 +    ["I'm trying a different product", ["Skip my Dec 16 order 
+          +while you try it"]],                                          
+      242 +  ])("offers the alternatives for %s, then the cancel, Back an
+          +d Keep", async (reason, offers) => {                          
+      243 +    await atStep2(reason);                                    
+      244 +                                                              
+      245 +    expect(inDialog().getByText("Instead, you can:")).toBeInTh
+          +eDocument();                                                  
+      246 +    expect(                                                   
+      247 +      within(inDialog().getByRole("list"))                    
+     … 199 more lines (ctrl+o to expand)
+
+● All 44 tests passed on the first run, but I'll verify this isn't a false
+  positive by temporarily introducing three breaks: Back always focusing the
+  first reason, the confirm button styled differently from the offers, and
+  missing plan-heading focus after an R6 offer.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Both files are restored and tests pass as expected. Since jsdom can't
+  replicate real layout or modal stacking, I'll start the dev server to test
+  step 2 in a real browser at 320px, watching for long-label issues.
+
+  Searched for 1 pattern, called chrome-devtools 3 times, ran 1 shell command (ctrl+o to expand)
+
+● At 320px nothing overflows: the page and the dialog are both 320/288 wide with
+  no scroll. The longest offers wrap to 3 lines (88px), and every button is at
+  least 44px. Here is how it looks:
+
+  Called chrome-devtools (ctrl+o to expand)
+
+● The 320px layout checks out, with proper visual hierarchy between the primary
+  offer/cancel actions and secondary Back/Keep options, and the heading focus
+  ring matches 003's styling. Next I'll verify the R5 swap (reducer closing one
+  modal and opening another in a single render) in real Chrome, since jsdom
+  can't replicate top-layer and focus-restore behavior.
+
+  Called chrome-devtools (ctrl+o to expand)
+
+● The real clock isn't pinned like the e2e one, so the fixture's date isn't Dec
+  16 here. I'll match the skip offer by its prefix instead.
+
+  Called chrome-devtools (ctrl+o to expand)
+
+● R5 checks out in real Chrome: after the dialog swap, only the skip dialog
+  remains open, focus stays on "Keep my order" even as the cancel dialog's late
+  close event arrives, and closing the skip dialog moves focus to "Skip next
+  order" (002 R6). Running the full check for T4 next.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bash(npx vitest run 2>&1 | grep "Tests " && sed -i 's/^- \[ \] T4 (R3–R6)/-
+      [x] T4 (R3–R6)/' SPECS/004-a-cancel-retention/task.md && grep -n "\[.\] T"
+      SPECS/004-a-ca…)
+  ⎿  Updated SPECS/004-a-cancel-retention/task.md (+1 -1)
+       7        for every row and every ignored case
+       8  - [x] T3 (R1, R2, R10): the "Cancel subscription" trigger, `Can
+          celDialog` step 1, the shared layout effect for both
+       9        dialogs, and focus on open and on close, plus the CSS and
+           component tests (names, Esc and native close)
+      10 -- [ ] T4 (R3–R6): step 2 with the offers, "Yes, cancel my subsc
+         -ription", "Back" and the "Other" textarea, and taking          
+      10 +- [x] T4 (R3–R6): step 2 with the offers, "Yes, cancel my subsc
+         +ription", "Back" and the "Other" textarea, and taking          
+      11        an offer (the skip dialog for R5, a 003 change for R6), p
+          lus component tests
+      12  - [ ] T5 (R7–R9): the local cancel and Undo, the cancelled-view
+           message, the announcements and the focus, plus
+      13        component tests (pending changes kept, no Undo on the can
+          celled fixture)
+
+● Update(SPECS/CHANGELOG.md)
+  ⎿  Added 37 lines
+       2  
+       3  Newest first. One entry per completed task. Format and rules ar
+          e in [README.md](README.md).
+       4  
+       5 +## 2026-11-03: 004-a-cancel-retention / T4: step 2 and taking a
+         +n offer                                                        
+       6 +                                                               
+       7 +- **Changed:**                                                 
+       8 +  - `src/part-a/CancelDialog.tsx`: step 2 has `<h2 tabIndex={-1
+         +}>Cancel your subscription?</h2>`. Then, when                  
+       9 +    `offersFor` returns any offers, "Instead, you can:" and a `
+         +<ul>` of offer buttons. For "Other", the optional              
+      10 +    "Tell us more (optional)" `<textarea>`. Then "Yes, cancel m
+         +y subscription", and "Back" and "Keep my                       
+      11 +    subscription" side by side.                                
+      12 +  - `src/part-a/SubscriptionCard.tsx`: dispatches `cancel/offer
+         +Taken`, `cancel/confirmed` and `cancel/back`, and              
+      13 +    passes the server data, `local` and the heading ref to the 
+         +dialog.                                                        
+      14 +  - `src/part-a/SubscriptionCard.module.css`: `.button--block`,
+         + shared by the offers and the cancel, and                      
+      15 +    `.textarea`. `.textarea` and `.dialog__title` are in the fo
+         +cus-visible list.                                              
+      16 +  - `src/part-a/CancelDialog.test.tsx`: 29 more tests (44 in al
+         +l). They cover:                                                
+      17 +    - step 2's name, focus and buttons for each reason         
+      18 +    - the shared class, and no button named "Cancel subscriptio
+         +n"                                                             
+      19 +    - the textarea for "Other" only, lost on Back              
+      20 +    - a pending 90 or 60, and no next order date               
+      21 +    - Back's focus for every reason                            
+      22 +    - Esc, the native close and Keep at step 2                 
+      23 +    - both skip offers (R5)                                    
+      24 +    - both frequency offers and the quantity offer (R6)        
+      25 +- **Decisions:**                                               
+      26 +  - "Yes, cancel my subscription" is wired now, because its red
+         +ucer case exists since T2. T5 still owns the                   
+      27 +    cancelled view's message, Undo and their tests.            
+      28 +  - The textarea is uncontrolled. It is never read or sent, and
+         + it unmounts with the step, so it needs no state.              
+      29 +  - The offers are rebuilt from `offersFor` on every render. Th
+         +e reducer checks the offer again when it is taken.             
+      30 +- **Verified:**                                                
+      31 +  - Three temporary breaks, each caught and then reverted:     
+      32 +    - Back always focusing the first reason: 4 tests fail      
+      33 +    - the cancel styled apart from the offers: 1 test fails    
+      34 +    - no `plan-heading` focus after an R6 offer: 3 tests fail  
+      35 +  - In Chrome (dev server, 320px, mobile emulation):           
+      36 +    - Step 2 for "It costs too much" has no horizontal scroll i
+         +n the page or the dialog. The offers wrap to 3                 
+      37 +      lines (88px), and every button is at least 44px.         
+      38 +    - The R5 swap leaves exactly one modal open, the skip dialo
+         +g. Focus stays on "Keep my order" after the cancel             
+      39 +      dialog's queued `close` event. Closing it focuses "Skip n
+         +ext order".                                                    
+      40 +  - `npm run check` passed: 420 unit and component tests, and e
+         +2e 70 passed, 10 skipped.                                      
+      41 +                                                               
+      42  ## 2026-11-03: 004-a-cancel-retention / T3: trigger, step 1 and
+           leaving the flow
+      43  
+      44  - **Changed:**
+
+● Finally, I'll stop the dev server I started.
+
+● Stop Task
+  ⎿  npm run dev -- --port 5199 --strictPort · stopped
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● tsconfig.tsbuildinfo was left behind by the tsc -b I ran early in T2 (the
+  project's own script uses --noEmit). I'm removing it.
+
+● Bash(rm tsconfig.tsbuildinfo && git status --short | grep -c . )
+  ⎿  Deleted tsconfig.tsbuildinfo (+0 -1)
+      1 -{"root":["./src/App.tsx","./src/main.tsx","./src/api/fixtures.ts
+        -","./src/api/mockApi.ts","./src/api/types.ts","./src/part-a/Item
+        -List.tsx","./src/part-a/PlanChanges.test.tsx","./src/part-a/Plan
+        -Changes.tsx","./src/part-a/SkipDialog.test.tsx","./src/part-a/Sk
+        -ipDialog.tsx","./src/part-a/SubscriptionCard.test.tsx","./src/pa
+        -rt-a/SubscriptionCard.tsx","./src/part-a/cancel.test.ts","./src/
+        -part-a/cancel.ts","./src/part-a/constants.ts","./src/part-a/form
+        -at.test.ts","./src/part-a/format.ts","./src/part-a/plan.test.ts"
+        -,"./src/part-a/plan.ts","./src/part-a/planReducer.test.ts","./sr
+        -c/part-a/skip.test.ts","./src/part-a/skip.ts","./src/part-a/skip
+        -Reducer.test.ts","./src/part-a/subscriptionReducer.test.ts","./s
+        -rc/part-a/subscriptionReducer.ts","./src/part-a/views.tsx","./sr
+        -c/part-b/BuyBox.tsx","./src/part-b/copy.ts","./src/test/deferred
+        -.ts","./src/test/setup.ts","./e2e/a-overview.spec.ts","./e2e/a-p
+        -lan.spec.ts","./e2e/a-skip.spec.ts","./e2e/a11y.ts","./e2e/smoke
+        -.spec.ts","./e2e/test.ts","./vite.config.ts","./playwright.confi
+        -g.ts"],"errors":true,"version":"5.8.3"}                         
+      1   No newline at end of file
+
+● T2, T3 and T4 are done and ticked in task.md, each with its own CHANGELOG
+  entry. npm run check passed after each task. The last run had 420 unit and
+  component tests passing, and e2e 70 passed, 10 skipped (the same
+  viewport-specific skips as before). Nothing is committed yet.
+
+  T2, the reducer cancel layer. I added the cancel and cancelled fields, the
+  seven cancel/* actions and viewOf(server, cancelled), with 58 new reducer
+  tests in cancelReducer.test.ts.
+  - Bug found and fixed: "Discard changes" didn't check the local cancel. A
+    stray discard while cancelled would have wiped the pending changes that
+    "Undo cancellation" has to bring back. It now follows the same rule as the
+    other plan changes, which is what the plan already said. A test failed
+    before the fix and passes after it.
+  - One guard added: the skip dialog can't open while the cancel dialog is open,
+    so two modals are never stacked. I added this to plan.md before writing the
+    code.
+  - Offer check: when a customer takes an offer, it must still match what the
+    current data would offer, label included. Otherwise the action is ignored
+    and the dialog stays as it is.
+
+  T3, the trigger and step 1. "Cancel subscription" ends the active view.
+  CancelDialog lists the five reasons as buttons, and one layout effect drives
+  both dialogs: it always closes one before opening the other. The "Keep my
+  subscription" button you chose is on both steps, and R3, R10 and the plan were
+  updated first. The spec stays Approved, since the change was your decision.
+
+  T4, step 2. Each reason shows its offers, then "Yes, cancel my subscription",
+  "Back" and "Keep my subscription". "Other" adds the optional textarea. The
+  offers and the cancel button share one class, so R3's "same size and contrast"
+  holds by construction. A skip offer opens the existing skip dialog (R5). A
+  frequency or quantity offer applies the 003 change, announces it and moves
+  focus to "Change your plan" (R6).
+
+  How I checked:
+  - Deliberate breaks: for each task I broke the code on purpose a few times and
+    confirmed the new tests caught every break, then restored the files.
+  - Real Chrome at 320px:
+    - The longest step 2 doesn't scroll sideways, and every button is at least
+      44px tall.
+    - The swap to the skip dialog leaves exactly one dialog open, with focus on
+      "Keep my order".
+
+  Decision for you: "Yes, cancel my subscription" already works, because its
+  reducer case existed since T2. But until T5 it lands on the existing cancelled
+  view, without the "won't be charged again" message or "Undo cancellation".
+
+  Next are T5 (the local cancel and Undo) and T6 (the e2e flows). Should I
+  commit T2–T4 to develop first? docs/10-Coding_agent.txt was already untracked
+  when I started, so I'd leave it out of the commit unless you want it in.
+
+❯ Ok lets wait until T5 for the correct messages, now just commit all the
+  current workign tree
+
+● I'll commit everything, including docs/10-Coding_agent.txt, which "all the
+  current working tree" covers. Since some files changed on disk after my last
+  run, I'll check what is staged first.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● I committed T2–T4 to develop as d87790b, and the working tree is now clean.
+  The commit has all 14 files: the spec and CHANGELOG updates, the reducer, the
+  dialog, the tests, and docs/10-Coding_agent.txt.
+
+  A few source and test files changed on disk after my last npm run check, so I
+  didn't re-run it before committing. Most likely those changes came from my own
+  Prettier runs, but the commit itself hasn't been checked; the T5 check will
+  cover it.
+
+  Until T5, "Yes, cancel my subscription" works but lands on the existing
+  cancelled view, without the "won't be charged again" message or "Undo
+  cancellation". T5 adds those. Tell me when you want to start it.

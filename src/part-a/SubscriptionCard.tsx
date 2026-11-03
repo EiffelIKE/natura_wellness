@@ -21,6 +21,8 @@ interface StatusViewProps {
   plan: Omit<PlanChangesProps, "subscription">;
   onCancel: () => void;
   cancelButtonRef: Ref<HTMLButtonElement>;
+  /** 004 R8: undoes the local cancel. */
+  onUndo: () => void;
 }
 
 /** R7: the view follows the server's status, through `viewOf`. 003 R7: plan changes are shown only when active. */
@@ -32,6 +34,7 @@ function StatusView({
   plan,
   onCancel,
   cancelButtonRef,
+  onUndo,
 }: StatusViewProps) {
   switch (viewOf(subscription, cancelled)) {
     case "active":
@@ -48,7 +51,10 @@ function StatusView({
     case "paused":
       return <PausedView subscription={subscription} />;
     case "cancelled":
-      return <CancelledView subscription={subscription} />;
+      // 004 R8: Undo only for the local cancel. A server that is already cancelled has nothing to undo.
+      return (
+        <CancelledView subscription={subscription} onUndo={subscription.status === "active" ? onUndo : undefined} />
+      );
   }
 }
 
@@ -101,6 +107,9 @@ export function SubscriptionCard() {
   }, [skipOpen, cancelOpen]);
 
   // 002–004: the reducer decides where focus goes (002 R4, R6, R7, R9, R10, 003 R5, 004 R10). This only applies it.
+  // Keyed on the whole state, not `state.focus`: two transitions in a row can ask for the same target (004: cancel,
+  // then Undo, both focus the h1), and the second must still move focus. Every accepted action starts from
+  // `focus: null` and an ignored one returns the same object, so this runs once per transition that asks for focus.
   useEffect(() => {
     const targets: Record<Focus, RefObject<HTMLElement | null>> = {
       keep: keepRef,
@@ -117,7 +126,7 @@ export function SubscriptionCard() {
     // R10: a removed focused element leaves focus on <body>. Focus anywhere else was the customer's choice.
     if (state.focus === "heading-if-lost" && document.activeElement !== document.body) return;
     targets[state.focus].current?.focus();
-  }, [state.focus]);
+  }, [state]);
 
   // 003 R9: the changes only live here, so leaving while they are shown asks first. Derived from the state, so
   // Discard, setting every value back, a fresh server value or a view that isn't active ends it by itself.
@@ -185,6 +194,7 @@ export function SubscriptionCard() {
   const takeOffer = (offer: Offer) => dispatch({ type: "cancel/offerTaken", offer });
   const confirmCancel = () => dispatch({ type: "cancel/confirmed" });
   const backToReasons = () => dispatch({ type: "cancel/back" });
+  const undoCancel = () => dispatch({ type: "cancel/undone" });
 
   // 003: no request is sent for a plan change (Known limitations), so these only dispatch.
   const plan = {
@@ -217,6 +227,7 @@ export function SubscriptionCard() {
             plan={plan}
             onCancel={openCancel}
             cancelButtonRef={cancelButtonRef}
+            onUndo={undoCancel}
           />
           {/* Outside the view, so it stays mounted when R10 swaps the view behind it. */}
           <SkipDialog

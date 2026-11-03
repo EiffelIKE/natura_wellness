@@ -182,16 +182,35 @@ export function PausedView({ subscription }: { subscription: Subscription }) {
   );
 }
 
+interface CancelledViewProps {
+  subscription: Subscription;
+  /**
+   * 004 R7, R8: only set for a local cancel of an active server, so the cancelled fixture never offers Undo.
+   * The local cancel has no date, because the server never sent one, so it gets a message instead.
+   */
+  onUndo?: () => void;
+}
+
 /** R6: no skip or plan changes. */
-export function CancelledView({ subscription }: { subscription: Subscription }) {
+export function CancelledView({ subscription, onUndo }: CancelledViewProps) {
   const { cancelledAt, items } = subscription;
   return (
     <div className={`${styles.panel} ${styles["panel--muted"]}`}>
       <StatusBadge status="cancelled" />
-      {cancelledAt !== null && (
-        <p className={styles.lead}>
-          Cancelled on <ServerDate iso={cancelledAt} />
-        </p>
+      {onUndo ? (
+        <>
+          <p className={styles.lead}>Your subscription is cancelled. You won't be charged again.</p>
+          {/* 004 R8: the only action here. Focus goes to the h1 after a cancel, so it is never pressed by mistake. */}
+          <button type="button" className={`${styles.button} ${styles["section__action"]}`} onClick={onUndo}>
+            Undo cancellation
+          </button>
+        </>
+      ) : (
+        cancelledAt !== null && (
+          <p className={styles.lead}>
+            Cancelled on <ServerDate iso={cancelledAt} />
+          </p>
+        )
       )}
       <Products items={items} />
     </div>

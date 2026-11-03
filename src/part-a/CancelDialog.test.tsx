@@ -444,3 +444,134 @@ describe("a frequency or quantity offer (R6)", () => {
     expect(planHeading()).toHaveFocus();
   });
 });
+
+const CANCELLED_TEXT = "Your subscription is cancelled. You won't be charged again.";
+const h1 = () => screen.getByRole("heading", { level: 1, name: "Manage my subscription" });
+const undo = () => screen.getByRole("button", { name: "Undo cancellation" });
+/** The view's message. The status region repeats the same text, so it is left out. */
+const VIEW_TEXT = { selector: "p:not([role=status])" };
+
+/** The browser's leave check, as in PlanChanges.test.tsx (003 R9). */
+const leaveIsBlocked = () => {
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+  return event.defaultPrevented;
+};
+
+/** Opens the flow, chooses `reason` and confirms: the 3 clicks of R7. */
+async function cancelFor(reason = "I didn't see results", subscription = active()) {
+  const user = await atStep2(reason, subscription);
+  await user.click(inDialog().getByRole("button", { name: "Yes, cancel my subscription" }));
+  return user;
+}
+
+describe("the local cancel (R7)", () => {
+  it.each(REASON_LABELS)("finishes in 3 clicks for %s", async (reason) => {
+    await cancelFor(reason);
+
+    expect(document.querySelectorAll("dialog[open]")).toHaveLength(0);
+    expect(screen.getByText("Cancelled")).toHaveTextContent("Status: Cancelled");
+    expect(screen.getByText(CANCELLED_TEXT, VIEW_TEXT)).toBeInTheDocument();
+  });
+
+  it("announces the cancel and focuses the h1, not Undo", async () => {
+    await cancelFor();
+
+    expect(status()).toHaveTextContent(CANCELLED_TEXT);
+    expect(h1()).toHaveFocus();
+    expect(undo()).not.toHaveFocus();
+  });
+
+  it("shows no date, because the server sent none", async () => {
+    await cancelFor();
+
+    expect(screen.queryByText(/^Cancelled on/)).not.toBeInTheDocument();
+    expect(document.querySelector("time")).toBeNull();
+  });
+
+  it("keeps the server's products, and offers nothing but Undo", async () => {
+    await cancelFor();
+
+    expect(within(screen.getByRole("list")).getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getAllByRole("heading").map((heading) => `${heading.tagName} ${heading.textContent}`)).toEqual([
+      "H1 Manage my subscription",
+      "H2 In your subscription",
+    ]);
+    // The closed dialogs are in the DOM, but not in the accessibility tree.
+    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Undo cancellation"]);
+  });
+
+  it("sends no request (Known limitations)", async () => {
+    await cancelFor();
+
+    expect(getApi).toHaveBeenCalledTimes(1);
+    expect(skipApi).not.toHaveBeenCalled();
+  });
+
+  it("turns off the leave warning for pending changes (plan Risks)", async () => {
+    const user = await renderLoaded();
+    await user.click(screen.getByRole("radio", { name: "Every 60 days" }));
+    expect(leaveIsBlocked()).toBe(true);
+
+    await user.click(trigger());
+    await user.click(inDialog().getByRole("button", { name: "I didn't see results" }));
+    await user.click(inDialog().getByRole("button", { name: "Yes, cancel my subscription" }));
+
+    expect(leaveIsBlocked()).toBe(false);
+  });
+});
+
+describe("Undo cancellation (R8)", () => {
+  it("brings back the active view, announces it and focuses the h1", async () => {
+    const user = await cancelFor();
+    await user.click(undo());
+
+    expect(screen.getByText("Active")).toHaveTextContent("Status: Active");
+    expect(screen.getByText("$101.87")).toBeInTheDocument();
+    expect(screen.queryByText(CANCELLED_TEXT, VIEW_TEXT)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo cancellation" })).not.toBeInTheDocument();
+    expect(status()).toHaveTextContent("Cancellation undone. Your subscription is active.");
+    expect(h1()).toHaveFocus();
+  });
+
+  it("brings back the pending changes and their leave warning", async () => {
+    const user = await renderLoaded();
+    await user.click(screen.getByRole("radio", { name: "Every 60 days" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Multivitamin, 30 tablets quantity" }), "1");
+
+    await user.click(trigger());
+    await user.click(inDialog().getByRole("button", { name: "Other" }));
+    await user.click(inDialog().getByRole("button", { name: "Yes, cancel my subscription" }));
+    expect(screen.queryByRole("heading", { name: "Change your plan" })).not.toBeInTheDocument();
+
+    await user.click(undo());
+
+    expect(screen.getByRole("radio", { name: "Every 60 days" })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: "Multivitamin, 30 tablets quantity" })).toHaveValue("1");
+    expect(screen.getByText("Starting after your Dec 16 order:")).toBeInTheDocument();
+    expect(screen.getByText("After that: $63.67 per order")).toBeInTheDocument();
+    expect(leaveIsBlocked()).toBe(true);
+  });
+
+  it("lets the customer cancel again, starting from step 1", async () => {
+    const user = await cancelFor("It costs too much");
+    await user.click(undo());
+    await user.click(trigger());
+
+    expect(dialog()).toHaveAttribute("open");
+    expect(inDialog().getByRole("heading", { name: "Why are you cancelling?" })).toBeInTheDocument();
+    expect(inDialog().getByRole("button", { name: REASON_LABELS[0] })).toHaveFocus();
+
+    await user.click(inDialog().getByRole("button", { name: "Other" }));
+    await user.click(inDialog().getByRole("button", { name: "Yes, cancel my subscription" }));
+    expect(screen.getByText(CANCELLED_TEXT, VIEW_TEXT)).toBeInTheDocument();
+  });
+
+  it("is never offered for the cancelled fixture", async () => {
+    await renderLoaded({ ...fixtures.cancelled(), cancelledAt: iso(2026, 10, 30) });
+
+    expect(screen.getByText(/^Cancelled on/)).toHaveTextContent("Cancelled on Nov 30");
+    expect(screen.queryByText(CANCELLED_TEXT, VIEW_TEXT)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo cancellation" })).not.toBeInTheDocument();
+  });
+});
