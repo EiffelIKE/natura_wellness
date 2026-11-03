@@ -53,14 +53,14 @@ The right alternative depends on the reason. No discounts are invented.
 
 ## Acceptance criteria
 
-- [ ] R1, R2, R3, R7: From the active view, a customer can finish cancelling in 3 taps for any reason.
-- [ ] R3: Each reason shows the right offers, and "Yes, cancel my subscription" is always visible.
-- [ ] R3, R5: "Too much product" → "Skip my Nov 8 order" opens the skip dialog with both dates.
-- [ ] R4: Given a pending 90 days, the "costs too much" offers show no frequency button.
-- [ ] R6: "Ship every 60 days" applies the pending change and the subscription stays active.
-- [ ] R7, R8: After cancelling, the cancelled view shows. "Undo cancellation" brings back the active view with any
+- [x] R1, R2, R3, R7: From the active view, a customer can finish cancelling in 3 taps for any reason.
+- [x] R3: Each reason shows the right offers, and "Yes, cancel my subscription" is always visible.
+- [x] R3, R5: "Too much product" → "Skip my Nov 8 order" opens the skip dialog with both dates.
+- [x] R4: Given a pending 90 days, the "costs too much" offers show no frequency button.
+- [x] R6: "Ship every 60 days" applies the pending change and the subscription stays active.
+- [x] R7, R8: After cancelling, the cancelled view shows. "Undo cancellation" brings back the active view with any
       pending changes.
-- [ ] R10: Esc or "Keep my subscription" at any step closes the flow without cancelling.
+- [x] R10: Esc or "Keep my subscription" at any step closes the flow without cancelling.
 
 ## Out of scope
 

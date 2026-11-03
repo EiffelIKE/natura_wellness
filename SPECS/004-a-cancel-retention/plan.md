@@ -224,7 +224,9 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
   - cancel with changes pending → Undo → the active view with the same pending lines
   - Esc and "Keep my subscription" at step 1 and at step 2: focus on "Cancel subscription", still active
   - axe WCAG 2.2 A/AA and no horizontal scroll at 375px, 320px and 1200px on step 1, step 2 ("Other", with the
-    textarea, and "It costs too much", with the longest labels) and the cancelled view
+    textarea, and "It costs too much", with the longest labels) and the cancelled view. A modal sits in the top
+    layer with its own overflow, so the page's scroll width can't see inside it. The open dialog and every button
+    are also checked for horizontal overflow, and every button for a height of at least 44px.
 
 ## Risks
 

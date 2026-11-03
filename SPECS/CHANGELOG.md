@@ -2,6 +2,43 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 004-a-cancel-retention / T6: cancel e2e
+
+- **Changed:**
+  - New `e2e/a-cancel.spec.ts` (22 tests on each project, 40 run, the 320px ones on mobile only):
+    - for each of the five reasons: 3 activations to the cancelled view, then Undo. The mobile project uses real
+      taps (`hasTouch`), the desktop one clicks.
+    - keyboard only: Tab to the trigger, Enter, Tab to "I didn't see results", Enter, Tab to "Yes, cancel my
+      subscription", Enter. Then focus is on the h1 and the status region has the announcement. Then Tab to Undo
+      and Enter.
+    - "Too much product" → "Skip my Dec 16 order": the skip dialog with Dec 16 and Jan 15, 2027, only one modal
+      open, and focus on "Keep my order"
+    - a pending 90 days: "It costs too much" offers only the quantity
+    - "Ship every 60 days": the dialog is gone, Active, the pending line, the announcement, focus on "Change your
+      plan"
+    - cancel with a frequency and a quantity pending, then Undo: the same lines and the same $63.67
+    - Esc and "Keep my subscription" at step 1 and at step 2
+    - axe and reflow at 375px, 1200px and 320px for step 1, step 2 ("Other" and "It costs too much") and the
+      cancelled view
+  - `spec.md`: every acceptance criterion is ticked, because each one now has an e2e test. The status stays
+    Approved until T7.
+  - `plan.md` (Testing): the reflow check also looks inside the open dialog and inside each button.
+- **Decisions:**
+  - Found while testing: `white-space: nowrap` on the offer buttons passed the first version of the reflow tests.
+    The page's scroll width can't see overflow inside a modal, because the modal sits in the top layer with its own
+    overflow. The check now also fails when the open dialog or any button is wider inside than its box. 002's skip
+    e2e has the same blind spot, but its labels are short. I left it unchanged, because it is outside this task.
+  - A locator fix: `getByText(/^Status: /)` matched the badge's visually hidden span. The badge locator is now
+    `a-overview.spec.ts`'s.
+- **Verified:**
+  - Three temporary breaks, each caught and then reverted:
+    - the focus effect keyed on `state.focus` again: 12 tests fail (every Undo focus, both projects)
+    - a cancel that wipes `local`: 2 tests fail (Undo with pending changes)
+    - `white-space: nowrap` on the offer buttons: 3 tests fail ("It costs too much" at 1200px, 375px and 320px).
+      This break was missed before the overflow check was added.
+  - `npm run check` passed: 434 unit and component tests, and e2e 110 passed, 14 skipped (the 320px and 640×320
+    tests on the desktop project).
+
 ## 2026-11-03: 004-a-cancel-retention / T5: local cancel and Undo
 
 - **Changed:**
