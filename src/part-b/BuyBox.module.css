@@ -26,8 +26,8 @@
   --badge-bg: #f6e7c4;
   --badge-ink: #7a5a12;
 
+  /* No min-height: the body colour above fills the viewport, and 100vh plus the app's nav would scroll. */
   box-sizing: border-box;
-  min-block-size: 100vh;
   padding: 56px clamp(32px, 5.333vw, 64px);
   background: var(--page);
   color: var(--ink);

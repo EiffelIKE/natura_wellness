@@ -2,6 +2,36 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 002-a-skip-shipment / T11 fix: random-mode e2e no longer stalls on a success
+
+- **Changed:** `e2e/a-skip.spec.ts`: the random-mode test reads the alert with `allTextContents()` instead of
+  `textContent()`. No application change.
+- **Decisions:** the test failed once in the T14 `npm run check` (10s timeout, outcome still "pending"), while the
+  page snapshot showed the skip had succeeded. A success sets the dialog to `closed`, which unmounts its content,
+  alert included, while the `<dialog>` is still open. If `isHidden()` ran just before that and `textContent()`
+  just after, `textContent()` waited for an alert that would never come back, and the poll couldn't retry. The
+  non-waiting read returns `[]`, so the poll runs again and sees the dialog hidden.
+- **Verified:** 30 of 30 passed in a repeat (`--repeat-each=15`, both projects, traces off). With traces on, 3 of
+  30 failed only with `ENOENT` writing trace files, while VS Code's Playwright test servers shared `test-results/`.
+  `npm run check`: green, as in the T14 entry.
+
+## 2026-11-03: 005-b-buy-box / T14: no vertical scroll from the nav
+
+- **Changed:** the human saw a vertical scroll the height of the nav after T13. `.page` had `min-block-size: 100vh`,
+  and the app's nav sits above it, so the page was always 100vh + 32px. `BuyBox.module.css`: the rule is removed.
+  `spec.md`: R12 adds no vertical scroll when the content fits, and a new criterion. `plan.md`: a "Height" bullet.
+  `task.md`: T14. `e2e/b-buy-box.spec.ts`: a check at 1920×1080 and 1440×900 with the nav shown.
+- **Decisions:** remove the rule instead of subtracting the nav's height: `body:has(.page)` already paints the page
+  colour across the viewport, so the min-height did nothing else. No test caught it because the visual test hides
+  the nav, and without it 100vh fits exactly. The check first used 1200×780, which failed at 784px after the fix:
+  nav 32 + padding 56 + box column about 640 + padding 56 is real content, 4px taller than the design's window
+  once the nav is added. That scroll is correct, so the check uses 1440×900 instead, where the content fits.
+- **Verified:** with the CSS rule restored, the check failed by exactly the nav's 32px (1112 > 1080, 932 > 900);
+  without it, both pass and the body colour is still `#fbf8f3`. Visual diff unchanged at **0.769%**. `npm run
+check`: green; 611 unit/component tests and 168 e2e tests passed, 26 intentional skips. Two earlier runs were
+  red: one from the 002 race in the entry above, and one with two `a-cancel` timeouts while another repo's
+  Playwright suite loaded the machine. `a-cancel.spec.ts` then passed 220 of 220 over 5 repeats.
+
 ## 2026-11-03: 005-b-buy-box / T13: centre the layout above 1200px
 
 - **Changed:** the human found the buy box pinned to the left at 1920×1080, with about 790px of empty space on

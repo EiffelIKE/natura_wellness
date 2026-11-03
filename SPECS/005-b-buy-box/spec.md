@@ -121,7 +121,8 @@ below, which were settled with the human on 2026-11-03.
   960px and 1200px the grid shrinks, the photo column first, so the box keeps its width as long as it can. Above
   1200px the columns keep their 1200px sizes (540 / 64 / 468) and the layout is centred, so the side margins grow
   equally instead of leaving the box pinned left. Below 960px it becomes one column: the photo, then the box. There
-  is no horizontal scroll at 1024px, 768px, 375px or 320px (WCAG 1.4.10), in any state. Everything except 1200px is
+  is no horizontal scroll at 1024px, 768px, 375px or 320px (WCAG 1.4.10), in any state. When the content fits the
+  viewport, there is no vertical scroll either, with the app's nav shown. Everything except 1200px is
   our own layout, because the design shows only 1200px.
 - R13 **Keyboard and focus.** Every control works by keyboard alone, in DOM order. Every focusable element has a
   visible `:focus-visible` indicator. The design shows none, so the default screenshot is unaffected. There is one
@@ -192,6 +193,8 @@ below, which were settled with the human on 2026-11-03.
       columns, with the photo column narrower and the box at full width.
 - [x] R12: At 1440px and 1920px the columns stay 540 / 64 / 468, and from 960px up the left and right margins are
       equal within 1px.
+- [x] R12: At 1920×1080 and 1440×900, with the nav shown, the page doesn't scroll vertically and the warm page
+      colour still fills the viewport.
 - [x] R12: At 1024px and 768px there is no horizontal scroll. At 375px and 320px the layout is one column with no
       horizontal scroll. Each is checked in the default and one-time states.
 - [x] R13: A keyboard-only run reaches every control, picks one-time, the subscription, 60 days and a quantity of 2,

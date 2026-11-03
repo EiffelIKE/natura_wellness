@@ -114,6 +114,29 @@ for (const width of [1920, 1440, 1024, 960, 959, 768, 375, 320]) {
   });
 }
 
+// The app's nav sits above the buy box, and the visual test hides it, so check the real page with it shown.
+// Not 1200×780: there the nav plus the content is 784px, a real 4px overflow, not the old 100vh + nav.
+for (const [width, height] of [
+  [1920, 1080],
+  [1440, 900],
+] as const) {
+  test(`005 T14, R12: no vertical scroll at ${width}×${height} when the content fits`, async ({ page }) => {
+    test.skip(test.info().project.name === "desktop", "The viewport is set here, so one project is enough.");
+    await page.setViewportSize({ width, height });
+    await page.goto("/?part=b");
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.getByRole("navigation")).toBeVisible();
+
+    const { scrollHeight, clientHeight } = await page.evaluate(() => {
+      const root = document.documentElement;
+      return { scrollHeight: root.scrollHeight, clientHeight: root.clientHeight };
+    });
+    expect(scrollHeight, "The page must not scroll by the nav's height").toBeLessThanOrEqual(clientHeight);
+    const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(background, "The warm page colour still fills the viewport").toBe("rgb(251, 248, 243)");
+  });
+}
+
 test("005 T6, R12: quantity 10 and long totals fit at 320px", async ({ page }) => {
   test.skip(test.info().project.name === "desktop", "The viewport is set here, so one project is enough.");
   await page.setViewportSize({ width: 320, height: 812 });

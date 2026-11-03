@@ -46,3 +46,5 @@
       frequency is preserved, every total agrees, and no console errors occur
 - [x] T13 (R12): centre the layout above 1200px (found by the human at 1920×1080). Add 1440px and 1920px to the
       reflow check, assert the 540 / 468 columns there, and assert equal side margins from 960px up
+- [x] T14 (R12): remove the vertical scroll the nav's height caused (found by the human at 1920×1080). Check
+      1920×1080 and 1440×900 with the nav shown

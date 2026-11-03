@@ -275,6 +275,8 @@ main.page
 - **Above 1200px:** the grid is capped at `max-inline-size: 1072px` (540 + 64 + 468) and centred with
   `margin-inline: auto`. At 1200 the page's content box is already exactly 1072, so the design width is unchanged;
   wider, the extra space splits equally on both sides.
+- **Height:** `.page` has no `min-height`. The page colour is on `body:has(.page)`, which fills the viewport, and
+  `100vh` on `.page` plus the app's nav above it would scroll by the nav's height.
 - **Below 960px:** one column, `max-width: 560px`, centred, with a 16px side padding. The photo comes first.
 - **Option header:** a wrapping flex row, switching below 480px to a grid with columns for the radio, the wrapping
   label and the price. The badge sits below the label, and the price block stays top-right.

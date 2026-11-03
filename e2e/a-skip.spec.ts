@@ -129,8 +129,10 @@ test("R6, R7: in the mock's default random mode, confirming until it works skips
     await confirm.click();
     // Empty while the skip and any reload are pending; the conflict message only shows once both are done.
     await expect(alert).toBeEmpty();
+    // Non-waiting reads only: a success unmounts the alert just before the dialog closes, and textContent() would
+    // then wait for an alert that never returns, stalling the poll. allTextContents() returns [] and polls again.
     const outcome = async () =>
-      (await dialog(page).isHidden()) ? "skipped" : (await alert.textContent()) ? "conflict" : "pending";
+      (await dialog(page).isHidden()) ? "skipped" : (await alert.allTextContents()).join("") ? "conflict" : "pending";
     await expect.poll(outcome, SLOW).not.toBe("pending");
     if ((await outcome()) === "skipped") break;
 
