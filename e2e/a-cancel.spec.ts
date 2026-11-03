@@ -3,7 +3,12 @@ import { expect, test, type Page } from "./test";
 
 // 004: the cancel flow against the real in-browser mock, on both projects (375px with touch, and 1200px). The clock
 // and time zone are pinned in playwright.config.ts: now is Dec 10, 2026, the next order is Dec 16 ($101.87), every
-// 30 days, and one skip moves it to Jan 15, 2027. Nothing in the cancel flow waits on the network.
+// 30 days, and one skip moves it to Jan 15, 2027. The cancel flow itself never waits on the network. A skip taken
+// from it, and the skip's reload, can each take up to 2.5s, so the expectations that wait for them get 10s.
+
+const SLOW = { timeout: 10_000 };
+const CONFLICT_MESSAGE =
+  "Your subscription was changed somewhere else. We've loaded the latest details. Check the dates and confirm again.";
 
 const REASONS = [
   "I have too much product left",
@@ -32,9 +37,12 @@ const plan = (page: Page) => page.locator("section", { has: page.getByRole("head
 const radio = (page: Page, name: string) => plan(page).getByRole("radio", { name, exact: true });
 const multivitamin = (page: Page) => plan(page).getByRole("combobox", { name: "Multivitamin, 30 tablets quantity" });
 const pendingLines = (page: Page) => plan(page).getByRole("listitem");
+const skipDialog = (page: Page) => page.getByRole("dialog", { name: "Skip your next order?" });
+const skipButton = (page: Page) => page.getByRole("button", { name: "Skip next order" });
+const nextOrder = (page: Page) => page.locator("section", { has: page.getByRole("heading", { name: "Next order" }) });
 
-async function load(page: Page) {
-  await page.goto("/?part=a&fixture=active&conflict=never");
+async function load(page: Page, conflict: "never" | "always" = "never") {
+  await page.goto(`/?part=a&fixture=active&conflict=${conflict}`);
   await expect(trigger(page)).toBeVisible();
 }
 
@@ -147,6 +155,43 @@ test('R3, R5: "Too much product" hands over to the skip dialog with both dates',
   await expect(badge(page)).toHaveText("Status: Active");
 });
 
+test("R5, 002 R6: a skip taken from the cancel flow goes through, and the subscription stays active", async ({
+  page,
+}) => {
+  await atStep2(page, "I have too much product left");
+  await step2(page).getByRole("button", { name: "Skip my Dec 16 order" }).click();
+  await skipDialog(page).getByRole("button", { name: "Skip Dec 16 order" }).click();
+
+  await expect(status(page)).toHaveText("Skipped. Your next order is Jan 15, 2027.", SLOW);
+  await expect(openDialogs(page)).toHaveCount(0);
+  // 002 R6: the skip dialog's own focus, as plan.md's Risks say, next to "Cancel subscription".
+  await expect(skipButton(page)).toBeFocused();
+  await expect(nextOrder(page)).toContainText("Jan 15, 2027");
+  await expect(badge(page)).toHaveText("Status: Active");
+  await expect(trigger(page)).toBeVisible();
+});
+
+test("R5, 002 R7: a 409 on a skip from the cancel flow is 002's, and Keep leaves the order as it was", async ({
+  page,
+}) => {
+  await load(page, "always");
+  await trigger(page).click();
+  await step1(page).getByRole("button", { name: "I'm trying a different product" }).click();
+  await step2(page).getByRole("button", { name: "Skip my Dec 16 order while you try it" }).click();
+  await skipDialog(page).getByRole("button", { name: "Skip Dec 16 order" }).click();
+
+  await expect(skipDialog(page).getByRole("alert")).toHaveText(CONFLICT_MESSAGE, SLOW);
+  const keepOrder = skipDialog(page).getByRole("button", { name: "Keep my order" });
+  await expect(keepOrder).toBeFocused();
+  await expect(openDialogs(page)).toHaveCount(1);
+
+  await keepOrder.click();
+  await expect(openDialogs(page)).toHaveCount(0);
+  await expect(skipButton(page)).toBeFocused();
+  await expect(nextOrder(page)).toContainText("Dec 16");
+  await expect(badge(page)).toHaveText("Status: Active");
+});
+
 test('R3, R4: with 90 days pending, "It costs too much" has no frequency offer', async ({ page }) => {
   await load(page);
   await radio(page, "Every 90 days").check();
@@ -189,6 +234,18 @@ test("R7, R8: cancelling with changes pending, then Undo, brings back the same c
   await expect(radio(page, "Every 60 days")).toBeChecked();
   await expect(multivitamin(page)).toHaveValue("1");
   await expect(plan(page).getByText("After that: $63.67 per order")).toBeVisible();
+
+  // 003 R9 is back with the changes: leaving asks first, and staying keeps them.
+  const prompts: string[] = [];
+  // Handling the event stops Playwright's auto-dismiss, and dismiss() is "Stay on page".
+  page.on("dialog", (prompt) => {
+    prompts.push(prompt.type());
+    void prompt.dismiss();
+  });
+  await page.getByRole("link", { name: "Part B: Buy box" }).click();
+  await expect.poll(() => prompts).toEqual(["beforeunload"]);
+  await expect(page).toHaveURL(/part=a/);
+  await expect(pendingLines(page)).toHaveText(LINES);
 });
 
 test.describe("R10: leaving keeps the subscription", () => {

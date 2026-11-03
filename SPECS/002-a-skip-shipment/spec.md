@@ -1,6 +1,6 @@
 # 002: Skip next shipment
 
-Status: Approved
+Status: Implemented
 
 ## Problem
 
@@ -69,7 +69,7 @@ rejects a skip with a 409, and the customer must always know what happened and w
 
 ## Acceptance criteria
 
-- [ ] R1: Given paused, cancelled or locally cancelled, then there is no skip button.
+- [x] R1: Given paused, cancelled or locally cancelled, then there is no skip button.
 - [x] R1: Given active without `nextChargeAt`, then there is no skip button.
 - [x] R2: Given active with `nextChargeAt` N and an interval of 30, then the dialog shows N and N + 30 days.
 - [x] R2: Given N + 30 days falls in the next year, then the new date shows the year.

@@ -101,12 +101,13 @@ describe("offersFor (R3, R4)", () => {
       ]);
     });
 
-    it("saves the difference in totals for each item above 1, in server order", () => {
+    it("saves the difference in totals for each item above 1, the largest saving first", () => {
       // Vitamin D 3: (3 × 2995 + 2 × 4495) × 0.85 = 15278.75 → 15279.
       // Vitamin D 2: 14980 × 0.85 = 12733, so $25.46. Multivitamin 1: 13480 × 0.85 = 11458, so $38.21 this time.
+      // The server lists Vitamin D first, but the Multivitamin saves more (R3).
       expect(labels("costs", server, { ...none, quantities: { "NW-VITD-60": 3 } }).slice(1)).toEqual([
-        "Get 2 Vitamin D, 60 softgels instead of 3: save $25.46 per order",
         "Get 1 Multivitamin, 30 tablets instead of 2: save $38.21 per order",
+        "Get 2 Vitamin D, 60 softgels instead of 3: save $25.46 per order",
       ]);
     });
 
@@ -145,6 +146,13 @@ describe("offersFor (R3, R4)", () => {
     });
   });
 
+  describe("with nothing cheaper to offer", () => {
+    it("has no costs offer for a server at 90 days with every quantity at 1", () => {
+      const lowest = { ...server, intervalDays: 90, items: server.items.map((item) => ({ ...item, quantity: 1 })) };
+      expect(offersFor("costs", lowest, none)).toEqual([]);
+    });
+  });
+
   describe("without a next order date", () => {
     const undated = { ...server, nextChargeAt: null, nextChargeTotalCents: null };
 
@@ -153,5 +161,45 @@ describe("offersFor (R3, R4)", () => {
       expect(labels("different", undated, none)).toEqual([]);
       expect(labels("costs", undated, none)[0]).toBe("Ship every 60 days: $101.87 every 60 days instead of every 30");
     });
+  });
+});
+
+describe("at most 2 quantity offers (R3)", () => {
+  // Round prices, so every total is exact at 15% off and a tie really is a tie.
+  const item = (sku: string, unitPriceCents: number, quantity = 2) => ({
+    sku,
+    name: sku,
+    quantity,
+    unitPriceCents,
+    imageUrl: null,
+  });
+  const quantitySkus = (subscription: typeof server, local = none) =>
+    offersFor("costs", subscription, local).flatMap((offer) => (offer.kind === "quantity" ? [offer.sku] : []));
+
+  it("keeps the two largest savings, largest first, after the frequency offer", () => {
+    // Savings at 15% off: B 1700, C 3400, A 850. A is dropped.
+    const three = { ...server, items: [item("A", 1000), item("B", 2000), item("C", 4000)] };
+    const offers = offersFor("costs", three, none);
+
+    expect(offers.map((offer) => offer.kind)).toEqual(["frequency", "quantity", "quantity"]);
+    expect(quantitySkus(three)).toEqual(["C", "B"]);
+    expect(offers[1].label).toBe("Get 1 C instead of 2: save $34.00 per order");
+  });
+
+  it("keeps the server's order on a tie", () => {
+    const tied = { ...server, items: [item("A", 2000), item("B", 4000), item("C", 2000)] };
+    expect(quantitySkus(tied)).toEqual(["B", "A"]);
+  });
+
+  it("applies the cap after leaving out the items that can't go lower", () => {
+    // C is the largest saving, but at 1 it has no offer, so A and B both show.
+    const three = { ...server, items: [item("A", 1000), item("B", 2000), item("C", 4000, 1)] };
+    expect(quantitySkus(three)).toEqual(["B", "A"]);
+  });
+
+  it("ranks with the pending quantities", () => {
+    // Pending C at 1 drops its offer, so the cap lets A back in.
+    const three = { ...server, items: [item("A", 1000), item("B", 2000), item("C", 4000)] };
+    expect(quantitySkus(three, { ...none, quantities: { C: 1 } })).toEqual(["B", "A"]);
   });
 });

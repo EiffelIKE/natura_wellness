@@ -331,6 +331,78 @@ describe("step 2 (R3, R4)", () => {
   });
 });
 
+describe("at most 2 quantity offers (R3)", () => {
+  // Vitamin D and Multivitamin at 2, plus a cheaper third item at 2. Savings: Multivitamin $38.21, Vitamin D
+  // $25.46, Fish oil $16.15, so Fish oil is left out.
+  const fishOil = { sku: "NW-FISH-90", name: "Fish oil", quantity: 2, unitPriceCents: 1900, imageUrl: null };
+  const three = () =>
+    active({ items: [...fixtures.active().items.map((item) => ({ ...item, quantity: 2 })), fishOil] });
+
+  it("shows two, the largest saving first, after the frequency offer", async () => {
+    await atStep2("It costs too much", three());
+
+    const offers = within(inDialog().getByRole("list")).getAllByRole("button");
+    expect(offers.map((button) => button.textContent)).toEqual([
+      expect.stringMatching(/^Ship every 60 days: /),
+      "Get 1 Multivitamin, 30 tablets instead of 2: save $38.21 per order",
+      "Get 1 Vitamin D, 60 softgels instead of 2: save $25.46 per order",
+    ]);
+    expect(inDialog().queryByRole("button", { name: /Fish oil/ })).not.toBeInTheDocument();
+  });
+
+  it("applies the second one too", async () => {
+    const user = await atStep2("It costs too much", three());
+    await user.click(inDialog().getByRole("button", { name: /^Get 1 Vitamin D/ }));
+
+    expect(document.querySelectorAll("dialog[open]")).toHaveLength(0);
+    expect(screen.getByRole("combobox", { name: "Vitamin D, 60 softgels quantity" })).toHaveValue("1");
+  });
+});
+
+describe("the fallbacks (R3, R4)", () => {
+  const offerTexts = () =>
+    inDialog()
+      .queryAllByRole("listitem")
+      .map((item) => item.textContent);
+  const lead = () => inDialog().queryByText("Instead, you can:");
+
+  it('falls back to the frequency offer for "too much" without a next order date', async () => {
+    await atStep2("I have too much product left", active({ nextChargeAt: null }));
+
+    expect(lead()).toBeInTheDocument();
+    expect(offerTexts()).toEqual(["Ship every 60 days"]);
+  });
+
+  it('has no offer and no lead for "different product" without a next order date', async () => {
+    await atStep2("I'm trying a different product", active({ nextChargeAt: null }));
+
+    expect(lead()).not.toBeInTheDocument();
+    expect(inDialog().queryByRole("list")).not.toBeInTheDocument();
+    expect(buttonTexts()).toEqual(STEP_2_ACTIONS);
+  });
+
+  it("drops the offer for a quantity already lowered to 1, and uses the lower total", async () => {
+    const user = await renderLoaded();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Multivitamin, 30 tablets quantity" }), "1");
+    await user.click(trigger());
+    await user.click(inDialog().getByRole("button", { name: "It costs too much" }));
+
+    expect(offerTexts()).toEqual(["Ship every 60 days: $63.67 every 60 days instead of every 30"]);
+  });
+
+  it('has no offer and no lead for "costs" with 90 days and every quantity at 1 pending', async () => {
+    const user = await renderLoaded();
+    await user.click(screen.getByRole("radio", { name: "Every 90 days" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Multivitamin, 30 tablets quantity" }), "1");
+    await user.click(trigger());
+    await user.click(inDialog().getByRole("button", { name: "It costs too much" }));
+
+    expect(lead()).not.toBeInTheDocument();
+    expect(buttonTexts()).toEqual(STEP_2_ACTIONS);
+    expect(inDialog().getByRole("button", { name: "Yes, cancel my subscription" })).toBeVisible();
+  });
+});
+
 describe("Back (R3)", () => {
   it.each(REASON_LABELS)("returns to step 1 with focus on %s", async (reason) => {
     const user = await atStep2(reason);

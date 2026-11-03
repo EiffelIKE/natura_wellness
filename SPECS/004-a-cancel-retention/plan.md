@@ -96,9 +96,12 @@ export function offersFor(reason: Reason, server: Subscription, local: Local): O
   never uses `nextChargeTotalCents`, so it works when the server sends none.
 - **Saving (R3):** `totalAfterDiscount(current) - totalAfterDiscount(with that item lowered by one)`, imported
   from `src/api/fixtures.ts`, as 003 does.
-- **A quantity offer** is listed for each item whose current quantity is above 1, in server order. It is left out
+- **A quantity offer** is listed for each item whose current quantity is above 1. It is left out
   when the lowered quantity isn't in `quantityOptions(item)`, for example a server quantity of 12, where 11 isn't a
   choice. `plan/quantity` would ignore it.
+- **At most 2 quantity offers (R3):** after that filter, the offers are sorted by saving, largest first, with a
+  stable sort so ties keep the server's order. Then the first two are kept. The reducer's offer check uses
+  `offersFor`, so an offer that was dropped by the cap is rejected too.
 - **The skip offers** need `canSkip(server)`. Without a next order date, there is nothing to skip. "Too much
   product" then shows only the frequency offer, and "Trying a different product" shows none.
 - **Same frequency as the server:** server 60, pending 30, offer 60. Taking it goes through `plan/frequency`, which
@@ -195,6 +198,8 @@ With the e2e fixture (next order Dec 16, $101.87, every 30 days, Vitamin D × 1,
     - A pending Multivitamin 1 drops its quantity offer and lowers the frequency offer's total to $63.67.
     - A server quantity of 12 has no quantity offer.
     - No next order date means no skip offer.
+    - Three items above 1 give two quantity offers, largest saving first. A tie keeps the server's order.
+    - A server at 90 days with every quantity at 1 gives no "costs" offer.
   - Reducer: every row of the table, including each ignored case:
     - opening while not ready, paused, locally cancelled or with the skip dialog open
     - a stale or made-up offer

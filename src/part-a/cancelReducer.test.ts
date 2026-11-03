@@ -231,6 +231,24 @@ describe("cancel/offerTaken (R5, R6)", () => {
     expect(subscriptionReducer(state, taken(MULTI_1))).toBe(state);
   });
 
+  it("ignores a quantity offer the cap left out (R3)", () => {
+    // Three items at 2. The cheapest one's saving is the smallest, so it isn't among the two offered.
+    const cheap = { sku: "NW-CHEAP", name: "Cheap", quantity: 2, unitPriceCents: 1000, imageUrl: null };
+    const three = server({ items: [...fixtures.active().items.map((item) => ({ ...item, quantity: 2 })), cheap] });
+    const state = atOffer("costs", loaded(three));
+    if (state.load.kind !== "ready") throw new Error("not loaded");
+    const skus = offersFor("costs", state.load.server, state.local).map((offer) => "sku" in offer && offer.sku);
+    expect(skus).not.toContain("NW-CHEAP");
+
+    const leftOut: Offer = {
+      kind: "quantity",
+      sku: "NW-CHEAP",
+      quantity: 1,
+      label: "Get 1 Cheap instead of 2: save $8.50 per order",
+    };
+    expect(subscriptionReducer(state, taken(leftOut))).toBe(state);
+  });
+
   it("ignores a skip offer without a next order date", () => {
     const state = atOffer("too-much", loaded(server({ nextChargeAt: null })));
     expect(subscriptionReducer(state, taken(SKIP))).toBe(state);

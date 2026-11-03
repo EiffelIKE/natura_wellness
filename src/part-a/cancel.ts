@@ -34,13 +34,16 @@ function skipOffer(server: Subscription, suffix: string): Offer[] {
   return [{ kind: "skip", label: `Skip my ${formatDate(server.nextChargeAt)} order${suffix}` }];
 }
 
+/** R3: more than this many quantity offers would make the 375px dialog long. */
+const MAX_QUANTITY_OFFERS = 2;
+
 /**
- * R3: one unit less of each item above 1. The saving is the difference between the two totals, never a discounted
- * unit price, whose rounding can differ from the real change (001 R4).
+ * R3: one unit less of an item above 1, for the items with the largest savings. The saving is the difference
+ * between the two totals, never a discounted unit price, whose rounding can differ from the real change (001 R4).
  */
 function quantityOffers(server: Subscription, current: SubscriptionItem[]): Offer[] {
   const total = totalAfterDiscount(current, server.discountPercent);
-  return server.items.flatMap((item, index) => {
+  const candidates = server.items.flatMap((item, index) => {
     const { quantity } = current[index];
     const lower = quantity - 1;
     // `plan/quantity` would ignore a quantity that isn't a choice, such as 11 when the server sends 12.
@@ -50,8 +53,13 @@ function quantityOffers(server: Subscription, current: SubscriptionItem[]): Offe
     );
     const saving = total - totalAfterDiscount(lowered, server.discountPercent);
     const label = `Get ${lower} ${item.name} instead of ${quantity}: save ${formatMoney(saving)} per order`;
-    return [{ kind: "quantity", sku: item.sku, quantity: lower, label }];
+    return [{ saving, offer: { kind: "quantity", sku: item.sku, quantity: lower, label } as const }];
   });
+  // The sort is stable, so a tie keeps the server's order.
+  return candidates
+    .sort((a, b) => b.saving - a.saving)
+    .slice(0, MAX_QUANTITY_OFFERS)
+    .map(({ offer }) => offer);
 }
 
 /** R3, R4: the offers for a reason, in display order. "Current" is the server's data with pending 003 changes. */

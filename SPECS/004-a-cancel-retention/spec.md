@@ -1,6 +1,6 @@
 # 004: Cancel with a matching alternative
 
-Status: Approved
+Status: Implemented
 
 ## Problem
 
@@ -27,13 +27,15 @@ The right alternative depends on the reason. No discounts are invented.
   - **Too much product:** the main button is "Skip my Nov 8 order", and the second is "Ship every 60 days" (003),
     for customers whose problem is long term.
   - **Costs too much:** the main button is "Ship every 60 days: {total} every 60 days instead of every 30". The
-    second is "Get 1 Multivitamin instead of 2: save {amount} per order", shown for each item with quantity > 1.
+    second is "Get 1 Multivitamin instead of 2: save {amount} per order", shown for each item with quantity > 1,
+    at most 2 of them: the two largest savings, largest first, with ties in the server's order. This keeps the
+    375px dialog short.
     Its saving is `totalAfterDiscount(current) - totalAfterDiscount(with that item lowered by one)` (001 R4). Here
     "current" means the quantities including pending changes. A discounted unit price is not used, because its
     rounding can differ from the actual change in the total.
   - **Trying a different product:** "Skip my Nov 8 order while you try it".
   - **Didn't see results, and Other:** no offer, only the cancel and back buttons. "Other" also shows an optional
-    "Tell us more" text field.
+    "Tell us more" text field. Its text is cleared on "Back" or on closing, because it is never sent.
 - R4 The frequency offer shows the next slower option than the current one (30 → 60 → 90). It is hidden when the
   frequency is already 90.
 - R5 A skip offer closes the cancel flow and opens the 002 skip dialog, so there is one code path for latency and 409s,
@@ -57,6 +59,10 @@ The right alternative depends on the reason. No discounts are invented.
 - [x] R3: Each reason shows the right offers, and "Yes, cancel my subscription" is always visible.
 - [x] R3, R5: "Too much product" → "Skip my Nov 8 order" opens the skip dialog with both dates.
 - [x] R4: Given a pending 90 days, the "costs too much" offers show no frequency button.
+- [x] R3: Given three items above quantity 1, "It costs too much" shows two quantity offers, the largest saving
+      first.
+- [x] R3, R4: Given 90 days and every quantity at 1, from the server or pending, "It costs too much" shows no offer,
+      only the cancel, "Back" and "Keep my subscription".
 - [x] R6: "Ship every 60 days" applies the pending change and the subscription stays active.
 - [x] R7, R8: After cancelling, the cancelled view shows. "Undo cancellation" brings back the active view with any
       pending changes.
@@ -72,4 +78,4 @@ The right alternative depends on the reason. No discounts are invented.
 - Cancellation is simulated in local state, because the mock API has no cancel endpoint. A reload brings the active
   subscription back.
 - The reason and the "Other" text are not saved or sent.
-- R9 is not tested, because the mock never changes status.
+- R9 is unit-tested only (`viewOf` and the reducer guards), because the mock never changes status.

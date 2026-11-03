@@ -2,6 +2,105 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 002-a-skip-shipment: marked Implemented
+
+- **Changed:** `SPECS/002-a-skip-shipment/spec.md`: status Implemented, and the last open criterion (R1, no skip
+  button when paused, cancelled or locally cancelled) is ticked. The human asked for this.
+- **Decisions:** the criterion was waiting on 004's local cancel. It is covered now by three tests:
+  - `SubscriptionCard.test.tsx`: paused and cancelled have no buttons
+  - `CancelDialog.test.tsx` (004 T5): after a local cancel, the only button is "Undo cancellation"
+  - `cancelReducer.test.ts`: `skip/opened` is ignored while locally cancelled
+- **Verified:** every 002 task and criterion is ticked. `npm run check` passed with the 004 T10 run, and this
+  change touches docs only.
+
+## 2026-11-03: 004-a-cancel-retention / T10: the skip offer to the end, and the leave prompt after Undo
+
+- **Changed:**
+  - `e2e/a-cancel.spec.ts`:
+    - "Too much product" → "Skip my Dec 16 order" → confirm. "Skipped. Your next order is Jan 15, 2027." is
+      announced, no dialog stays open, focus is on "Skip next order" (002 R6), and the status is still Active.
+    - "I'm trying a different product" → its skip offer → confirm, with `conflict=always`. 002's 409 alert shows,
+      only one modal is open, and focus is on "Keep my order". Keep closes it with Dec 16 unchanged.
+    - The Undo-with-changes test now also follows the "Part B" link. The browser asks first (`beforeunload`),
+      staying keeps the page, and the pending lines are still there.
+    - New helpers: `SLOW`, `CONFLICT_MESSAGE`, and a `conflict` parameter for `load`.
+  - `spec.md`: status Implemented. All tasks and acceptance criteria are ticked.
+- **Decisions:** the 409 flow uses the "different product" skip offer, so both skip offers run end to end against
+  the real mock.
+- **Verified:**
+  - Two temporary breaks, each caught and then reverted:
+    - no leave warning after a cancel has happened: the Undo test fails on both projects
+    - the skip offer not handing over to `skip/opened`: 6 tests fail (3 per project)
+  - `npm run check` passed: 446 unit and component tests, and e2e 114 passed, 14 skipped.
+
+## 2026-11-03: 004-a-cancel-retention / T9: the fallbacks
+
+- **Changed:**
+  - `src/part-a/CancelDialog.test.tsx`: 4 new tests in "the fallbacks (R3, R4)":
+    - with no next order date, "too much" shows only "Ship every 60 days"
+    - with no next order date, "different product" has no "Instead, you can:" and no list
+    - a pending Multivitamin 1 leaves only the frequency offer, at $63.67
+    - with 90 days and Multivitamin 1 pending, "costs" shows no offer and no lead, only the cancel, Back and Keep
+  - `src/part-a/cancel.test.ts`: a server at 90 days with every quantity at 1 has no "costs" offer.
+  - `spec.md`: the no-offer criterion is ticked.
+- **Decisions:** no code change was needed. These tests pin behaviour that came from T1 and T4.
+- **Verified:**
+  - The new tests passed straight away, because they pin existing behaviour. Two temporary breaks show they can
+    fail, and both were reverted:
+    - the lead shown with no offers: 4 tests fail, 2 of them new
+    - quantity offers built from the server's quantities instead of the pending ones: 8 tests fail, 2 of them new
+  - `npm run check` passed: 446 unit and component tests, and e2e 110 passed, 14 skipped.
+
+## 2026-11-03: 004-a-cancel-retention / T8: at most 2 quantity offers
+
+- **Changed:**
+  - `src/part-a/cancel.ts`: `quantityOffers` builds every candidate with its saving, sorts by saving (largest
+    first), and keeps `MAX_QUANTITY_OFFERS` (2).
+  - `src/part-a/cancel.test.ts`: 4 new tests:
+    - the two largest savings, in order
+    - a tie keeps the server's order
+    - the cap is applied after the `quantityOptions` filter
+    - ranking uses the pending quantities
+  - The T1 test "in server order" now expects the largest saving first, as R3 now says. With Vitamin D at 3
+    pending, the Multivitamin's $38.21 comes before Vitamin D's $25.46.
+  - `src/part-a/cancelReducer.test.ts`: an offer the cap left out is ignored.
+  - `src/part-a/CancelDialog.test.tsx`: three items at 2 show the Multivitamin ($38.21), then Vitamin D ($25.46),
+    and no fish oil ($16.15). Taking the second offer applies it.
+  - `spec.md`: the cap criterion is ticked.
+- **Decisions:**
+  - The sort is `Array.prototype.sort`, which is stable since ES2019, so ties keep the server's order without a
+    tie-breaker.
+  - No reducer change was needed. `cancel/offerTaken` compares against `offersFor`, so it rejects a capped-out offer
+    by itself.
+- **Verified:**
+  - The 4 new unit tests failed before the change.
+  - A temporary break (a cap of 3) failed 4 tests, and was reverted.
+  - `npm run check` passed: 441 unit and component tests, and e2e 110 passed, 14 skipped.
+
+## 2026-11-03: 004-a-cancel-retention / T7: edge cases and e2e flows chosen
+
+- **Changed:**
+  - `spec.md`:
+    - R3: at most 2 quantity offers, the largest saving first, with ties in the server's order
+    - R3: the "Other" text is cleared on Back or on closing
+    - two new acceptance criteria (the cap, and no offers at 90 days with every quantity at 1)
+    - Known limitations: R9 is unit-tested only. The old line said "not tested", which has been wrong since T2.
+      The status stays Approved, because the human made these decisions.
+  - `plan.md`: the cap in `offersFor`, and its unit cases.
+  - `task.md`: T7 ticked, and new tasks T8 (the cap), T9 (the fallbacks) and T10 (the skip offer to the end, a 409,
+    and the `beforeunload` prompt after Undo).
+- **Decisions:**
+  - The human chose the "skip offer to the end" e2e flow and gave a table of edge cases, 10 to 17.
+  - Already covered, so no new task:
+    - 16 ("Other" text cleared): the component test for Back already covers it, and the spec now says so
+    - 17 (R9): unit-tested since T2
+    - 15 (Undo brings back the leave warning): asserted in a T5 component test, and T10 adds the real browser
+      prompt
+  - 12 (a pending quantity of 1) is unit-tested. T9 adds a component test.
+  - 13 (several items): a cap of 2, the largest saving first, chosen by the human over 2 in server order and over
+    1. The frequency offer stays first.
+- **Verified:** docs only. `prettier --check` is clean.
+
 ## 2026-11-03: 004-a-cancel-retention / T6: cancel e2e
 
 - **Changed:**
