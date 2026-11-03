@@ -2,6 +2,29 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 001-a-subscription-overview / T2: subscription reducer
+
+- **Changed:**
+  - New `src/part-a/subscriptionReducer.ts` with `State`, `Action`, `initialState`, `subscriptionReducer`,
+    `loadErrorKind(error)` and `viewOf(server)`.
+  - New `src/part-a/subscriptionReducer.test.ts` with 15 tests.
+  - `plan.md` (State shape, `requestId`, effective status) now matches the code, see Decisions.
+- **Decisions:**
+  - `requestId` moved from the `loading` and `failed` variants to `State`. In the plan's shape, `ready` had no id, so
+    once request 2 had loaded, a late response from request 1 couldn't be told apart from a fresh one. The mock's
+    latency is random, so that order can happen under the StrictMode double effect. Now one rule covers every
+    state: an id that isn't `state.requestId` is dropped, and the same state object is returned so React skips the
+    render.
+  - `viewOf` takes the server subscription instead of the whole state, so it never has to return a value for a
+    state that hasn't loaded. 004 adds the local cancel as a second argument.
+  - `loadErrorKind`: only an `ApiError` 404 is `not-found`. Everything else, including non-API errors, is `failed`,
+    because retrying a read is always safe (R2).
+  - `initialState` is already `loading`, so the skeleton shows on the first render, before the load effect runs.
+- **Verified:**
+  - A planted bug that compared ids only while loading (the plan's original shape) failed both "late response after
+    ready" tests. It was reverted.
+  - `npm run check` is green.
+
 ## 2026-11-03: 001-a-subscription-overview / T1: formatters
 
 - **Changed:**

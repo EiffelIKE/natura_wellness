@@ -1,7 +1,7 @@
 # 001: Tasks
 
 - [x] T1 (R4, R9): `format.ts` with `formatDate`, `formatMoney`, `formatFrequency`, plus unit tests
-- [ ] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load lifecycle, `requestId`, error mapping and `viewOf`,
+- [x] T2 (R1, R2, R7): `subscriptionReducer.ts` with the load lifecycle, `requestId`, error mapping and `viewOf`,
       plus unit tests
 - [ ] T3 (R1, R2, R11): `SubscriptionCard` load effect, skeleton, load error with "Try again", and the 404 view
       with the contact link, plus component tests

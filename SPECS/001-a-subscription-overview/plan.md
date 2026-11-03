@@ -12,12 +12,13 @@ layers without reshaping it.
 
 ```ts
 type Load =
-  | { kind: "loading"; requestId: number }
-  | { kind: "failed"; requestId: number } // 500 or unknown → R2 "Try again"
+  | { kind: "loading" }
+  | { kind: "failed" } // 500 or unknown → R2 "Try again"
   | { kind: "not-found" } // 404 → R2 contact link
   | { kind: "ready"; server: Subscription };
 
 interface State {
+  requestId: number; // the latest request sent
   load: Load;
   // Added later, never merged into `server` (001 R7, 003 R7):
   // local: { frequencyDays?: number; quantities: Record<string, number>; cancelled: boolean }  (003, 004)
@@ -30,13 +31,16 @@ type Action =
   | { type: "load/failed"; requestId: number; error: unknown };
 ```
 
-- **`requestId`:** the reducer ignores responses whose id isn't the latest. This covers the double effect in React
-  StrictMode (main.tsx), and later the reloads after a skip failure (002 R7). The mock takes no `AbortSignal`, so
-  dropping stale results is the only option.
+- **`requestId`:** the reducer ignores responses whose id isn't `state.requestId`, whatever `load` is. The id lives
+  on `State`, not on a `Load` variant, so a late response is still recognized as stale after the latest one has
+  loaded (the mock's latency is random, so request 2 can resolve before request 1). This covers the double effect in
+  React StrictMode (main.tsx), and later the reloads after a skip failure (002 R7). The mock takes no `AbortSignal`,
+  so dropping stale results is the only option.
 - **Errors:** `ApiError` 404 maps to `not-found`, and anything else maps to `failed`. This mapping lives in the
   reducer, as a pure function that is unit-tested.
-- **Effective status:** there is a selector, `viewOf(state)`, that returns `active | paused | cancelled`. In 001 it is
-  just `server.status`. 004 adds the local cancel to it, applying 001 R7: a server status that isn't active wins.
+- **Effective status:** there is a selector, `viewOf(server)`, that returns `active | paused | cancelled`. In 001 it
+  is just `server.status`. 004 adds the local cancel as a second argument, applying 001 R7: a server status that
+  isn't active wins.
 
 ## Files
 
