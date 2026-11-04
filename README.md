@@ -49,6 +49,7 @@ sessions happened. Each session usually starts with `/clear`, so each file cover
 | 19  | Codex       | 005: T7–T9, T11–T12                                                       |
 | 20  | Claude Code | Review and commit of Codex's T11–T12, 005 T10 final acceptance review     |
 | 21  | Claude Code | Review against the brief, 005 T13–T14 (centring above 1200px, nav scroll) |
+| 22  | Claude Code | Review against the brief, 001's stale R7 limitation                       |
 
 ### How the work was organised
 

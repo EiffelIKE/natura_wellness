@@ -64,6 +64,8 @@ subscription must never be mistaken for an active one.
       their quantities show, matching the server data.
 - [x] R5, R11: Given `?fixture=paused`, then "Paused until …" and the contact link show and there is no skip button.
 - [x] R6: Given `?fixture=cancelled`, then "Cancelled on …" shows and there is no skip button.
+- [x] R7: Given a paused or cancelled server, then a local cancel or plan change never makes it look active, and
+      a reload that returns paused or cancelled swaps the active view for that status.
 - [x] R8: The Multivitamin row, which has no image, lines up with the Vitamin D row.
 - [x] R3: Given an active subscription without `nextChargeAt`, then "We'll confirm your next order date soon." shows,
       and without `nextChargeTotalCents`, no amount or discount line shows.
@@ -87,8 +89,8 @@ subscription must never be mistaken for an active one.
   image is tested for real in e2e, by aborting the image request.
 - The fixture's dates are relative to the current time. In the running app they change between visits. E2e tests
   pin the start time and the time zone (README, "Dates and time zones in e2e tests").
-- R7's rule that the server's status wins is in place for correctness, but it is not tested. The mock never
-  changes a subscription's status, so a status change cannot happen in this app.
+- R7 is tested in the reducer (unit) and with hand-built reloads (component), but not end to end. The mock never
+  changes a subscription's status, so a status change cannot happen in the running app.
 
 ## Open questions
 
