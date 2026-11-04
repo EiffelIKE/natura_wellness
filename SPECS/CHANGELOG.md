@@ -2,6 +2,23 @@
 
 Newest first. One entry per completed task. Format and rules are in [README.md](README.md).
 
+## 2026-11-03: 001-a-subscription-overview: R7's limitation was stale
+
+- **Changed:** `spec.md`: Known limitations said R7 "is not tested". The human found that tests exist. It now says
+  R7 is tested in unit and component tests, but not end to end. A new acceptance criterion for R7, the only 001
+  requirement that had none. No code or test change.
+- **Decisions:**
+  - The line was written with the spec, before 003 and 004. Their tests cover R7:
+    - `viewOf` (`subscriptionReducer.test.ts`)
+    - the plan guards and `local` (`planReducer.test.ts`)
+    - a reload that returns paused or cancelled (`SkipDialog.test.tsx`, `PlanChanges.test.tsx`)
+    - a paused server with next-order fields (`SubscriptionCard.test.tsx`)
+  - The same stale line was fixed in 003 (T2) and 004 (T7), but 001 was missed. Status stays Implemented,
+    because no requirement changed. The rest of the brief review found nothing else to change in the specs.
+- **Verified:** read each test above. Checked the other specs' Known limitations for the same stale claim: 002
+  R10, 003 R7 and 004 R9 already say what is tested. `npm run check`: green twice. 611 unit and component tests,
+  168 e2e tests passed with 26 intentional skips, and a visual diff of 0.769%.
+
 ## 2026-11-03: e2e: wait for web fonts after every goto and reload
 
 - **Changed:** `e2e/test.ts`: the shared `page` fixture wraps `goto` and `reload` so that each one waits for
